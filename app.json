@@ -1,5 +1,6 @@
 {
   "expo": {
+<<<<<<< HEAD
     "name": "Khalid",
     "slug": "Khalid",
     "version": "1.0.0",
@@ -9,6 +10,18 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
+=======
+    "name": "service-marketplace-app",
+    "slug": "service-marketplace-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "servicemarketplaceapp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+>>>>>>> a7d3e1ab3cecbba72bd3293840d4cb14cd4f89b7
     },
     "android": {
       "adaptiveIcon": {
@@ -17,6 +30,10 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+<<<<<<< HEAD
+=======
+      "edgeToEdgeEnabled": true,
+>>>>>>> a7d3e1ab3cecbba72bd3293840d4cb14cd4f89b7
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -28,9 +45,19 @@
       [
         "expo-splash-screen",
         {
+<<<<<<< HEAD
           "backgroundColor": "#208AEF",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
+=======
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "backgroundColor": "#000000"
+          }
+>>>>>>> a7d3e1ab3cecbba72bd3293840d4cb14cd4f89b7
         }
       ]
     ],
