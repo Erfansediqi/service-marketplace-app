@@ -1,20 +1,18 @@
-import { useRouter } from 'expo-router';
+import { useRouter } from "expo-router";
 
-import { OnboardingScreen } from '@/components/onboarding-screen';
+import { OnboardingScreen } from "../components/onboarding-screen";
 
 export default function OnboardingScreenThree() {
   const router = useRouter();
 
   return (
     <OnboardingScreen
-      title="Save time & effort"
-      subtitle="Manage bookings, chat with professionals, and get your tasks done effortlessly while you relax."
+      title="در وقت و انرژی صرفه‌جویی کنید"
+      subtitle="رزروهای خود را مدیریت کنید، با متخصصان گفتگو کنید و کارهایتان را آسان‌تر انجام دهید."
       icon="time-outline"
-      iconColor="#D97706"
-      iconBackground="rgba(254, 243, 199, 0.74)"
       activePage={2}
-      buttonLabel="Get Started"
-      onPress={() => router.push('/signup')}
+      buttonLabel="شروع"
+      onPress={() => router.push("/signup")}
     />
   );
 }

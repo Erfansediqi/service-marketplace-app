@@ -29,12 +29,12 @@ export default function SignupScreen() {
 
   const nameError =
     submitted && fullName.trim().length < 2
-      ? "Enter your full name."
+      ? "لطفاً نام و نام خانوادگی خود را وارد کنید."
       : undefined;
 
   const phoneError =
     submitted && digits.length < 7
-      ? "Enter a valid phone number."
+      ? "لطفاً یک شماره تلفن معتبر وارد کنید."
       : undefined;
 
   const formValid = useMemo(
@@ -67,21 +67,25 @@ export default function SignupScreen() {
           <GlassButton
             disabled={!formValid && submitted}
             icon="arrow-forward"
-            label="Send verification code"
+            label="ارسال کد تأیید"
             onPress={handleSendCode}
           />
 
           <Text style={styles.legalText}>
-            By continuing, you agree to our{" "}
-            <Text style={styles.legalLink}>Terms</Text> and{" "}
-            <Text style={styles.legalLink}>Privacy Policy</Text>.
+            با ادامه، شما{" "}
+            <Text style={styles.legalLink}>شرایط استفاده</Text>
+            {" "}و{" "}
+            <Text style={styles.legalLink}>
+              سیاست حفظ حریم خصوصی
+            </Text>
+            {" "}ما را می‌پذیرید.
           </Text>
         </View>
       }
     >
       <View style={styles.topBar}>
         <GlassIconButton
-          accessibilityLabel="Go back"
+          accessibilityLabel="بازگشت"
           icon="chevron-back"
           onPress={() => router.back()}
         />
@@ -94,15 +98,18 @@ export default function SignupScreen() {
           contentStyle={styles.heroIconContent}
           variant="prominent"
         >
-          <Text style={styles.heroMark}>K</Text>
+          <Text style={styles.heroMark}>خ</Text>
         </GlassSurface>
 
         <View style={styles.heading}>
-          <Text style={styles.eyebrow}>YOUR KHEDMAT ACCOUNT</Text>
-          <Text style={styles.title}>Create your account</Text>
+          <Text style={styles.eyebrow}>حساب خدمت</Text>
+
+          <Text style={styles.title}>
+            حساب کاربری خود را بسازید
+          </Text>
+
           <Text style={styles.subtitle}>
-            Enter your name and phone number. We will send a short verification
-            code to confirm your account.
+            فقط با وارد کردن نام و شماره تلفن، شروع کنید.
           </Text>
         </View>
       </View>
@@ -113,9 +120,9 @@ export default function SignupScreen() {
           autoComplete="name"
           error={nameError}
           icon="person-outline"
-          label="Full name"
+          label="نام و نام خانوادگی"
           onChangeText={setFullName}
-          placeholder="Ahmad Zahir"
+          placeholder="احمد ظاهر"
           returnKeyType="next"
           textContentType="name"
           value={fullName}
@@ -125,7 +132,7 @@ export default function SignupScreen() {
           autoComplete="tel"
           error={phoneError}
           keyboardType="phone-pad"
-          label="Phone number"
+          label="شماره تلفن"
           leadingContent={
             <View style={styles.countryCode}>
               <Text style={styles.countryCodeText}>+93</Text>
@@ -133,7 +140,7 @@ export default function SignupScreen() {
             </View>
           }
           onChangeText={setPhoneNumber}
-          placeholder="70 123 4567"
+          placeholder="701234567"
           returnKeyType="done"
           textContentType="telephoneNumber"
           value={phoneNumber}
@@ -148,78 +155,102 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
     paddingBottom: Spacing.xxl,
   },
+
   topBar: {
     minHeight: 44,
     alignItems: "flex-start",
   },
+
   hero: {
     marginTop: Spacing.xxl,
   },
+
   heroIcon: {
     width: 72,
     height: 72,
     marginBottom: Spacing.xxl,
+    alignSelf: "flex-end",
   },
+
   heroIconContent: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
+
   heroMark: {
     color: Colors.textPrimary,
     fontSize: 29,
     lineHeight: 34,
     fontWeight: "700",
-    letterSpacing: -1,
   },
+
   heading: {
     gap: Spacing.sm,
+    alignItems: "flex-end",
   },
+
   eyebrow: {
     ...Typography.captionStyle,
     color: Colors.primary,
-    letterSpacing: 1.25,
+    letterSpacing: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
+
   title: {
     ...Typography.screenTitle,
     color: Colors.textPrimary,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
+
   subtitle: {
     ...Typography.bodyLarge,
     color: Colors.textSecondary,
     maxWidth: 430,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
+
   form: {
     width: "100%",
     marginTop: Spacing.screen,
     gap: Spacing.xxl,
   },
+
   countryCode: {
     height: "100%",
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.md,
   },
+
   countryCodeText: {
     ...Typography.label,
     color: Colors.textPrimary,
   },
+
   countryCodeDivider: {
     width: StyleSheet.hairlineWidth,
     height: 24,
     backgroundColor: Colors.borderStrong,
   },
+
   footer: {
     width: "100%",
     gap: Spacing.lg,
     alignItems: "center",
   },
+
   legalText: {
     ...Typography.captionStyle,
     color: Colors.textTertiary,
     textAlign: "center",
+    writingDirection: "rtl",
     maxWidth: 330,
   },
+
   legalLink: {
     color: Colors.textSecondary,
     fontWeight: "600",

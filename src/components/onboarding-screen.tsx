@@ -1,30 +1,27 @@
-import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import { ComponentProps } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { ComponentProps } from "react";
 import {
-  SafeAreaView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
 
 import {
   Colors,
   Radius,
   Spacing,
   Typography,
-} from '@/constants/theme';
+} from "../constants/theme";
+import { GlassButton } from "./glass/glass-button";
+import { GlassSurface } from "./glass/glass-surface";
+import { AppScreen } from "./layout/app-screen";
 
-type IoniconName = ComponentProps<typeof Ionicons>['name'];
+type IconName = ComponentProps<typeof Ionicons>["name"];
 
 type OnboardingScreenProps = {
   title: string;
   subtitle: string;
-  icon: IoniconName;
-  iconColor: string;
-  iconBackground: string;
+  icon: IconName;
   activePage: 0 | 1 | 2;
   buttonLabel: string;
   onPress: () => void;
@@ -34,251 +31,141 @@ export function OnboardingScreen({
   title,
   subtitle,
   icon,
-  iconColor,
-  iconBackground,
   activePage,
   buttonLabel,
   onPress,
 }: OnboardingScreenProps) {
   return (
-    <LinearGradient
-      colors={['#EEF2FF', '#F8FAFC', '#ECFDF5']}
-      locations={[0, 0.52, 1]}
-      style={styles.gradient}
+    <AppScreen
+      contentStyle={styles.screenContent}
+      footer={
+        <View style={styles.footer}>
+          <GlassButton
+            label={buttonLabel}
+            icon="arrow-back"
+            iconPosition="left"
+            onPress={onPress}
+          />
+        </View>
+      }
     >
-      <SafeAreaView style={styles.safeArea}>
-        <View pointerEvents="none" style={styles.backgroundDecoration}>
-          <View style={[styles.orb, styles.purpleOrb]} />
-          <View style={[styles.orb, styles.greenOrb]} />
-          <View style={[styles.orb, styles.orangeOrb]} />
+      <View style={styles.content}>
+        <GlassSurface
+          variant="prominent"
+          radius={Radius.xxl}
+          style={styles.iconSurface}
+          contentStyle={styles.iconContent}
+        >
+          <Ionicons
+            name={icon}
+            size={38}
+            color={Colors.primary}
+          />
+        </GlassSurface>
+
+        <View style={styles.copy}>
+          <Text style={styles.title}>{title}</Text>
+
+          <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
 
-        <View style={styles.container}>
-          <View style={styles.content}>
-            <BlurView intensity={55} tint="light" style={styles.glassCard}>
-              <View
-                style={[
-                  styles.illustrationCircle,
-                  { backgroundColor: iconBackground },
-                ]}
-              >
-                <View style={styles.iconGlow}>
-                  <Ionicons name={icon} size={54} color={iconColor} />
-                </View>
-              </View>
-
-              <View style={styles.textContainer}>
-                <Text style={styles.title}>{title}</Text>
-                <Text style={styles.subtitle}>{subtitle}</Text>
-              </View>
-
-              <View style={styles.paginationGlass}>
-                {[0, 1, 2].map((page) => (
-                  <View
-                    key={page}
-                    style={[
-                      styles.dot,
-                      activePage === page && styles.activeDot,
-                    ]}
-                  />
-                ))}
-              </View>
-            </BlurView>
-          </View>
-
-          <View style={styles.footer}>
-            <TouchableOpacity
-              activeOpacity={0.86}
-              onPress={onPress}
-              style={styles.buttonOuter}
-            >
-              <LinearGradient
-                colors={['#7C6CF2', '#5B4BD8']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.button}
-              >
-                <Text style={styles.buttonText}>{buttonLabel}</Text>
-
-                <View style={styles.buttonIcon}>
-                  <Ionicons
-                    name="arrow-forward"
-                    size={18}
-                    color={Colors.white}
-                  />
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </SafeAreaView>
-    </LinearGradient>
+        <GlassSurface
+          variant="regular"
+          radius={Radius.pill}
+          style={styles.paginationSurface}
+          contentStyle={styles.pagination}
+        >
+          {[0, 1, 2].map((page) => (
+            <View
+              key={page}
+              style={[
+                styles.dot,
+                activePage === page && styles.activeDot,
+              ]}
+            />
+          ))}
+        </GlassSurface>
+      </View>
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
+  screenContent: {
+    justifyContent: "center",
   },
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.xl,
-  },
-  backgroundDecoration: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-  },
-  orb: {
-    position: 'absolute',
-    borderRadius: Radius.pill,
-    opacity: 0.42,
-  },
-  purpleOrb: {
-    width: 260,
-    height: 260,
-    top: -70,
-    right: -90,
-    backgroundColor: '#C4B5FD',
-  },
-  greenOrb: {
-    width: 220,
-    height: 220,
-    bottom: 80,
-    left: -100,
-    backgroundColor: '#A7F3D0',
-  },
-  orangeOrb: {
-    width: 150,
-    height: 150,
-    top: '38%',
-    right: -75,
-    backgroundColor: '#FDE68A',
-  },
+
   content: {
     flex: 1,
-    justifyContent: 'center',
+    alignItems: "flex-end",
+    justifyContent: "center",
+    paddingBottom: Spacing.section,
   },
-  glassCard: {
-    alignItems: 'center',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
-    borderRadius: 32,
-    backgroundColor: 'rgba(255, 255, 255, 0.34)',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 44,
-    shadowColor: '#64748B',
-    shadowOffset: {
-      width: 0,
-      height: 18,
-    },
-    shadowOpacity: 0.16,
-    shadowRadius: 28,
-    elevation: 8,
+
+  iconSurface: {
+    width: 104,
+    height: 104,
+    alignSelf: "center",
+    marginBottom: Spacing.screen,
+    backgroundColor: "rgba(76, 141, 255, 0.10)",
+    borderColor: "rgba(100, 158, 255, 0.28)",
   },
-  illustrationCircle: {
-    width: 176,
-    height: 176,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.82)',
-    borderRadius: 88,
-    marginBottom: 38,
+
+  iconContent: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  iconGlow: {
-    width: 92,
-    height: 92,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 46,
-    backgroundColor: 'rgba(255, 255, 255, 0.54)',
+
+  copy: {
+    width: "100%",
+    alignItems: "flex-end",
+    gap: Spacing.lg,
   },
-  textContainer: {
-    alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
-  },
+
   title: {
-    color: Colors.text,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.6,
-    lineHeight: 34,
-    textAlign: 'center',
+    ...Typography.screenTitle,
+    width: "100%",
+    color: Colors.textPrimary,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
+
   subtitle: {
-    maxWidth: 310,
-    marginTop: Spacing.md,
+    ...Typography.bodyLarge,
+    width: "100%",
+    maxWidth: 430,
     color: Colors.textSecondary,
-    fontSize: Typography.body,
-    lineHeight: 24,
-    textAlign: 'center',
+    textAlign: "right",
+    writingDirection: "rtl",
   },
-  paginationGlass: {
-    flexDirection: 'row',
-    alignItems: 'center',
+
+  paginationSurface: {
+    alignSelf: "center",
+    marginTop: Spacing.screen,
+  },
+
+  pagination: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
     gap: Spacing.sm,
-    marginTop: 34,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.74)',
-    borderRadius: Radius.pill,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    paddingHorizontal: 14,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 10,
   },
+
   dot: {
-    width: 8,
-    height: 8,
+    width: 7,
+    height: 7,
     borderRadius: Radius.pill,
-    backgroundColor: 'rgba(100, 116, 139, 0.25)',
+    backgroundColor: Colors.textMuted,
   },
+
   activeDot: {
     width: 28,
     backgroundColor: Colors.primary,
   },
+
   footer: {
-    paddingTop: Spacing.lg,
-  },
-  buttonOuter: {
-    borderRadius: Radius.xl,
-    shadowColor: Colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 12,
-    },
-    shadowOpacity: 0.34,
-    shadowRadius: 18,
-    elevation: 8,
-  },
-  button: {
-    minHeight: 58,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.48)',
-    borderRadius: Radius.xl,
-    paddingHorizontal: Spacing.lg,
-  },
-  buttonText: {
-    color: Colors.white,
-    fontSize: Typography.button,
-    fontWeight: '700',
-  },
-  buttonIcon: {
-    position: 'absolute',
-    right: 18,
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    width: "100%",
   },
 });
