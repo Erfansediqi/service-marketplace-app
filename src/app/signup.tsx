@@ -1,226 +1,227 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
+
+import { GlassButton } from "../components/glass/glass-button";
+import { GlassIconButton } from "../components/glass/glass-icon-button";
+import { GlassInput } from "../components/glass/glass-input";
+import { GlassSurface } from "../components/glass/glass-surface";
+import { AppScreen } from "../components/layout/app-screen";
+import {
+  Colors,
+  Radius,
+  Spacing,
+  Typography,
+} from "../constants/theme";
 
 export default function SignupScreen() {
   const router = useRouter();
+
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const digits = phoneNumber.replace(/\D/g, "");
+
+  const nameError =
+    submitted && fullName.trim().length < 2
+      ? "Enter your full name."
+      : undefined;
+
+  const phoneError =
+    submitted && digits.length < 7
+      ? "Enter a valid phone number."
+      : undefined;
+
+  const formValid = useMemo(
+    () => fullName.trim().length >= 2 && digits.length >= 7,
+    [digits.length, fullName],
+  );
 
   const handleSendCode = () => {
-    router.push("/verify-code" as any);
+    setSubmitted(true);
+
+    if (!formValid) {
+      return;
+    }
+
+    router.push({
+      pathname: "/verify-code",
+      params: {
+        phone: `+93 ${phoneNumber.trim()}`,
+      },
+    });
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
-      >
-        <View style={styles.content}>
-          {/* User Icon Bubble */}
-          <View style={styles.illustrationContainer}>
-            <View style={styles.illustrationCircle}>
-              <Ionicons name="person-outline" size={40} color="#6C5CE7" />
-            </View>
-          </View>
-
-          {/* Title and Subtitle */}
-          <View style={styles.headerContainer}>
-            <Text style={styles.title}>Create your account</Text>
-            <Text style={styles.subtitle}>Just two details to get started</Text>
-          </View>
-
-          {/* Form Inputs */}
-          <View style={styles.formContainer}>
-            {/* Full Name Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Full name</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons
-                  name="person-outline"
-                  size={20}
-                  color="#94A3B8"
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Ahmad Zahir"
-                  placeholderTextColor="#CBD5E1"
-                  value={fullName}
-                  onChangeText={setFullName}
-                />
-              </View>
-            </View>
-
-            {/* Phone Number Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone number</Text>
-              <View style={styles.phoneRow}>
-                <View style={styles.countryCodeBox}>
-                  <Text style={styles.countryCodeText}>+93</Text>
-                </View>
-                <View style={[styles.inputWrapper, { flex: 1 }]}>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="70 123 4567"
-                    placeholderTextColor="#CBD5E1"
-                    keyboardType="phone-pad"
-                    value={phoneNumber}
-                    onChangeText={setPhoneNumber}
-                  />
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Footer CTA */}
+    <AppScreen
+      keyboardAware
+      scrollable
+      contentStyle={styles.screenContent}
+      footer={
         <View style={styles.footer}>
-          <TouchableOpacity
-            style={styles.button}
+          <GlassButton
+            disabled={!formValid && submitted}
+            icon="arrow-forward"
+            label="Send verification code"
             onPress={handleSendCode}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.buttonText}>Send verification code</Text>
-          </TouchableOpacity>
-          <Text style={styles.termsText}>
-            By continuing you agree to our Terms and Privacy Policy
+          />
+
+          <Text style={styles.legalText}>
+            By continuing, you agree to our{" "}
+            <Text style={styles.legalLink}>Terms</Text> and{" "}
+            <Text style={styles.legalLink}>Privacy Policy</Text>.
           </Text>
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      }
+    >
+      <View style={styles.topBar}>
+        <GlassIconButton
+          accessibilityLabel="Go back"
+          icon="chevron-back"
+          onPress={() => router.back()}
+        />
+      </View>
+
+      <View style={styles.hero}>
+        <GlassSurface
+          radius={Radius.xxl}
+          style={styles.heroIcon}
+          contentStyle={styles.heroIconContent}
+          variant="prominent"
+        >
+          <Text style={styles.heroMark}>K</Text>
+        </GlassSurface>
+
+        <View style={styles.heading}>
+          <Text style={styles.eyebrow}>YOUR KHEDMAT ACCOUNT</Text>
+          <Text style={styles.title}>Create your account</Text>
+          <Text style={styles.subtitle}>
+            Enter your name and phone number. We will send a short verification
+            code to confirm your account.
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.form}>
+        <GlassInput
+          autoCapitalize="words"
+          autoComplete="name"
+          error={nameError}
+          icon="person-outline"
+          label="Full name"
+          onChangeText={setFullName}
+          placeholder="Ahmad Zahir"
+          returnKeyType="next"
+          textContentType="name"
+          value={fullName}
+        />
+
+        <GlassInput
+          autoComplete="tel"
+          error={phoneError}
+          keyboardType="phone-pad"
+          label="Phone number"
+          leadingContent={
+            <View style={styles.countryCode}>
+              <Text style={styles.countryCodeText}>+93</Text>
+              <View style={styles.countryCodeDivider} />
+            </View>
+          }
+          onChangeText={setPhoneNumber}
+          placeholder="70 123 4567"
+          returnKeyType="done"
+          textContentType="telephoneNumber"
+          value={phoneNumber}
+        />
+      </View>
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
+  screenContent: {
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xxl,
   },
-  keyboardView: {
-    flex: 1,
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingVertical: 30,
+  topBar: {
+    minHeight: 44,
+    alignItems: "flex-start",
   },
-  content: {
+  hero: {
+    marginTop: Spacing.xxl,
+  },
+  heroIcon: {
+    width: 72,
+    height: 72,
+    marginBottom: Spacing.xxl,
+  },
+  heroIconContent: {
     flex: 1,
-    paddingTop: 20,
     alignItems: "center",
-  },
-  illustrationContainer: {
-    marginBottom: 24,
-    alignItems: "center",
-  },
-  illustrationCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#EDE9FE",
     justifyContent: "center",
-    alignItems: "center",
   },
-  headerContainer: {
-    alignItems: "center",
-    marginBottom: 32,
+  heroMark: {
+    color: Colors.textPrimary,
+    fontSize: 29,
+    lineHeight: 34,
+    fontWeight: "700",
+    letterSpacing: -1,
+  },
+  heading: {
+    gap: Spacing.sm,
+  },
+  eyebrow: {
+    ...Typography.captionStyle,
+    color: Colors.primary,
+    letterSpacing: 1.25,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginBottom: 6,
+    ...Typography.screenTitle,
+    color: Colors.textPrimary,
   },
   subtitle: {
-    fontSize: 14,
-    color: "#64748B",
+    ...Typography.bodyLarge,
+    color: Colors.textSecondary,
+    maxWidth: 430,
   },
-  formContainer: {
+  form: {
     width: "100%",
-    gap: 20,
+    marginTop: Spacing.screen,
+    gap: Spacing.xxl,
   },
-  inputGroup: {
-    width: "100%",
-    gap: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#475569",
-  },
-  inputWrapper: {
+  countryCode: {
+    height: "100%",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1.5,
-    borderColor: "#E2E8F0",
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 56,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#0F172A",
-  },
-  phoneRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  countryCodeBox: {
-    width: 80,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1.5,
-    borderColor: "#E2E8F0",
-    borderRadius: 16,
-    height: 56,
-    justifyContent: "center",
-    alignItems: "center",
+    gap: Spacing.md,
   },
   countryCodeText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#0F172A",
+    ...Typography.label,
+    color: Colors.textPrimary,
+  },
+  countryCodeDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 24,
+    backgroundColor: Colors.borderStrong,
   },
   footer: {
     width: "100%",
-    gap: 16,
+    gap: Spacing.lg,
     alignItems: "center",
-    paddingBottom: 10,
   },
-  button: {
-    width: "100%",
-    backgroundColor: "#6C5CE7",
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: "center",
-    shadowColor: "#6C5CE7",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  termsText: {
-    fontSize: 12,
-    color: "#94A3B8",
+  legalText: {
+    ...Typography.captionStyle,
+    color: Colors.textTertiary,
     textAlign: "center",
+    maxWidth: 330,
+  },
+  legalLink: {
+    color: Colors.textSecondary,
+    fontWeight: "600",
   },
 });

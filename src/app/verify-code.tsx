@@ -1,108 +1,257 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
 import {
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
+
+import { GlassButton } from "../components/glass/glass-button";
+import { GlassIconButton } from "../components/glass/glass-icon-button";
+import { GlassOtpInput } from "../components/glass/glass-otp-input";
+import { GlassSurface } from "../components/glass/glass-surface";
+import { AppScreen } from "../components/layout/app-screen";
+import {
+  Colors,
+  Radius,
+  Spacing,
+  Typography,
+} from "../constants/theme";
+
+const CODE_LENGTH = 4;
+const RESEND_SECONDS = 30;
 
 export default function VerifyCodeScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ phone?: string }>();
+
   const [code, setCode] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [secondsRemaining, setSecondsRemaining] =
+    useState(RESEND_SECONDS);
+
+  const phone =
+    typeof params.phone === "string" && params.phone.trim()
+      ? params.phone
+      : "+93 70 123 4567";
+
+  const validCode = useMemo(
+    () => code.length === CODE_LENGTH,
+    [code.length],
+  );
+
+  useEffect(() => {
+    if (secondsRemaining <= 0) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setSecondsRemaining((current) => current - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [secondsRemaining]);
 
   const handleVerify = () => {
-    router.push("/explore" as any);
+    setSubmitted(true);
+
+    if (!validCode) {
+      return;
+    }
+
+    router.replace("/explore");
+  };
+
+  const handleResend = () => {
+    if (secondsRemaining > 0) {
+      return;
+    }
+
+    setCode("");
+    setSubmitted(false);
+    setSecondsRemaining(RESEND_SECONDS);
+
+    // Connect the real resend-code API here later.
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.illustrationCircle}>
-          <Ionicons name="shield-checkmark-outline" size={40} color="#6C5CE7" />
+    <AppScreen
+      keyboardAware
+      contentStyle={styles.screenContent}
+      footer={
+        <View style={styles.footer}>
+          <GlassButton
+            disabled={!validCode && submitted}
+            icon="arrow-forward"
+            label="Verify and continue"
+            onPress={handleVerify}
+          />
+
+          <Pressable
+            accessibilityRole="button"
+            hitSlop={10}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.changeNumber}>Change phone number</Text>
+          </Pressable>
+        </View>
+      }
+    >
+      <View style={styles.topBar}>
+        <GlassIconButton
+          accessibilityLabel="Go back"
+          icon="chevron-back"
+          onPress={() => router.back()}
+        />
+      </View>
+
+      <View style={styles.main}>
+        <GlassSurface
+          radius={Radius.xxl}
+          style={styles.heroIcon}
+          contentStyle={styles.heroIconContent}
+          variant="prominent"
+        >
+          <Text style={styles.shield}>✓</Text>
+        </GlassSurface>
+
+        <View style={styles.heading}>
+          <Text style={styles.eyebrow}>PHONE VERIFICATION</Text>
+          <Text style={styles.title}>Enter the code</Text>
+
+          <Text style={styles.subtitle}>
+            We sent a {CODE_LENGTH}-digit verification code to{" "}
+            <Text style={styles.phone}>{phone}</Text>.
+          </Text>
         </View>
 
-        <Text style={styles.title}>Enter verification code</Text>
-        <Text style={styles.subtitle}>
-          We've sent a 4-digit code to your phone number.
-        </Text>
+        <View style={styles.codeSection}>
+          <GlassOtpInput
+            autoFocus
+            error={
+              submitted && !validCode
+                ? `Enter the complete ${CODE_LENGTH}-digit code.`
+                : undefined
+            }
+            length={CODE_LENGTH}
+            onChange={(value) => {
+              setCode(value);
 
-        <TextInput
-          style={styles.input}
-          placeholder="1234"
-          placeholderTextColor="#CBD5E1"
-          keyboardType="number-pad"
-          maxLength={4}
-          value={code}
-          onChangeText={setCode}
-        />
+              if (submitted) {
+                setSubmitted(false);
+              }
+            }}
+            value={code}
+          />
 
-        <TouchableOpacity style={styles.button} onPress={handleVerify}>
-          <Text style={styles.buttonText}>Verify & Continue</Text>
-        </TouchableOpacity>
+          <View style={styles.resendRow}>
+            <Text style={styles.resendPrompt}>
+              Didn&apos;t receive the code?
+            </Text>
+
+            <Pressable
+              accessibilityRole="button"
+              disabled={secondsRemaining > 0}
+              hitSlop={8}
+              onPress={handleResend}
+            >
+              <Text
+                style={[
+                  styles.resendAction,
+                  secondsRemaining > 0 && styles.resendDisabled,
+                ]}
+              >
+                {secondsRemaining > 0
+                  ? `Resend in ${secondsRemaining}s`
+                  : "Resend code"}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
       </View>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screenContent: {
+    paddingTop: Spacing.md,
+  },
+  topBar: {
+    minHeight: 44,
+    alignItems: "flex-start",
+  },
+  main: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
-    paddingHorizontal: 24,
+    justifyContent: "center",
+    paddingBottom: Spacing.hero,
+  },
+  heroIcon: {
+    width: 72,
+    height: 72,
+    marginBottom: Spacing.xxl,
+  },
+  heroIconContent: {
+    flex: 1,
+    alignItems: "center",
     justifyContent: "center",
   },
-  content: {
-    alignItems: "center",
-    width: "100%",
+  shield: {
+    color: Colors.primary,
+    fontSize: 30,
+    lineHeight: 34,
+    fontWeight: "700",
   },
-  illustrationCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#EDE9FE",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 24,
+  heading: {
+    gap: Spacing.sm,
+  },
+  eyebrow: {
+    ...Typography.captionStyle,
+    color: Colors.primary,
+    letterSpacing: 1.25,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginBottom: 6,
+    ...Typography.screenTitle,
+    color: Colors.textPrimary,
   },
   subtitle: {
-    fontSize: 14,
-    color: "#64748B",
-    textAlign: "center",
-    marginBottom: 32,
+    ...Typography.bodyLarge,
+    color: Colors.textSecondary,
+    maxWidth: 430,
   },
-  input: {
-    width: "100%",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1.5,
-    borderColor: "#E2E8F0",
-    borderRadius: 16,
-    height: 56,
-    fontSize: 24,
-    textAlign: "center",
-    letterSpacing: 8,
-    color: "#0F172A",
-    marginBottom: 24,
+  phone: {
+    color: Colors.textPrimary,
+    fontWeight: "600",
   },
-  button: {
-    width: "100%",
-    backgroundColor: "#6C5CE7",
-    borderRadius: 16,
-    paddingVertical: 16,
+  codeSection: {
+    marginTop: Spacing.screen,
+    gap: Spacing.xxl,
+  },
+  resendRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: Spacing.xs,
+  },
+  resendPrompt: {
+    ...Typography.captionStyle,
+    color: Colors.textTertiary,
+  },
+  resendAction: {
+    ...Typography.captionStyle,
+    color: Colors.primary,
+    fontWeight: "600",
+  },
+  resendDisabled: {
+    color: Colors.textMuted,
+  },
+  footer: {
+    gap: Spacing.xl,
     alignItems: "center",
   },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
+  changeNumber: {
+    ...Typography.label,
+    color: Colors.textSecondary,
   },
 });
