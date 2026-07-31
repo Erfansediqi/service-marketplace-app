@@ -4,14 +4,7 @@
     "strict": true,
     "paths": {
       "@/*": [
-<<<<<<< HEAD
-        "./src/*"
-      ],
-      "@/assets/*": [
-        "./assets/*"
-=======
         "./*"
->>>>>>> a7d3e1ab3cecbba72bd3293840d4cb14cd4f89b7
       ]
     }
   },
