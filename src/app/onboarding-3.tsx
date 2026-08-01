@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+
 import { OnboardingScreen } from "../components/onboarding-screen";
 import { useLanguage } from "../context/languagecontext";
 
@@ -13,7 +14,10 @@ export default function OnboardingScreenThree() {
       icon="shield-checkmark-outline"
       activePage={2}
       buttonLabel={t("continue")}
-      onPress={() => router.push("/signup")}
+      onBack={() => router.back()}
+      onPress={() =>
+        router.push("/signup")
+      }
     />
   );
 }

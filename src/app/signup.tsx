@@ -1,36 +1,106 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
-import { GlassButton } from "../components/glass/glass-button";
-import { GlassIconButton } from "../components/glass/glass-icon-button";
-import { GlassInput } from "../components/glass/glass-input";
-import { GlassSurface } from "../components/glass/glass-surface";
-import { AppScreen } from "../components/layout/app-screen";
-import { Colors, Radius, Spacing, Typography } from "../constants/theme";
+import { KhedmatButton } from "../components/khedmat/khedmat-button";
+import { KhedmatCard } from "../components/khedmat/khedmat-card";
+import { KhedmatInput } from "../components/khedmat/khedmat-input";
+import { KhedmatScreen } from "../components/khedmat/khedmat-screen";
+import {
+  KhedmatPalette,
+  Layout,
+  Radius,
+  Shadows,
+  Spacing,
+  Typography,
+} from "../constants/theme";
 import { useLanguage } from "../context/languagecontext";
 
 export default function SignupScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
-  const isRtl = language === "Pashto" || language === "Dari";
 
-  const [fullName, setFullName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const isRtl =
+    language === "Dari" ||
+    language === "Pashto";
 
-  const digits = phoneNumber.replace(/\D/g, "");
+  const usesLocalizedDigits = isRtl;
+
+  const [fullName, setFullName] =
+    useState("");
+
+  const [
+    phoneNumber,
+    setPhoneNumber,
+  ] = useState("");
+
+  const [submitted, setSubmitted] =
+    useState(false);
+
+  const normalizedPhoneNumber =
+    normalizeToEnglishDigits(phoneNumber);
+
+  const digits =
+    normalizedPhoneNumber.replace(
+      /\D/g,
+      "",
+    );
 
   const nameError =
-    submitted && fullName.trim().length < 2 ? t("nameError") : undefined;
+    submitted &&
+    fullName.trim().length < 2
+      ? t("nameError")
+      : undefined;
 
   const phoneError =
-    submitted && digits.length < 7 ? t("phoneError") : undefined;
+    submitted &&
+    digits.length < 7
+      ? t("phoneError")
+      : undefined;
 
   const formValid = useMemo(
-    () => fullName.trim().length >= 2 && digits.length >= 7,
+    () =>
+      fullName.trim().length >= 2 &&
+      digits.length >= 7,
     [digits.length, fullName],
   );
+
+  const displayedPhoneNumber =
+    usesLocalizedDigits
+      ? toLocalizedDigits(
+          normalizedPhoneNumber,
+        )
+      : normalizedPhoneNumber;
+
+  const phonePlaceholder =
+    usesLocalizedDigits
+      ? toLocalizedDigits(
+          "701234567",
+        )
+      : "701234567";
+
+  const countryCode =
+    usesLocalizedDigits
+      ? toLocalizedDigits("+93")
+      : "+93";
+
+  const handlePhoneChange = (
+    value: string,
+  ) => {
+    const normalized =
+      normalizeToEnglishDigits(value);
+
+    const numbersOnly =
+      normalized.replace(/\D/g, "");
+
+    setPhoneNumber(numbersOnly);
+  };
 
   const handleSendCode = () => {
     setSubmitted(true);
@@ -42,22 +112,58 @@ export default function SignupScreen() {
     router.push({
       pathname: "/verify-code",
       params: {
-        phone: `+93 ${phoneNumber.trim()}`,
+        phone: `+93 ${digits}`,
       },
     });
   };
 
+  const nameIcon = (
+    <Ionicons
+      name="person-outline"
+      size={21}
+      color={KhedmatPalette.textMuted}
+    />
+  );
+
+  const phoneCodeContent = (
+    <View
+      style={[
+        styles.countryCode,
+        isRtl
+          ? styles.countryCodeRtl
+          : styles.countryCodeLtr,
+      ]}
+    >
+      <Text
+        style={styles.countryCodeText}
+      >
+        {countryCode}
+      </Text>
+
+      <View
+        style={
+          styles.countryCodeDivider
+        }
+      />
+    </View>
+  );
+
   return (
-    <AppScreen
+    <KhedmatScreen
       keyboardAware
       scrollable
-      contentStyle={styles.screenContent}
+      contentStyle={
+        styles.screenContent
+      }
       footer={
         <View style={styles.footer}>
-          <GlassButton
-            disabled={!formValid && submitted}
-            icon="arrow-forward"
-            label={t("sendVerificationCode")}
+          <KhedmatButton
+            label={t(
+              "sendVerificationCode",
+            )}
+            disabled={
+              submitted && !formValid
+            }
             onPress={handleSendCode}
           />
 
@@ -65,8 +171,9 @@ export default function SignupScreen() {
             style={[
               styles.legalText,
               {
-                textAlign: isRtl ? "right" : "left",
-                writingDirection: isRtl ? "rtl" : "ltr",
+                writingDirection: isRtl
+                  ? "rtl"
+                  : "ltr",
               },
             ]}
           >
@@ -75,201 +182,364 @@ export default function SignupScreen() {
         </View>
       }
     >
-      <View
-        style={[
-          styles.topBar,
-          { alignItems: isRtl ? "flex-start" : "flex-end" },
-        ]}
-      >
-        <GlassIconButton
+      <View style={styles.topBar}>
+        <Pressable
+          accessibilityRole="button"
           accessibilityLabel={t("back")}
-          icon="chevron-back"
           onPress={() => router.back()}
-        />
+          style={({ pressed }) => [
+            styles.backButton,
+            pressed &&
+              styles.backButtonPressed,
+          ]}
+        >
+          <Ionicons
+            name={
+              isRtl
+                ? "chevron-forward"
+                : "chevron-back"
+            }
+            size={24}
+            color={
+              KhedmatPalette.navy900
+            }
+          />
+        </Pressable>
       </View>
 
       <View style={styles.hero}>
-        <GlassSurface
-          radius={Radius.xxl}
-          style={[
-            styles.heroIcon,
-            { alignSelf: isRtl ? "flex-end" : "flex-start" },
-          ]}
-          contentStyle={styles.heroIconContent}
-          variant="prominent"
-        >
-          <Text style={styles.heroMark}>خ</Text>
-        </GlassSurface>
-
-        <View
-          style={[
-            styles.heading,
-            { alignItems: isRtl ? "flex-end" : "flex-start" },
-          ]}
-        >
-          <Text
-            style={[
-              styles.eyebrow,
-              {
-                textAlign: isRtl ? "right" : "left",
-                writingDirection: isRtl ? "rtl" : "ltr",
-              },
-            ]}
-          >
-            {t("serviceAccount")}
-          </Text>
-
-          <Text
-            style={[
-              styles.title,
-              {
-                textAlign: isRtl ? "right" : "left",
-                writingDirection: isRtl ? "rtl" : "ltr",
-              },
-            ]}
-          >
-            {t("createAccountTitle")}
-          </Text>
-
-          <Text
-            style={[
-              styles.subtitle,
-              {
-                textAlign: isRtl ? "right" : "left",
-                writingDirection: isRtl ? "rtl" : "ltr",
-              },
-            ]}
-          >
-            {t("createAccountSubtitle")}
-          </Text>
+        <View style={styles.avatar}>
+          <Ionicons
+            name="person"
+            size={44}
+            color={
+              KhedmatPalette.white
+            }
+          />
         </View>
+
+        <Text
+          style={[
+            styles.title,
+            {
+              writingDirection: isRtl
+                ? "rtl"
+                : "ltr",
+            },
+          ]}
+        >
+          {t("createAccountTitle")}
+        </Text>
       </View>
 
-      <View style={styles.form}>
-        <GlassInput
-          autoCapitalize="words"
-          autoComplete="name"
-          error={nameError}
-          icon="person-outline"
-          label={t("fullNameLabel")}
-          onChangeText={setFullName}
-          placeholder={t("fullNamePlaceholder")}
-          returnKeyType="next"
-          textContentType="name"
-          value={fullName}
-        />
+      <KhedmatCard
+        style={styles.formCard}
+        contentStyle={
+          styles.formCardContent
+        }
+      >
+        <View style={styles.form}>
+          <KhedmatInput
+            autoCapitalize="words"
+            autoComplete="name"
+            error={nameError}
+            isRtl={isRtl}
+            label={t("fullNameLabel")}
+            leadingContent={
+              isRtl
+                ? undefined
+                : nameIcon
+            }
+            trailingContent={
+              isRtl
+                ? nameIcon
+                : undefined
+            }
+            onChangeText={setFullName}
+            placeholder={t(
+              "fullNamePlaceholder",
+            )}
+            returnKeyType="next"
+            textContentType="name"
+            value={fullName}
+          />
 
-        <GlassInput
-          autoComplete="tel"
-          error={phoneError}
-          keyboardType="phone-pad"
-          label={t("phoneLabel")}
-          leadingContent={
-            <View style={styles.countryCode}>
-              <Text style={styles.countryCodeText}>+93</Text>
-              <View style={styles.countryCodeDivider} />
-            </View>
+          <KhedmatInput
+            autoComplete="tel"
+            error={phoneError}
+            isRtl={isRtl}
+            keyboardType="phone-pad"
+            label={t("phoneLabel")}
+            leadingContent={
+              isRtl
+                ? undefined
+                : phoneCodeContent
+            }
+            trailingContent={
+              isRtl
+                ? phoneCodeContent
+                : undefined
+            }
+            onChangeText={
+              handlePhoneChange
+            }
+            placeholder={
+              phonePlaceholder
+            }
+            returnKeyType="done"
+            textContentType="telephoneNumber"
+            value={displayedPhoneNumber}
+          />
+        </View>
+      </KhedmatCard>
+
+      <View
+        style={[
+          styles.securityNote,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
+      >
+        <Ionicons
+          name="shield-checkmark-outline"
+          size={17}
+          color={
+            KhedmatPalette.blue500
           }
-          onChangeText={setPhoneNumber}
-          placeholder="701234567"
-          returnKeyType="done"
-          textContentType="telephoneNumber"
-          value={phoneNumber}
         />
+
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.78}
+          style={[
+            styles.securityText,
+            {
+              textAlign: isRtl
+                ? "right"
+                : "left",
+              writingDirection: isRtl
+                ? "rtl"
+                : "ltr",
+            },
+          ]}
+        >
+          {getSecurityMessage(language)}
+        </Text>
       </View>
-    </AppScreen>
+    </KhedmatScreen>
   );
+}
+
+function normalizeToEnglishDigits(
+  value: string,
+): string {
+  const persianDigits =
+    "۰۱۲۳۴۵۶۷۸۹";
+
+  const arabicDigits =
+    "٠١٢٣٤٥٦٧٨٩";
+
+  return value
+    .replace(
+      /[۰-۹]/g,
+      (digit) =>
+        String(
+          persianDigits.indexOf(
+            digit,
+          ),
+        ),
+    )
+    .replace(
+      /[٠-٩]/g,
+      (digit) =>
+        String(
+          arabicDigits.indexOf(
+            digit,
+          ),
+        ),
+    );
+}
+
+function toLocalizedDigits(
+  value: string,
+): string {
+  const digits: Record<
+    string,
+    string
+  > = {
+    "0": "۰",
+    "1": "۱",
+    "2": "۲",
+    "3": "۳",
+    "4": "۴",
+    "5": "۵",
+    "6": "۶",
+    "7": "۷",
+    "8": "۸",
+    "9": "۹",
+  };
+
+  return value.replace(
+    /\d/g,
+    (digit) =>
+      digits[digit] ?? digit,
+  );
+}
+
+function getSecurityMessage(
+  language: string,
+): string {
+  if (language === "Dari") {
+    return "شماره تماس شما فقط برای تأیید حساب و هماهنگی خدمات استفاده می‌شود.";
+  }
+
+  if (language === "Pashto") {
+    return "ستاسو د تلیفون شمېره یوازې د حساب د تایید او خدمتونو د همغږۍ لپاره کارول کېږي.";
+  }
+
+  return "Your phone number is used only for account verification and service coordination.";
 }
 
 const styles = StyleSheet.create({
   screenContent: {
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.sm,
     paddingBottom: Spacing.xxl,
   },
 
   topBar: {
-    minHeight: 44,
+    width: "100%",
+    minHeight:
+      Layout.minimumTouchTarget,
+    alignItems: "flex-start",
+  },
+
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.surface,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+  },
+
+  backButtonPressed: {
+    opacity: 0.78,
+    transform: [
+      {
+        scale: 0.96,
+      },
+    ],
   },
 
   hero: {
+    width: "100%",
     marginTop: Spacing.lg,
+    alignItems: "center",
   },
 
-  heroIcon: {
-    width: 72,
-    height: 72,
-    marginBottom: Spacing.lg,
-  },
-
-  heroIconContent: {
-    flex: 1,
+  avatar: {
+    width: 92,
+    height: 92,
+    marginBottom: Spacing.xl,
+    borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-  },
-
-  heroMark: {
-    color: Colors.textPrimary,
-    fontSize: 29,
-    lineHeight: 34,
-    fontWeight: "700",
-  },
-
-  heading: {
-    gap: Spacing.xs,
-  },
-
-  eyebrow: {
-    ...Typography.captionStyle,
-    color: Colors.primary,
-    letterSpacing: 1,
+    backgroundColor:
+      KhedmatPalette.navy900,
+    ...Shadows.darkAccent,
   },
 
   title: {
     ...Typography.screenTitle,
-    color: Colors.textPrimary,
+    width: "100%",
+    maxWidth:
+      Layout.readableTextMaxWidth,
+    alignSelf: "center",
+    color:
+      KhedmatPalette.textPrimary,
+    textAlign: "center",
   },
 
-  subtitle: {
-    ...Typography.bodyLarge,
-    color: Colors.textSecondary,
-    maxWidth: 430,
+  formCard: {
+    marginTop: Spacing.xxl,
+  },
+
+  formCardContent: {
+    padding: Spacing.lg,
   },
 
   form: {
     width: "100%",
-    marginTop: Spacing.xl,
     gap: Spacing.lg,
   },
 
   countryCode: {
     height: "100%",
-    flexDirection: "row",
     alignItems: "center",
     gap: Spacing.md,
+  },
+
+  countryCodeRtl: {
+    flexDirection: "row-reverse",
+  },
+
+  countryCodeLtr: {
+    flexDirection: "row",
   },
 
   countryCodeText: {
     ...Typography.label,
-    color: Colors.textPrimary,
+    color:
+      KhedmatPalette.navy700,
   },
 
   countryCodeDivider: {
-    width: StyleSheet.hairlineWidth,
+    width:
+      StyleSheet.hairlineWidth,
     height: 24,
-    backgroundColor: Colors.borderStrong,
+    backgroundColor:
+      KhedmatPalette.border,
+  },
+
+  securityNote: {
+    width: "100%",
+    marginTop: Spacing.lg,
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingHorizontal: 2,
+  },
+
+  securityText: {
+    ...Typography.captionStyle,
+    flex: 1,
+    color:
+      KhedmatPalette.textSecondary,
+    lineHeight: 18,
   },
 
   footer: {
     width: "100%",
-    gap: Spacing.md,
+    gap: Spacing.sm,
     alignItems: "center",
-    paddingVertical: Spacing.sm,
   },
 
   legalText: {
     ...Typography.captionStyle,
-    color: Colors.textTertiary,
+    width: "100%",
+    maxWidth:
+      Layout.readableTextMaxWidth,
+    alignSelf: "center",
+    color:
+      KhedmatPalette.textMuted,
+    lineHeight: 17,
     textAlign: "center",
-    paddingHorizontal: Spacing.md,
   },
 });

@@ -1,163 +1,364 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
-  SafeAreaView,
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
+
+import { KhedmatButton } from "../components/khedmat/khedmat-button";
+import { KhedmatScreen } from "../components/khedmat/khedmat-screen";
+import {
+  KhedmatPalette,
+  Layout,
+  Radius,
+  Shadows,
+  Spacing,
+  Typography,
+} from "../constants/theme";
 import { useLanguage } from "../context/languagecontext";
+
+type LanguageOption = {
+  id: "English" | "Dari" | "Pashto";
+  label: string;
+  nativeLabel: string;
+};
+
+const languages: LanguageOption[] = [
+  {
+    id: "English",
+    label: "English",
+    nativeLabel: "English",
+  },
+  {
+    id: "Dari",
+    label: "Dari",
+    nativeLabel: "دری",
+  },
+  {
+    id: "Pashto",
+    label: "Pashto",
+    nativeLabel: "پښتو",
+  },
+];
 
 export default function LanguageScreen() {
   const router = useRouter();
-  const { language, setLanguage, t } = useLanguage();
 
-  const languages = [
-    { id: "English", label: "English" },
-    { id: "Dari", label: "دری" },
-    { id: "Pashto", label: "پښتو" },
-  ] as const;
+  const {
+    language,
+    setLanguage,
+    t,
+  } = useLanguage();
+
+  const isRtl =
+    language === "Dari" ||
+    language === "Pashto";
 
   const handleContinue = () => {
     router.push("/onboarding-1");
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Header Icon & Title */}
-        <View style={styles.headerContainer}>
+    <KhedmatScreen
+      contentStyle={styles.screenContent}
+      footer={
+        <View style={styles.footer}>
+          <KhedmatButton
+            label={t("continue")}
+            onPress={handleContinue}
+          />
+        </View>
+      }
+    >
+      <View style={styles.centerContent}>
+        <View style={styles.iconCircle}>
           <Ionicons
             name="globe-outline"
-            size={40}
-            color="#6C5CE7"
-            style={styles.globeIcon}
+            size={42}
+            color={KhedmatPalette.white}
           />
-          <Text style={styles.title}>{t("chooseLanguage")}</Text>
-          <Text style={styles.subtitle}>{t("subtitle")}</Text>
         </View>
 
-        {/* Language Options Cards */}
+        <View style={styles.header}>
+          <Text
+            style={[
+              styles.title,
+              {
+                writingDirection: isRtl
+                  ? "rtl"
+                  : "ltr",
+              },
+            ]}
+          >
+            {t("chooseLanguage")}
+          </Text>
+
+          <Text
+            style={[
+              styles.subtitle,
+              {
+                writingDirection: isRtl
+                  ? "rtl"
+                  : "ltr",
+              },
+            ]}
+          >
+            {t("subtitle")}
+          </Text>
+        </View>
+
         <View style={styles.optionsContainer}>
-          {languages.map((lang) => {
-            const isSelected = language === lang.id;
+          {languages.map((item) => {
+            const selected =
+              language === item.id;
+
+            const optionIsRtl =
+              item.id === "Dari" ||
+              item.id === "Pashto";
+
             return (
-              <TouchableOpacity
-                key={lang.id}
-                style={[styles.card, isSelected && styles.selectedCard]}
-                onPress={() => setLanguage(lang.id)}
-                activeOpacity={0.8}
+              <Pressable
+                key={item.id}
+                accessibilityRole="radio"
+                accessibilityState={{
+                  selected,
+                }}
+                accessibilityLabel={
+                  item.label
+                }
+                onPress={() =>
+                  setLanguage(item.id)
+                }
+                style={({ pressed }) => [
+                  styles.languageCard,
+                  selected &&
+                    styles.selectedLanguageCard,
+                  pressed &&
+                    styles.languageCardPressed,
+                ]}
               >
-                <Text
+                <View
                   style={[
-                    styles.cardText,
-                    isSelected && styles.selectedCardText,
+                    styles.optionContent,
+                    {
+                      flexDirection:
+                        optionIsRtl
+                          ? "row-reverse"
+                          : "row",
+                    },
                   ]}
                 >
-                  {lang.label}
-                </Text>
-                <Ionicons
-                  name={
-                    isSelected ? "checkmark-circle-outline" : "ellipse-outline"
-                  }
-                  size={20}
-                  color={isSelected ? "#6C5CE7" : "#CBD5E1"}
-                />
-              </TouchableOpacity>
+                  <View
+                    style={
+                      styles.languageCopy
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.languageName,
+                        selected &&
+                          styles.selectedLanguageName,
+                        {
+                          textAlign:
+                            optionIsRtl
+                              ? "right"
+                              : "left",
+                          writingDirection:
+                            optionIsRtl
+                              ? "rtl"
+                              : "ltr",
+                        },
+                      ]}
+                    >
+                      {item.nativeLabel}
+                    </Text>
+
+                    {item.label !==
+                    item.nativeLabel ? (
+                      <Text
+                        style={[
+                          styles.languageSecondaryLabel,
+                          {
+                            textAlign:
+                              optionIsRtl
+                                ? "right"
+                                : "left",
+                          },
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  <View
+                    style={[
+                      styles.selectionCircle,
+                      selected &&
+                        styles.selectionCircleSelected,
+                    ]}
+                  >
+                    {selected ? (
+                      <Ionicons
+                        name="checkmark"
+                        size={16}
+                        color={
+                          KhedmatPalette.white
+                        }
+                      />
+                    ) : null}
+                  </View>
+                </View>
+              </Pressable>
             );
           })}
         </View>
       </View>
-
-      {/* Continue Button */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.continueButton}
-          onPress={handleContinue}
-        >
-          <Text style={styles.continueButtonText}>{t("continue")}</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+    </KhedmatScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screenContent: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 30,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xxl,
   },
-  content: {
+
+  centerContent: {
     flex: 1,
-    paddingTop: 40,
+    width: "100%",
     alignItems: "center",
+    justifyContent: "center",
+    paddingBottom: Spacing.screen,
   },
-  globeIcon: {
-    marginBottom: 16,
-  },
-  headerContainer: {
+
+  iconCircle: {
+    width: 88,
+    height: 88,
+    marginBottom: Spacing.xl,
+    borderRadius: Radius.pill,
     alignItems: "center",
-    marginBottom: 30,
+    justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.navy900,
+    ...Shadows.darkAccent,
   },
+
+  header: {
+    width: "100%",
+    maxWidth:
+      Layout.readableTextMaxWidth,
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+
   title: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginBottom: 6,
+    ...Typography.screenTitle,
+    width: "100%",
+    color:
+      KhedmatPalette.textPrimary,
+    textAlign: "center",
   },
+
   subtitle: {
-    fontSize: 13,
-    color: "#64748B",
+    ...Typography.bodyStyle,
+    width: "100%",
+    color:
+      KhedmatPalette.textSecondary,
+    textAlign: "center",
   },
+
   optionsContainer: {
     width: "100%",
-    gap: 12,
+    marginTop: Spacing.xxl,
+    gap: Spacing.md,
   },
-  card: {
-    flexDirection: "row",
+
+  languageCard: {
+    width: "100%",
+    minHeight: 72,
+    justifyContent: "center",
+    paddingHorizontal: Spacing.lg,
+    backgroundColor:
+      KhedmatPalette.surface,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    borderRadius: Radius.xl,
+  },
+
+  selectedLanguageCard: {
+    borderWidth: 2,
+    borderColor:
+      KhedmatPalette.blue500,
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
+    ...Shadows.small,
+  },
+
+  languageCardPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.994 }],
+  },
+
+  optionContent: {
+    width: "100%",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#FFFFFF",
+    gap: Spacing.md,
+  },
+
+  languageCopy: {
+    flex: 1,
+    gap: 2,
+  },
+
+  languageName: {
+    ...Typography.label,
+    width: "100%",
+    color:
+      KhedmatPalette.textPrimary,
+    fontSize: 17,
+    lineHeight: 23,
+  },
+
+  selectedLanguageName: {
+    color:
+      KhedmatPalette.navy700,
+  },
+
+  languageSecondaryLabel: {
+    ...Typography.captionStyle,
+    width: "100%",
+    color:
+      KhedmatPalette.textMuted,
+  },
+
+  selectionCircle: {
+    width: 28,
+    height: 28,
+    flexShrink: 0,
+    borderRadius: Radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1.5,
-    borderColor: "#E2E8F0",
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
+    borderColor:
+      KhedmatPalette.border,
+    backgroundColor:
+      KhedmatPalette.surface,
   },
-  selectedCard: {
-    borderColor: "#6C5CE7",
-    backgroundColor: "#F3F4F6",
+
+  selectionCircleSelected: {
+    borderColor:
+      KhedmatPalette.blue500,
+    backgroundColor:
+      KhedmatPalette.blue500,
   },
-  cardText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1E293B",
-  },
-  selectedCardText: {
-    color: "#6C5CE7",
-  },
+
   footer: {
     width: "100%",
-    paddingBottom: 10,
-  },
-  continueButton: {
-    backgroundColor: "#6C5CE7",
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: "center",
-    shadowColor: "#6C5CE7",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  continueButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
   },
 });

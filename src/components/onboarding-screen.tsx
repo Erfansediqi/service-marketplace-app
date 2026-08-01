@@ -1,14 +1,26 @@
 import { Ionicons } from "@expo/vector-icons";
 import { ComponentProps } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
-import { Colors, Radius, Spacing, Typography } from "../constants/theme";
+import {
+  KhedmatPalette,
+  Layout,
+  Radius,
+  Shadows,
+  Spacing,
+  Typography,
+} from "../constants/theme";
 import { useLanguage } from "../context/languagecontext";
-import { GlassButton } from "./glass/glass-button";
-import { GlassSurface } from "./glass/glass-surface";
-import { AppScreen } from "./layout/app-screen";
+import { KhedmatButton } from "./khedmat/khedmat-button";
+import { KhedmatScreen } from "./khedmat/khedmat-screen";
 
-type IconName = ComponentProps<typeof Ionicons>["name"];
+type IconName =
+  ComponentProps<typeof Ionicons>["name"];
 
 type OnboardingScreenProps = {
   title: string;
@@ -17,6 +29,7 @@ type OnboardingScreenProps = {
   activePage: 0 | 1 | 2;
   buttonLabel: string;
   onPress: () => void;
+  onBack?: () => void;
 };
 
 export function OnboardingScreen({
@@ -26,51 +39,72 @@ export function OnboardingScreen({
   activePage,
   buttonLabel,
   onPress,
+  onBack,
 }: OnboardingScreenProps) {
   const { language } = useLanguage();
-  const isEnglish = language === "English";
+
+  const isRtl =
+    language === "Dari" ||
+    language === "Pashto";
 
   return (
-    <AppScreen
+    <KhedmatScreen
       contentStyle={styles.screenContent}
       footer={
         <View style={styles.footer}>
-          <GlassButton
+          <KhedmatButton
             label={buttonLabel}
-            icon={isEnglish ? "arrow-forward" : "arrow-back"}
-            iconPosition={isEnglish ? "right" : "left"}
             onPress={onPress}
           />
         </View>
       }
     >
-      <View
-        style={[
-          styles.content,
-          { alignItems: isEnglish ? "flex-start" : "flex-end" },
-        ]}
-      >
-        <GlassSurface
-          variant="prominent"
-          radius={Radius.xxl}
-          style={styles.iconSurface}
-          contentStyle={styles.iconContent}
-        >
-          <Ionicons name={icon} size={38} color={Colors.primary} />
-        </GlassSurface>
+      <View style={styles.topBar}>
+        {onBack ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+            onPress={onBack}
+            style={({ pressed }) => [
+              styles.backButton,
+              pressed &&
+                styles.backButtonPressed,
+            ]}
+          >
+            <Ionicons
+              name={
+                isRtl
+                  ? "chevron-forward"
+                  : "chevron-back"
+              }
+              size={24}
+              color={
+                KhedmatPalette.navy900
+              }
+            />
+          </Pressable>
+        ) : (
+          <View style={styles.backPlaceholder} />
+        )}
+      </View>
 
-        <View
-          style={[
-            styles.copy,
-            { alignItems: isEnglish ? "flex-start" : "flex-end" },
-          ]}
-        >
+      <View style={styles.content}>
+        <View style={styles.iconCircle}>
+          <Ionicons
+            name={icon}
+            size={46}
+            color={KhedmatPalette.white}
+          />
+        </View>
+
+        <View style={styles.copy}>
           <Text
             style={[
               styles.title,
               {
-                textAlign: isEnglish ? "left" : "right",
-                writingDirection: isEnglish ? "ltr" : "rtl",
+                writingDirection: isRtl
+                  ? "rtl"
+                  : "ltr",
               },
             ]}
           >
@@ -81,8 +115,9 @@ export function OnboardingScreen({
             style={[
               styles.subtitle,
               {
-                textAlign: isEnglish ? "left" : "right",
-                writingDirection: isEnglish ? "ltr" : "rtl",
+                writingDirection: isRtl
+                  ? "rtl"
+                  : "ltr",
               },
             ]}
           >
@@ -90,93 +125,133 @@ export function OnboardingScreen({
           </Text>
         </View>
 
-        <GlassSurface
-          variant="regular"
-          radius={Radius.pill}
-          style={styles.paginationSurface}
-          contentStyle={[
+        <View
+          style={[
             styles.pagination,
-            { flexDirection: isEnglish ? "row" : "row-reverse" },
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
           ]}
         >
           {[0, 1, 2].map((page) => (
             <View
               key={page}
-              style={[styles.dot, activePage === page && styles.activeDot]}
+              style={[
+                styles.dot,
+                activePage === page &&
+                  styles.activeDot,
+              ]}
             />
           ))}
-        </GlassSurface>
+        </View>
       </View>
-    </AppScreen>
+    </KhedmatScreen>
   );
 }
 
 const styles = StyleSheet.create({
   screenContent: {
+    flex: 1,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xxl,
+  },
+
+  topBar: {
+    width: "100%",
+    minHeight:
+      Layout.minimumTouchTarget,
+    alignItems: "flex-start",
+  },
+
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.pill,
+    alignItems: "center",
     justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.surface,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+  },
+
+  backButtonPressed: {
+    opacity: 0.78,
+    transform: [{ scale: 0.96 }],
+  },
+
+  backPlaceholder: {
+    width: 44,
+    height: 44,
   },
 
   content: {
     flex: 1,
-    justifyContent: "center",
-    paddingBottom: Spacing.section,
-  },
-
-  iconSurface: {
-    width: 104,
-    height: 104,
-    alignSelf: "center",
-    marginBottom: Spacing.screen,
-    backgroundColor: "rgba(76, 141, 255, 0.10)",
-    borderColor: "rgba(100, 158, 255, 0.28)",
-  },
-
-  iconContent: {
-    flex: 1,
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
+    paddingBottom: Spacing.screen,
+  },
+
+  iconCircle: {
+    width: 112,
+    height: 112,
+    marginBottom: Spacing.xxl,
+    borderRadius: Radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.navy900,
+    ...Shadows.darkAccent,
   },
 
   copy: {
     width: "100%",
-    gap: Spacing.lg,
+    maxWidth:
+      Layout.readableTextMaxWidth,
+    alignItems: "center",
+    gap: Spacing.md,
   },
 
   title: {
     ...Typography.screenTitle,
     width: "100%",
-    color: Colors.textPrimary,
+    color:
+      KhedmatPalette.textPrimary,
+    textAlign: "center",
   },
 
   subtitle: {
-    ...Typography.bodyLarge,
+    ...Typography.bodyStyle,
     width: "100%",
-    maxWidth: 430,
-    color: Colors.textSecondary,
-  },
-
-  paginationSurface: {
-    alignSelf: "center",
-    marginTop: Spacing.screen,
+    color:
+      KhedmatPalette.textSecondary,
+    textAlign: "center",
+    lineHeight: 24,
   },
 
   pagination: {
+    marginTop: Spacing.screen,
     alignItems: "center",
+    justifyContent: "center",
     gap: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 10,
   },
 
   dot: {
-    width: 7,
-    height: 7,
+    width: 8,
+    height: 8,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.textMuted,
+    backgroundColor:
+      KhedmatPalette.blue200,
   },
 
   activeDot: {
     width: 28,
-    backgroundColor: Colors.primary,
+    backgroundColor:
+      KhedmatPalette.blue500,
   },
 
   footer: {

@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+
 import { OnboardingScreen } from "../components/onboarding-screen";
 import { useLanguage } from "../context/languagecontext";
 
@@ -10,10 +11,13 @@ export default function OnboardingScreenTwo() {
     <OnboardingScreen
       title={t("onboarding2Title")}
       subtitle={t("onboarding2Subtitle")}
-      icon="construct-outline"
+      icon="calendar-outline"
       activePage={1}
       buttonLabel={t("next")}
-      onPress={() => router.push("/onboarding-3")}
+      onBack={() => router.back()}
+      onPress={() =>
+        router.push("/onboarding-3")
+      }
     />
   );
 }

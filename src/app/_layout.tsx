@@ -1,15 +1,54 @@
+import {
+  Roboto_400Regular,
+  Roboto_500Medium,
+  Roboto_600SemiBold,
+  Roboto_700Bold,
+  useFonts,
+} from "@expo-google-fonts/roboto";
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { useEffect } from "react";
 
 import { BookingProvider } from "../context/booking-context";
 import { LanguageProvider } from "../context/languagecontext";
 import { SessionProvider } from "../context/session-context";
 
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // The splash screen may already be controlled by Expo during fast refresh.
+});
+
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Roboto_400Regular,
+    Roboto_500Medium,
+    Roboto_600SemiBold,
+    Roboto_700Bold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync().catch(() => {
+        // Ignore errors if the splash screen has already been hidden.
+      });
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
   return (
     <SessionProvider>
       <BookingProvider>
         <LanguageProvider>
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: {
+                backgroundColor: "#D6E8EE",
+              },
+            }}
+          >
             <Stack.Screen name="index" />
             <Stack.Screen name="language" />
 

@@ -1,12 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
+  Pressable,
   SafeAreaView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
+
+import {
+  KhedmatPalette,
+  Radius,
+  Shadows,
+  Spacing,
+  Typography,
+} from "../constants/theme";
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -16,80 +24,105 @@ export default function SplashScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Center Brand Identity */}
-      <View style={styles.centerContent}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="compass-outline" size={36} color="#FFFFFF" />
-        </View>
-        <Text style={styles.brandTitle}>Khedmat</Text>
-        <Text style={styles.brandSubtitle}>Find trusted help, near you</Text>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.centerContent}>
+          <View style={styles.logo}>
+            <Ionicons
+              name="construct-outline"
+              size={42}
+              color={KhedmatPalette.white}
+            />
+          </View>
 
-      {/* Bottom Navigation Arrow Key */}
-      <View style={styles.bottomContainer}>
-        <TouchableOpacity
-          style={styles.arrowButton}
+          <Text style={styles.brandTitle}>
+            Khedmat
+          </Text>
+
+          <Text style={styles.brandSubtitle}>
+            Find trusted help, near you
+          </Text>
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Continue"
           onPress={handleNextPress}
-          activeOpacity={0.8}
+          style={({ pressed }) => [
+            styles.continueButton,
+            pressed && styles.continueButtonPressed,
+          ]}
         >
-          <Ionicons name="arrow-forward" size={24} color="#0066FF" />
-        </TouchableOpacity>
+          <Ionicons
+            name="arrow-forward"
+            size={24}
+            color={KhedmatPalette.navy900}
+          />
+        </Pressable>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: KhedmatPalette.navy900,
+  },
+
   container: {
     flex: 1,
-    backgroundColor: "#6C5CE7",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 40,
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.screen,
+    paddingBottom: Spacing.xxl,
+    backgroundColor: KhedmatPalette.navy900,
   },
+
   centerContent: {
     flex: 1,
-    justifyContent: "center",
     alignItems: "center",
-  },
-  iconContainer: {
-    width: 72,
-    height: 72,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    borderRadius: 20,
     justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
   },
+
+  logo: {
+    width: 88,
+    height: 88,
+    marginBottom: Spacing.xl,
+    borderRadius: Radius.xxl,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: KhedmatPalette.navy700,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.22)",
+  },
+
   brandTitle: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    letterSpacing: -0.5,
-    marginBottom: 6,
+    ...Typography.display,
+    color: KhedmatPalette.white,
+    textAlign: "center",
   },
+
   brandSubtitle: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.8)",
-    fontWeight: "500",
+    ...Typography.bodyStyle,
+    marginTop: Spacing.xs,
+    color: KhedmatPalette.blue200,
+    textAlign: "center",
   },
-  bottomContainer: {
-    width: "100%",
-    alignItems: "center",
-    paddingBottom: 20,
-  },
-  arrowButton: {
+
+  continueButton: {
     width: 56,
     height: 56,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 28,
-    justifyContent: "center",
+    borderRadius: Radius.pill,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    justifyContent: "center",
+    backgroundColor: KhedmatPalette.white,
+    ...Shadows.medium,
+  },
+
+  continueButtonPressed: {
+    opacity: 0.86,
+    transform: [{ scale: 0.96 }],
   },
 });
