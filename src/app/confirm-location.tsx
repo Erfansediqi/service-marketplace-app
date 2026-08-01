@@ -2,11 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import MapView, { Region } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,11 +15,11 @@ import { GlassButton } from "../components/glass/glass-button";
 import { GlassIconButton } from "../components/glass/glass-icon-button";
 import { GlassSurface } from "../components/glass/glass-surface";
 import {
-    Colors,
-    Radius,
-    Shadows,
-    Spacing,
-    Typography,
+  Colors,
+  Radius,
+  Shadows,
+  Spacing,
+  Typography,
 } from "../constants/theme";
 import { reverseGeocode } from "../services/location";
 
@@ -226,7 +226,7 @@ export default function ConfirmLocationScreen() {
              * address.details
              */
 
-            router.replace("/explore");
+            router.replace("/role-selection");
           },
         },
       ],

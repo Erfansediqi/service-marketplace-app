@@ -1,23 +1,23 @@
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
-    StyleSheet,
-    Text,
-    View,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import { GlassButton } from "../components/glass/glass-button";
 import { GlassIconButton } from "../components/glass/glass-icon-button";
 import { GlassInput } from "../components/glass/glass-input";
 import {
-    GlassSelect,
-    GlassSelectOption,
+  GlassSelect,
+  GlassSelectOption,
 } from "../components/glass/glass-select";
 import { AppScreen } from "../components/layout/app-screen";
 import {
-    Colors,
-    Spacing,
-    Typography,
+  Colors,
+  Spacing,
+  Typography,
 } from "../constants/theme";
 import { provinces } from "../data/afghanistan-addresses";
 
@@ -147,7 +147,7 @@ export default function ManualAddressScreen() {
      * or onboarding state before navigating to the next screen.
      */
 
-    router.replace("/explore");
+    router.replace("/role-selection");
   };
 
   return (
