@@ -105,6 +105,18 @@ const en = {
     "Province, city, district and detailed address selection screen will be built in the next step.",
   backlabel: "Back",
   okaction: "OK",
+
+  // Role Selection Screen
+  roleEyebrow: "Account Type",
+  roleTitle: "How would you like to use the service?",
+  roleSubtitle: "Choose the option that best matches your needs.",
+  customerTitle: "Service Customer",
+  customerSubtitle:
+    "Find services you need, compare providers, and submit your requests.",
+  providerTitle: "Service Provider",
+  providerSubtitle:
+    "Showcase your skills and services, receive client requests, and grow your business.",
+  roleHelperText: "You can change your account type later from settings.", // Fixed uppercase 'H'
 };
 
 export default en;

@@ -1,12 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { GlassButton } from "../components/glass/glass-button";
 import { GlassIconButton } from "../components/glass/glass-icon-button";
@@ -19,6 +14,7 @@ import {
   Spacing,
   Typography,
 } from "../constants/theme";
+import { useLanguage } from "../context/languagecontext";
 import { useSession } from "../context/session-context";
 
 type UserRole = "customer" | "provider";
@@ -30,32 +26,28 @@ type RoleOption = {
   icon: keyof typeof Ionicons.glyphMap;
 };
 
-const roleOptions: RoleOption[] = [
-  {
-    id: "customer",
-    title: "دریافت‌کنندهٔ خدمات",
-    subtitle:
-      "خدمات مورد نیاز خود را پیدا کنید، ارائه‌دهندگان را مقایسه کنید و درخواست خود را ثبت نمایید.",
-    icon: "person-outline",
-  },
-  {
-    id: "provider",
-    title: "ارائه‌دهندهٔ خدمات",
-    subtitle:
-      "مهارت‌ها و خدمات خود را معرفی کنید، درخواست‌های مشتریان را دریافت کنید و کار خود را گسترش دهید.",
-    icon: "briefcase-outline",
-  },
-];
-
 export default function RoleSelectionScreen() {
   const router = useRouter();
+  const { enterCustomerWorkspace } = useSession();
+  const { t, language } = useLanguage();
 
-  const {
-    enterCustomerWorkspace,
-  } = useSession();
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const isRtl = language === "Dari" || language === "Pashto";
 
-  const [selectedRole, setSelectedRole] =
-    useState<UserRole | null>(null);
+  const roleOptions: RoleOption[] = [
+    {
+      id: "customer",
+      title: t("customerTitle"),
+      subtitle: t("customerSubtitle"),
+      icon: "person-outline",
+    },
+    {
+      id: "provider",
+      title: t("providerTitle"),
+      subtitle: t("providerSubtitle"),
+      icon: "briefcase-outline",
+    },
+  ];
 
   const handleContinue = () => {
     if (!selectedRole) {
@@ -78,60 +70,105 @@ export default function RoleSelectionScreen() {
       footer={
         <View style={styles.footer}>
           <GlassButton
-            label="ادامه"
-            icon="arrow-back"
-            iconPosition="left"
+            label={t("continue")}
+            icon={isRtl ? "arrow-back" : "arrow-forward"}
+            iconPosition={isRtl ? "left" : "right"}
             disabled={!selectedRole}
             onPress={handleContinue}
           />
 
-          <Text style={styles.helperText}>
-            بعداً می‌توانید نوع حساب خود را از تنظیمات تغییر دهید.
+          <Text
+            style={[
+              styles.helperText,
+              {
+                textAlign: isRtl ? "right" : "left",
+                writingDirection: isRtl ? "rtl" : "ltr",
+              },
+            ]}
+          >
+            {t("roleHelperText")}
           </Text>
         </View>
       }
     >
-      <View style={styles.topBar}>
+      <View
+        style={[
+          styles.topBar,
+          { alignItems: isRtl ? "flex-start" : "flex-end" },
+        ]}
+      >
         <GlassIconButton
-          icon="chevron-back"
-          accessibilityLabel="بازگشت"
+          icon={isRtl ? "chevron-back" : "chevron-forward"}
+          accessibilityLabel={t("back")}
           onPress={() => router.back()}
         />
       </View>
 
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          { alignItems: isRtl ? "flex-end" : "flex-start" },
+        ]}
+      >
         <GlassSurface
           variant="prominent"
           radius={Radius.xxl}
-          style={styles.headerIcon}
+          style={[
+            styles.headerIcon,
+            { alignSelf: isRtl ? "flex-end" : "flex-start" },
+          ]}
           contentStyle={styles.headerIconContent}
         >
-          <Ionicons
-            name="people-outline"
-            size={34}
-            color={Colors.primary}
-          />
+          <Ionicons name="people-outline" size={34} color={Colors.primary} />
         </GlassSurface>
 
-        <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>
-            نوع حساب
+        <View
+          style={[
+            styles.headerCopy,
+            { alignItems: isRtl ? "flex-end" : "flex-start" },
+          ]}
+        >
+          <Text
+            style={[
+              styles.eyebrow,
+              {
+                textAlign: isRtl ? "right" : "left",
+                writingDirection: isRtl ? "rtl" : "ltr",
+              },
+            ]}
+          >
+            {t("roleEyebrow")}
           </Text>
 
-          <Text style={styles.title}>
-            چگونه می‌خواهید از خدمت استفاده کنید؟
+          <Text
+            style={[
+              styles.title,
+              {
+                textAlign: isRtl ? "right" : "left",
+                writingDirection: isRtl ? "rtl" : "ltr",
+              },
+            ]}
+          >
+            {t("roleTitle")}
           </Text>
 
-          <Text style={styles.subtitle}>
-            گزینه‌ای را انتخاب کنید که با نیاز شما مطابقت دارد.
+          <Text
+            style={[
+              styles.subtitle,
+              {
+                textAlign: isRtl ? "right" : "left",
+                writingDirection: isRtl ? "rtl" : "ltr",
+              },
+            ]}
+          >
+            {t("roleSubtitle")}
           </Text>
         </View>
       </View>
 
       <View style={styles.options}>
         {roleOptions.map((option) => {
-          const selected =
-            selectedRole === option.id;
+          const selected = selectedRole === option.id;
 
           return (
             <Pressable
@@ -141,84 +178,78 @@ export default function RoleSelectionScreen() {
                 selected,
               }}
               accessibilityLabel={option.title}
-              onPress={() =>
-                setSelectedRole(option.id)
-              }
+              onPress={() => setSelectedRole(option.id)}
               style={({ pressed }) => [
                 styles.optionPressable,
-                pressed &&
-                  styles.optionPressed,
+                pressed && styles.optionPressed,
               ]}
             >
               <GlassSurface
-                variant={
-                  selected
-                    ? "prominent"
-                    : "regular"
-                }
+                variant={selected ? "prominent" : "regular"}
                 radius={Radius.xl}
                 style={[
                   styles.optionSurface,
-                  selected &&
-                    styles.selectedOptionSurface,
-                  selected &&
-                    Shadows.small,
+                  selected && styles.selectedOptionSurface,
+                  selected && Shadows.small,
                 ]}
-                contentStyle={
-                  styles.optionContent
-                }
+                contentStyle={styles.optionContent}
               >
                 <View
-                  style={styles.optionTopRow}
+                  style={[
+                    styles.optionTopRow,
+                    { flexDirection: isRtl ? "row-reverse" : "row" },
+                  ]}
                 >
                   <View
                     style={[
                       styles.iconContainer,
-                      selected &&
-                        styles.selectedIconContainer,
+                      selected && styles.selectedIconContainer,
                     ]}
                   >
                     <Ionicons
                       name={option.icon}
                       size={26}
-                      color={
-                        selected
-                          ? Colors.white
-                          : Colors.textSecondary
-                      }
+                      color={selected ? Colors.white : Colors.textSecondary}
                     />
                   </View>
 
                   <View
                     style={[
                       styles.radioOuter,
-                      selected &&
-                        styles.radioOuterSelected,
+                      selected && styles.radioOuterSelected,
                     ]}
                   >
-                    {selected ? (
-                      <View
-                        style={styles.radioInner}
-                      />
-                    ) : null}
+                    {selected ? <View style={styles.radioInner} /> : null}
                   </View>
                 </View>
 
-                <View style={styles.optionCopy}>
+                <View
+                  style={[
+                    styles.optionCopy,
+                    { alignItems: isRtl ? "flex-end" : "flex-start" },
+                  ]}
+                >
                   <Text
                     style={[
                       styles.optionTitle,
-                      selected &&
-                        styles.selectedOptionTitle,
+                      selected && styles.selectedOptionTitle,
+                      {
+                        textAlign: isRtl ? "right" : "left",
+                        writingDirection: isRtl ? "rtl" : "ltr",
+                      },
                     ]}
                   >
                     {option.title}
                   </Text>
 
                   <Text
-                    style={
-                      styles.optionSubtitle
-                    }
+                    style={[
+                      styles.optionSubtitle,
+                      {
+                        textAlign: isRtl ? "right" : "left",
+                        writingDirection: isRtl ? "rtl" : "ltr",
+                      },
+                    ]}
                   >
                     {option.subtitle}
                   </Text>
@@ -240,23 +271,20 @@ const styles = StyleSheet.create({
 
   topBar: {
     minHeight: 44,
-    alignItems: "flex-start",
+    width: "100%",
   },
 
   header: {
     marginTop: Spacing.md,
-    alignItems: "flex-end",
+    width: "100%",
     gap: Spacing.lg,
   },
 
   headerIcon: {
     width: 68,
     height: 68,
-    alignSelf: "flex-end",
-    backgroundColor:
-      "rgba(76, 141, 255, 0.10)",
-    borderColor:
-      "rgba(100, 158, 255, 0.28)",
+    backgroundColor: "rgba(76, 141, 255, 0.10)",
+    borderColor: "rgba(100, 158, 255, 0.28)",
   },
 
   headerIconContent: {
@@ -267,7 +295,6 @@ const styles = StyleSheet.create({
 
   headerCopy: {
     width: "100%",
-    alignItems: "flex-end",
     gap: Spacing.sm,
   },
 
@@ -275,16 +302,12 @@ const styles = StyleSheet.create({
     ...Typography.captionStyle,
     width: "100%",
     color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 
   title: {
     ...Typography.screenTitle,
     width: "100%",
     color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
     fontSize: 28,
     lineHeight: 35,
   },
@@ -294,8 +317,6 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 430,
     color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
     lineHeight: 24,
   },
 
@@ -320,10 +341,8 @@ const styles = StyleSheet.create({
   },
 
   selectedOptionSurface: {
-    borderColor:
-      "rgba(76, 141, 255, 0.58)",
-    backgroundColor:
-      "rgba(76, 141, 255, 0.11)",
+    borderColor: "rgba(76, 141, 255, 0.58)",
+    backgroundColor: "rgba(76, 141, 255, 0.11)",
   },
 
   optionContent: {
@@ -332,9 +351,9 @@ const styles = StyleSheet.create({
   },
 
   optionTopRow: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
+    width: "100%",
   },
 
   iconContainer: {
@@ -344,15 +363,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: Colors.glass,
-    borderWidth:
-      StyleSheet.hairlineWidth,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.border,
   },
 
   selectedIconContainer: {
     backgroundColor: Colors.primary,
-    borderColor:
-      "rgba(255, 255, 255, 0.24)",
+    borderColor: "rgba(255, 255, 255, 0.24)",
   },
 
   radioOuter: {
@@ -378,7 +395,6 @@ const styles = StyleSheet.create({
 
   optionCopy: {
     width: "100%",
-    alignItems: "flex-end",
     gap: Spacing.sm,
   },
 
@@ -386,8 +402,6 @@ const styles = StyleSheet.create({
     ...Typography.sectionTitle,
     width: "100%",
     color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
     fontSize: 21,
     lineHeight: 28,
   },
@@ -400,8 +414,6 @@ const styles = StyleSheet.create({
     ...Typography.bodyStyle,
     width: "100%",
     color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
     lineHeight: 22,
   },
 
@@ -416,8 +428,6 @@ const styles = StyleSheet.create({
     ...Typography.captionStyle,
     maxWidth: 330,
     color: Colors.textTertiary,
-    textAlign: "center",
-    writingDirection: "rtl",
     lineHeight: 19,
   },
 });

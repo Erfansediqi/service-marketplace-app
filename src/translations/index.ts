@@ -2,11 +2,14 @@ import dari from "./dari";
 import en from "./en";
 import pashto from "./pashto";
 
-export const translations = {
+const translations = {
   English: en,
   Dari: dari,
   Pashto: pashto,
-};
+} as const;
 
-export type Language = "English" | "Dari" | "Pashto";
+// This dynamically extracts your language names and translation keys from en.ts
+export type Language = keyof typeof translations;
 export type TranslationKeys = keyof typeof en;
+
+export { translations };

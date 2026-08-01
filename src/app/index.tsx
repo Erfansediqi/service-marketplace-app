@@ -1,12 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import {
-  Pressable,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
 
 import {
   KhedmatPalette,
@@ -35,13 +29,9 @@ export default function SplashScreen() {
             />
           </View>
 
-          <Text style={styles.brandTitle}>
-            Khedmat
-          </Text>
+          <Text style={styles.brandTitle}>Khedmat</Text>
 
-          <Text style={styles.brandSubtitle}>
-            Find trusted help, near you
-          </Text>
+          <Text style={styles.brandSubtitle}>Find trusted help, near you</Text>
         </View>
 
         <Pressable
