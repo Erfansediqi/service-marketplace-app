@@ -8,9 +8,12 @@ import { GlassInput } from "../components/glass/glass-input";
 import { GlassSurface } from "../components/glass/glass-surface";
 import { AppScreen } from "../components/layout/app-screen";
 import { Colors, Radius, Spacing, Typography } from "../constants/theme";
+import { useLanguage } from "../context/languagecontext";
 
 export default function SignupScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
+  const isRtl = language === "Pashto" || language === "Dari";
 
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -19,14 +22,10 @@ export default function SignupScreen() {
   const digits = phoneNumber.replace(/\D/g, "");
 
   const nameError =
-    submitted && fullName.trim().length < 2
-      ? "لطفاً نام و نام خانوادگی خود را وارد کنید."
-      : undefined;
+    submitted && fullName.trim().length < 2 ? t("nameError") : undefined;
 
   const phoneError =
-    submitted && digits.length < 7
-      ? "لطفاً یک شماره تلفن معتبر وارد کنید."
-      : undefined;
+    submitted && digits.length < 7 ? t("phoneError") : undefined;
 
   const formValid = useMemo(
     () => fullName.trim().length >= 2 && digits.length >= 7,
@@ -58,21 +57,32 @@ export default function SignupScreen() {
           <GlassButton
             disabled={!formValid && submitted}
             icon="arrow-forward"
-            label="ارسال کد تأیید"
+            label={t("sendVerificationCode")}
             onPress={handleSendCode}
           />
 
-          <Text style={styles.legalText}>
-            با ادامه، شما <Text style={styles.legalLink}>شرایط استفاده</Text> و{" "}
-            <Text style={styles.legalLink}>سیاست حفظ حریم خصوصی</Text> ما را
-            می‌پذیرید.
+          <Text
+            style={[
+              styles.legalText,
+              {
+                textAlign: isRtl ? "right" : "left",
+                writingDirection: isRtl ? "rtl" : "ltr",
+              },
+            ]}
+          >
+            {t("legalTextCombined")}
           </Text>
         </View>
       }
     >
-      <View style={styles.topBar}>
+      <View
+        style={[
+          styles.topBar,
+          { alignItems: isRtl ? "flex-start" : "flex-end" },
+        ]}
+      >
         <GlassIconButton
-          accessibilityLabel="بازگشت"
+          accessibilityLabel={t("back")}
           icon="chevron-back"
           onPress={() => router.back()}
         />
@@ -81,20 +91,56 @@ export default function SignupScreen() {
       <View style={styles.hero}>
         <GlassSurface
           radius={Radius.xxl}
-          style={styles.heroIcon}
+          style={[
+            styles.heroIcon,
+            { alignSelf: isRtl ? "flex-end" : "flex-start" },
+          ]}
           contentStyle={styles.heroIconContent}
           variant="prominent"
         >
           <Text style={styles.heroMark}>خ</Text>
         </GlassSurface>
 
-        <View style={styles.heading}>
-          <Text style={styles.eyebrow}>حساب خدمت</Text>
+        <View
+          style={[
+            styles.heading,
+            { alignItems: isRtl ? "flex-end" : "flex-start" },
+          ]}
+        >
+          <Text
+            style={[
+              styles.eyebrow,
+              {
+                textAlign: isRtl ? "right" : "left",
+                writingDirection: isRtl ? "rtl" : "ltr",
+              },
+            ]}
+          >
+            {t("serviceAccount")}
+          </Text>
 
-          <Text style={styles.title}>حساب کاربری خود را بسازید</Text>
+          <Text
+            style={[
+              styles.title,
+              {
+                textAlign: isRtl ? "right" : "left",
+                writingDirection: isRtl ? "rtl" : "ltr",
+              },
+            ]}
+          >
+            {t("createAccountTitle")}
+          </Text>
 
-          <Text style={styles.subtitle}>
-            فقط با وارد کردن نام و شماره تلفن، شروع کنید.
+          <Text
+            style={[
+              styles.subtitle,
+              {
+                textAlign: isRtl ? "right" : "left",
+                writingDirection: isRtl ? "rtl" : "ltr",
+              },
+            ]}
+          >
+            {t("createAccountSubtitle")}
           </Text>
         </View>
       </View>
@@ -105,9 +151,9 @@ export default function SignupScreen() {
           autoComplete="name"
           error={nameError}
           icon="person-outline"
-          label="نام و نام خانوادگی"
+          label={t("fullNameLabel")}
           onChangeText={setFullName}
-          placeholder="احمد ظاهر"
+          placeholder={t("fullNamePlaceholder")}
           returnKeyType="next"
           textContentType="name"
           value={fullName}
@@ -117,7 +163,7 @@ export default function SignupScreen() {
           autoComplete="tel"
           error={phoneError}
           keyboardType="phone-pad"
-          label="شماره تلفن"
+          label={t("phoneLabel")}
           leadingContent={
             <View style={styles.countryCode}>
               <Text style={styles.countryCodeText}>+93</Text>
@@ -143,18 +189,16 @@ const styles = StyleSheet.create({
 
   topBar: {
     minHeight: 44,
-    alignItems: "flex-start",
   },
 
   hero: {
-    marginTop: Spacing.xxl,
+    marginTop: Spacing.lg,
   },
 
   heroIcon: {
     width: 72,
     height: 72,
-    marginBottom: Spacing.xxl,
-    alignSelf: "flex-end",
+    marginBottom: Spacing.lg,
   },
 
   heroIconContent: {
@@ -171,37 +215,30 @@ const styles = StyleSheet.create({
   },
 
   heading: {
-    gap: Spacing.sm,
-    alignItems: "flex-end",
+    gap: Spacing.xs,
   },
 
   eyebrow: {
     ...Typography.captionStyle,
     color: Colors.primary,
     letterSpacing: 1,
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 
   title: {
     ...Typography.screenTitle,
     color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 
   subtitle: {
     ...Typography.bodyLarge,
     color: Colors.textSecondary,
     maxWidth: 430,
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 
   form: {
     width: "100%",
-    marginTop: Spacing.screen,
-    gap: Spacing.xxl,
+    marginTop: Spacing.xl,
+    gap: Spacing.lg,
   },
 
   countryCode: {
@@ -224,20 +261,15 @@ const styles = StyleSheet.create({
 
   footer: {
     width: "100%",
-    gap: Spacing.lg,
+    gap: Spacing.md,
     alignItems: "center",
+    paddingVertical: Spacing.sm,
   },
 
   legalText: {
     ...Typography.captionStyle,
     color: Colors.textTertiary,
     textAlign: "center",
-    writingDirection: "rtl",
-    maxWidth: 330,
-  },
-
-  legalLink: {
-    color: Colors.textSecondary,
-    fontWeight: "600",
+    paddingHorizontal: Spacing.md,
   },
 });

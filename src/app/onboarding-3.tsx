@@ -13,7 +13,7 @@ export default function OnboardingScreenThree() {
       icon="shield-checkmark-outline"
       activePage={2}
       buttonLabel={t("continue")}
-      onPress={() => router.push("/role-selection")}
+      onPress={() => router.push("/signup")}
     />
   );
 }
