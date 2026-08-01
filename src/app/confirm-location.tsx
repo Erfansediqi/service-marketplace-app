@@ -1,30 +1,44 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useLocalSearchParams,
+  useRouter,
+} from "expo-router";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
-  Animated,
-  PanResponder,
+  Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import MapView, { Region } from "react-native-maps";
+import MapView, {
+  Region,
+} from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { GlassButton } from "../components/glass/glass-button";
-import { GlassIconButton } from "../components/glass/glass-icon-button";
-import { GlassSurface } from "../components/glass/glass-surface";
+import { KhedmatButton } from "../components/khedmat/khedmat-button";
+import { KhedmatCard } from "../components/khedmat/khedmat-card";
 import {
-  Colors,
+  Fonts,
+  KhedmatPalette,
+  Layout,
   Radius,
   Shadows,
   Spacing,
   Typography,
 } from "../constants/theme";
 import { useLanguage } from "../context/languagecontext";
-import { reverseGeocode } from "../services/location";
+import {
+  requestUserLocation,
+  reverseGeocode,
+} from "../services/location";
 
 const DEFAULT_LOCATION = {
   latitude: 34.5553,
@@ -32,9 +46,11 @@ const DEFAULT_LOCATION = {
 };
 
 const DEFAULT_DELTA = {
-  latitudeDelta: 0.012,
-  longitudeDelta: 0.012,
+  latitudeDelta: 0.008,
+  longitudeDelta: 0.008,
 };
+
+const ADDRESS_REQUEST_DELAY = 550;
 
 type AddressState = {
   title: string;
@@ -45,618 +61,1107 @@ function parseCoordinate(
   value: string | string[] | undefined,
   fallback: number,
 ): number {
-  const rawValue = Array.isArray(value) ? value[0] : value;
+  const rawValue = Array.isArray(value)
+    ? value[0]
+    : value;
+
   const parsedValue = Number(rawValue);
 
-  return Number.isFinite(parsedValue) ? parsedValue : fallback;
+  return Number.isFinite(parsedValue)
+    ? parsedValue
+    : fallback;
 }
 
 function joinAddressParts(
-  values: Array<string | null | undefined>,
+  values: Array<
+    string | null | undefined
+  >,
   isEnglish: boolean,
 ): string {
-  const separator = isEnglish ? ", " : "، ";
+  const separator = isEnglish
+    ? ", "
+    : "، ";
+
   return values
     .map((value) => value?.trim())
     .filter(
-      (value, index, array): value is string =>
-        Boolean(value) && array.indexOf(value) === index,
+      (
+        value,
+        index,
+        array,
+      ): value is string =>
+        Boolean(value) &&
+        array.indexOf(value) === index,
     )
     .join(separator);
 }
 
 export default function ConfirmLocationScreen() {
   const router = useRouter();
-  const { t, language } = useLanguage();
-  const isEnglish = language === "English";
 
-  const params = useLocalSearchParams<{
-    lat?: string | string[];
-    lng?: string | string[];
-  }>();
+  const {
+    t,
+    language,
+  } = useLanguage();
 
-  const mapRef = useRef<MapView>(null);
-  const geocodeRequestRef = useRef(0);
+  const isEnglish =
+    language === "English";
+
+  const isRtl =
+    language === "Dari" ||
+    language === "Pashto";
+
+  const params =
+    useLocalSearchParams<{
+      lat?: string | string[];
+      lng?: string | string[];
+    }>();
+
+  const mapRef =
+    useRef<MapView>(null);
+
+  const geocodeRequestRef =
+    useRef(0);
 
   const initialLatitude = useMemo(
-    () => parseCoordinate(params.lat, DEFAULT_LOCATION.latitude),
+    () =>
+      parseCoordinate(
+        params.lat,
+        DEFAULT_LOCATION.latitude,
+      ),
     [params.lat],
   );
 
   const initialLongitude = useMemo(
-    () => parseCoordinate(params.lng, DEFAULT_LOCATION.longitude),
+    () =>
+      parseCoordinate(
+        params.lng,
+        DEFAULT_LOCATION.longitude,
+      ),
     [params.lng],
   );
 
-  const initialRegion = useMemo<Region>(
-    () => ({
-      latitude: initialLatitude,
-      longitude: initialLongitude,
-      ...DEFAULT_DELTA,
-    }),
-    [initialLatitude, initialLongitude],
+  const initialRegion =
+    useMemo<Region>(
+      () => ({
+        latitude: initialLatitude,
+        longitude: initialLongitude,
+        ...DEFAULT_DELTA,
+      }),
+      [
+        initialLatitude,
+        initialLongitude,
+      ],
+    );
+
+  const [
+    selectedRegion,
+    setSelectedRegion,
+  ] = useState<Region>(
+    initialRegion,
   );
 
-  const [selectedRegion, setSelectedRegion] = useState<Region>(initialRegion);
-
-  const [address, setAddress] = useState<AddressState>({
-    title: t("defaultAddressTitle"),
-    details: t("defaultAddressDetails"),
+  const [
+    address,
+    setAddress,
+  ] = useState<AddressState>({
+    title: t(
+      "defaultAddressTitle",
+    ),
+    details: t(
+      "defaultAddressDetails",
+    ),
   });
 
-  const [isResolvingAddress, setIsResolvingAddress] = useState(true);
-  const [isMapReady, setIsMapReady] = useState(false);
-  const [isMovingMap, setIsMovingMap] = useState(false);
-  const [addressError, setAddressError] = useState<string | null>(null);
+  const [
+    isMapReady,
+    setIsMapReady,
+  ] = useState(false);
 
-  // Collapsible Bottom Sheet Animation & Drag Handling
-  const sheetTranslateY = useRef(new Animated.Value(0)).current;
-  const [isSheetCollapsed, setIsSheetCollapsed] = useState(false);
+  const [
+    isMovingMap,
+    setIsMovingMap,
+  ] = useState(false);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dy) > 5;
-      },
-      onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dy > 0) {
-          sheetTranslateY.setValue(gestureState.dy);
+  const [
+    isResolvingAddress,
+    setIsResolvingAddress,
+  ] = useState(true);
+
+  const [
+    isLocatingUser,
+    setIsLocatingUser,
+  ] = useState(false);
+
+  const [
+    addressError,
+    setAddressError,
+  ] = useState<string | null>(
+    null,
+  );
+
+  const resolveAddress =
+    useCallback(
+      async (
+        latitude: number,
+        longitude: number,
+      ) => {
+        const requestId =
+          geocodeRequestRef.current +
+          1;
+
+        geocodeRequestRef.current =
+          requestId;
+
+        setIsResolvingAddress(true);
+        setAddressError(null);
+
+        try {
+          const result =
+            await reverseGeocode(
+              latitude,
+              longitude,
+            );
+
+          if (
+            requestId !==
+            geocodeRequestRef.current
+          ) {
+            return;
+          }
+
+          if (!result) {
+            setAddress({
+              title: t(
+                "fallbackLocationTitle",
+              ),
+              details: t(
+                "fallbackAddressDetails",
+              ),
+            });
+
+            return;
+          }
+
+          const title =
+            joinAddressParts(
+              [
+                result.name,
+                result.street,
+                result.district,
+              ],
+              isEnglish,
+            ) ||
+            t(
+              "fallbackLocationTitle",
+            );
+
+          const details =
+            joinAddressParts(
+              [
+                result.city,
+                result.subregion,
+                result.region,
+                result.country,
+              ],
+              isEnglish,
+            ) ||
+            t(
+              "fallbackAddressDetails",
+            );
+
+          setAddress({
+            title,
+            details,
+          });
+        } catch (error) {
+          console.error(
+            "Reverse geocoding failed:",
+            error,
+          );
+
+          if (
+            requestId !==
+            geocodeRequestRef.current
+          ) {
+            return;
+          }
+
+          setAddressError(
+            t(
+              "coordinatesUnavailable",
+            ),
+          );
+
+          setAddress({
+            title: t(
+              "fallbackLocationTitle",
+            ),
+            details: t(
+              "fallbackAddressDetails",
+            ),
+          });
+        } finally {
+          if (
+            requestId ===
+            geocodeRequestRef.current
+          ) {
+            setIsResolvingAddress(
+              false,
+            );
+          }
         }
       },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 80 || gestureState.vy > 0.5) {
-          // Collapse / Minimize Sheet downwards
-          Animated.timing(sheetTranslateY, {
-            toValue: 280,
-            duration: 250,
-            useNativeDriver: true,
-          }).start(() => setIsSheetCollapsed(true));
-        } else {
-          // Snap back to Expanded
-          Animated.spring(sheetTranslateY, {
-            toValue: 0,
-            useNativeDriver: true,
-            bounciness: 4,
-          }).start(() => setIsSheetCollapsed(false));
-        }
-      },
-    }),
-  ).current;
-
-  const toggleSheet = () => {
-    if (isSheetCollapsed) {
-      Animated.spring(sheetTranslateY, {
-        toValue: 0,
-        useNativeDriver: true,
-        bounciness: 4,
-      }).start(() => setIsSheetCollapsed(false));
-    } else {
-      Animated.timing(sheetTranslateY, {
-        toValue: 280,
-        duration: 250,
-        useNativeDriver: true,
-      }).start(() => setIsSheetCollapsed(true));
-    }
-  };
+      [isEnglish, t],
+    );
 
   useEffect(() => {
-    const requestId = geocodeRequestRef.current + 1;
-    geocodeRequestRef.current = requestId;
-
-    setIsResolvingAddress(true);
-    setAddressError(null);
-
-    const timer = setTimeout(async () => {
-      try {
-        const result = await reverseGeocode(
+    const timer = setTimeout(
+      () => {
+        resolveAddress(
           selectedRegion.latitude,
           selectedRegion.longitude,
         );
+      },
+      ADDRESS_REQUEST_DELAY,
+    );
 
-        if (requestId !== geocodeRequestRef.current) {
-          return;
-        }
+    return () =>
+      clearTimeout(timer);
+  }, [
+    resolveAddress,
+    selectedRegion.latitude,
+    selectedRegion.longitude,
+  ]);
 
-        if (!result) {
-          setAddress({
-            title: t("fallbackLocationTitle"),
-            details: t("fallbackAddressDetails"),
-          });
+  const handleRegionChange = () => {
+    setIsMovingMap(true);
+  };
 
-          return;
-        }
-
-        const title =
-          joinAddressParts(
-            [result.name, result.street, result.district],
-            isEnglish,
-          ) || t("fallbackLocationTitle");
-
-        const details =
-          joinAddressParts(
-            [result.city, result.subregion, result.region, result.country],
-            isEnglish,
-          ) || t("fallbackAddressDetails");
-
-        setAddress({
-          title,
-          details,
-        });
-      } catch (error) {
-        console.error("Reverse geocoding failed:", error);
-
-        if (requestId !== geocodeRequestRef.current) {
-          return;
-        }
-
-        setAddressError(t("coordinatesUnavailable"));
-
-        setAddress({
-          title: t("fallbackLocationTitle"),
-          details: t("coordinatesSuccess"),
-        });
-      } finally {
-        if (requestId === geocodeRequestRef.current) {
-          setIsResolvingAddress(false);
-        }
-      }
-    }, 650);
-
-    return () => clearTimeout(timer);
-  }, [selectedRegion.latitude, selectedRegion.longitude, isEnglish, t]);
-
-  const handleRegionChangeComplete = (region: Region) => {
+  const handleRegionChangeComplete = (
+    region: Region,
+  ) => {
     setSelectedRegion(region);
     setIsMovingMap(false);
   };
 
-  const handleRecenter = () => {
-    setIsMovingMap(true);
+  const handleRecenter =
+    async () => {
+      if (isLocatingUser) {
+        return;
+      }
 
-    const targetRegion = {
-      latitude: initialLatitude,
-      longitude: initialLongitude,
-      ...DEFAULT_DELTA,
+      setIsLocatingUser(true);
+      setAddressError(null);
+
+      try {
+        const currentLocation =
+          await requestUserLocation();
+
+        if (!currentLocation) {
+          Alert.alert(
+            getLocationErrorTitle(
+              language,
+            ),
+            getLocationErrorMessage(
+              language,
+            ),
+          );
+
+          return;
+        }
+
+        const targetRegion: Region = {
+          latitude:
+            currentLocation.latitude,
+          longitude:
+            currentLocation.longitude,
+          ...DEFAULT_DELTA,
+        };
+
+        setIsMovingMap(true);
+
+        mapRef.current?.animateToRegion(
+          targetRegion,
+          700,
+        );
+
+        /*
+         * Keep state synchronized with the
+         * exact region shown by the map.
+         * onRegionChangeComplete will also
+         * confirm this after the animation.
+         */
+        setSelectedRegion(
+          targetRegion,
+        );
+      } catch (error) {
+        console.error(
+          "Unable to recenter map:",
+          error,
+        );
+
+        Alert.alert(
+          getLocationErrorTitle(
+            language,
+          ),
+          getLocationErrorMessage(
+            language,
+          ),
+        );
+      } finally {
+        setIsLocatingUser(false);
+      }
     };
 
-    mapRef.current?.animateToRegion(targetRegion, 600);
-    setSelectedRegion(targetRegion);
-  };
-
-  const handleConfirmLocation = () => {
-    Alert.alert(
-      t("confirmLocationHeader"),
-      `${address.title}\n${address.details}`,
-      [
-        {
-          text: t("editAction"),
-          style: "cancel",
-        },
-        {
-          text: t("confirmAction"),
-          onPress: () => {
-            router.replace("/role-selection");
+  const handleConfirmLocation =
+    () => {
+      Alert.alert(
+        t(
+          "confirmLocationHeader",
+        ),
+        `${address.title}\n${address.details}`,
+        [
+          {
+            text: t("editAction"),
+            style: "cancel",
           },
-        },
-      ],
-    );
-  };
+          {
+            text: t(
+              "confirmAction",
+            ),
+            onPress: () => {
+              router.replace({
+                pathname:
+                  "/role-selection",
+                params: {
+                  latitude:
+                    selectedRegion.latitude.toString(),
+                  longitude:
+                    selectedRegion.longitude.toString(),
+                  addressTitle:
+                    address.title,
+                  addressDetails:
+                    address.details,
+                },
+              });
+            },
+          },
+        ],
+      );
+    };
 
-  const handleManualAddress = () => {
-    router.push("/manual-address");
-  };
+  const handleManualAddress =
+    () => {
+      router.push(
+        "/manual-address",
+      );
+    };
+
+  const latitudeText =
+    formatCoordinate(
+      selectedRegion.latitude,
+      isRtl,
+    );
+
+  const longitudeText =
+    formatCoordinate(
+      selectedRegion.longitude,
+      isRtl,
+    );
+
+  const confirmDisabled =
+    !isMapReady ||
+    isMovingMap ||
+    isResolvingAddress ||
+    isLocatingUser;
 
   return (
     <View style={styles.container}>
       <MapView
         ref={mapRef}
-        style={StyleSheet.absoluteFill}
-        initialRegion={initialRegion}
+        style={
+          StyleSheet.absoluteFill
+        }
+        initialRegion={
+          initialRegion
+        }
         showsUserLocation
         showsMyLocationButton={false}
         showsCompass={false}
         toolbarEnabled={false}
         loadingEnabled
-        onMapReady={() => setIsMapReady(true)}
-        onRegionChangeStart={() => setIsMovingMap(true)}
-        onRegionChangeComplete={handleRegionChangeComplete}
+        moveOnMarkerPress={false}
+        onMapReady={() =>
+          setIsMapReady(true)
+        }
+        onRegionChange={
+          handleRegionChange
+        }
+        onRegionChangeComplete={
+          handleRegionChangeComplete
+        }
       />
 
-      <View pointerEvents="none" style={styles.mapAtmosphere} />
-
-      <SafeAreaView pointerEvents="box-none" style={styles.safeArea}>
+      <SafeAreaView
+        pointerEvents="box-none"
+        style={styles.safeArea}
+      >
         <View
           pointerEvents="box-none"
-          style={[
-            styles.topControls,
-            { flexDirection: isEnglish ? "row" : "row-reverse" },
-          ]}
+          style={styles.topControls}
         >
-          <GlassIconButton
-            accessibilityLabel={t("back")}
-            icon="chevron-back"
-            onPress={() => router.back()}
-          />
-
-          <GlassSurface
-            variant="regular"
-            radius={Radius.pill}
-            style={styles.headerStatus}
-            contentStyle={[
-              styles.headerStatusContent,
-              { flexDirection: isEnglish ? "row" : "row-reverse" },
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t(
+              "back",
+            )}
+            onPress={() =>
+              router.back()
+            }
+            style={({ pressed }) => [
+              styles.iconButton,
+              pressed &&
+                styles.pressed,
             ]}
           >
-            <View style={styles.statusDot} />
+            <Ionicons
+              name={
+                isRtl
+                  ? "chevron-forward"
+                  : "chevron-back"
+              }
+              size={24}
+              color={
+                KhedmatPalette.navy900
+              }
+            />
+          </Pressable>
+
+          <View
+            style={[
+              styles.headerStatus,
+              {
+                flexDirection: isRtl
+                  ? "row-reverse"
+                  : "row",
+              },
+            ]}
+          >
+            <View
+              style={
+                styles.statusDot
+              }
+            />
 
             <Text
+              numberOfLines={1}
               style={[
                 styles.headerStatusText,
                 {
-                  textAlign: isEnglish ? "left" : "right",
-                  writingDirection: isEnglish ? "ltr" : "rtl",
+                  textAlign: isRtl
+                    ? "right"
+                    : "left",
+                  writingDirection:
+                    isRtl
+                      ? "rtl"
+                      : "ltr",
                 },
               ]}
             >
-              {t("confirmLocationHeader")}
+              {t(
+                "confirmLocationHeader",
+              )}
             </Text>
-          </GlassSurface>
+          </View>
         </View>
 
-        <View pointerEvents="none" style={styles.pinContainer}>
-          <View style={styles.pinShadow} />
+        {/*
+         * The tip of this pin is positioned at
+         * the exact visual center of MapView.
+         *
+         * selectedRegion is updated from the
+         * map's center through
+         * onRegionChangeComplete, so the pin and
+         * coordinates now represent the same point.
+         */}
+        <View
+          pointerEvents="none"
+          style={
+            styles.centerPinAnchor
+          }
+        >
+          <View
+            style={styles.pinShadow}
+          />
 
-          <View style={styles.pinOuter}>
-            <View style={styles.pinInner}>
-              <Ionicons name="location" size={28} color={Colors.white} />
-            </View>
+          <View
+            style={styles.pinBody}
+          >
+            <Ionicons
+              name="location"
+              size={30}
+              color={
+                KhedmatPalette.white
+              }
+            />
           </View>
 
-          <View style={styles.pinStem} />
+          <View
+            style={styles.pinTip}
+          />
         </View>
 
         <View style={styles.lowerArea}>
           <View
             style={[
-              styles.recenterWrapper,
-              { alignItems: isEnglish ? "flex-end" : "flex-start" },
+              styles.recenterRow,
+              {
+                justifyContent: isRtl
+                  ? "flex-start"
+                  : "flex-end",
+              },
             ]}
           >
-            <GlassIconButton
-              accessibilityLabel={t("recenterLabel")}
-              icon="navigate-outline"
-              size={22}
-              onPress={handleRecenter}
-            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t(
+                "recenterLabel",
+              )}
+              disabled={
+                isLocatingUser
+              }
+              onPress={
+                handleRecenter
+              }
+              style={({ pressed }) => [
+                styles.recenterButton,
+                pressed &&
+                  !isLocatingUser &&
+                  styles.pressed,
+              ]}
+            >
+              {isLocatingUser ? (
+                <ActivityIndicator
+                  size="small"
+                  color={
+                    KhedmatPalette.blue500
+                  }
+                />
+              ) : (
+                <Ionicons
+                  name="navigate"
+                  size={22}
+                  color={
+                    KhedmatPalette.blue500
+                  }
+                />
+              )}
+            </Pressable>
           </View>
 
-          <Animated.View
-            style={{
-              transform: [{ translateY: sheetTranslateY }],
-            }}
+          <KhedmatCard
+            style={
+              styles.bottomCard
+            }
+            contentStyle={
+              styles.bottomCardContent
+            }
           >
-            <GlassSurface
-              variant="prominent"
-              radius={Radius.xxl}
-              style={[styles.bottomSheet, Shadows.medium]}
-              contentStyle={styles.bottomSheetContent}
+            <View
+              style={[
+                styles.addressHeader,
+                {
+                  flexDirection: isRtl
+                    ? "row-reverse"
+                    : "row",
+                },
+              ]}
             >
-              <View {...panResponder.panHandlers} style={styles.handleArea}>
-                <View style={styles.sheetHandle} />
-              </View>
-
               <View
-                style={[
-                  styles.sheetHeader,
-                  { flexDirection: isEnglish ? "row" : "row-reverse" },
-                ]}
+                style={
+                  styles.addressIcon
+                }
               >
-                <View style={styles.addressIcon}>
-                  {isResolvingAddress ? (
-                    <ActivityIndicator size="small" color={Colors.primary} />
-                  ) : (
-                    <Ionicons
-                      name="location-outline"
-                      size={22}
-                      color={Colors.primary}
-                    />
-                  )}
-                </View>
-
-                <View
-                  style={[
-                    styles.addressCopy,
-                    { alignItems: isEnglish ? "flex-start" : "flex-end" },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.eyebrow,
-                      {
-                        textAlign: isEnglish ? "left" : "right",
-                        writingDirection: isEnglish ? "ltr" : "rtl",
-                      },
-                    ]}
-                  >
-                    {t("selectedLocationEyebrow")}
-                  </Text>
-
-                  <Text
-                    numberOfLines={2}
-                    style={[
-                      styles.addressTitle,
-                      {
-                        textAlign: isEnglish ? "left" : "right",
-                        writingDirection: isEnglish ? "ltr" : "rtl",
-                      },
-                    ]}
-                  >
-                    {isMovingMap ? t("movingMapTitle") : address.title}
-                  </Text>
-
-                  <Text
-                    numberOfLines={2}
-                    style={[
-                      styles.addressDetails,
-                      {
-                        textAlign: isEnglish ? "left" : "right",
-                        writingDirection: isEnglish ? "ltr" : "rtl",
-                      },
-                    ]}
-                  >
-                    {isMovingMap ? t("movingMapDetails") : address.details}
-                  </Text>
-                </View>
-              </View>
-
-              {addressError ? (
-                <View
-                  style={[
-                    styles.warningRow,
-                    { flexDirection: isEnglish ? "row" : "row-reverse" },
-                  ]}
-                >
-                  <Ionicons
-                    name="information-circle-outline"
-                    size={17}
-                    color={Colors.warning}
+                {isResolvingAddress ||
+                isMovingMap ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={
+                      KhedmatPalette.blue500
+                    }
                   />
-
-                  <Text
-                    style={[
-                      styles.warningText,
-                      {
-                        textAlign: isEnglish ? "left" : "right",
-                        writingDirection: isEnglish ? "ltr" : "rtl",
-                      },
-                    ]}
-                  >
-                    {addressError}
-                  </Text>
-                </View>
-              ) : null}
+                ) : (
+                  <Ionicons
+                    name="location-outline"
+                    size={22}
+                    color={
+                      KhedmatPalette.blue500
+                    }
+                  />
+                )}
+              </View>
 
               <View
+                style={
+                  styles.addressCopy
+                }
+              >
+                <Text
+                  style={[
+                    styles.eyebrow,
+                    {
+                      textAlign: isRtl
+                        ? "right"
+                        : "left",
+                      writingDirection:
+                        isRtl
+                          ? "rtl"
+                          : "ltr",
+                    },
+                  ]}
+                >
+                  {t(
+                    "selectedLocationEyebrow",
+                  )}
+                </Text>
+
+                <Text
+                  numberOfLines={2}
+                  style={[
+                    styles.addressTitle,
+                    {
+                      textAlign: isRtl
+                        ? "right"
+                        : "left",
+                      writingDirection:
+                        isRtl
+                          ? "rtl"
+                          : "ltr",
+                    },
+                  ]}
+                >
+                  {isMovingMap
+                    ? t(
+                        "movingMapTitle",
+                      )
+                    : address.title}
+                </Text>
+
+                <Text
+                  numberOfLines={2}
+                  style={[
+                    styles.addressDetails,
+                    {
+                      textAlign: isRtl
+                        ? "right"
+                        : "left",
+                      writingDirection:
+                        isRtl
+                          ? "rtl"
+                          : "ltr",
+                    },
+                  ]}
+                >
+                  {isMovingMap
+                    ? t(
+                        "movingMapDetails",
+                      )
+                    : address.details}
+                </Text>
+              </View>
+            </View>
+
+            {addressError ? (
+              <View
                 style={[
-                  styles.coordinates,
-                  { flexDirection: isEnglish ? "row" : "row-reverse" },
+                  styles.warningRow,
+                  {
+                    flexDirection:
+                      isRtl
+                        ? "row-reverse"
+                        : "row",
+                  },
                 ]}
               >
-                <View style={styles.coordinateItem}>
-                  <Text
-                    style={[
-                      styles.coordinateLabel,
-                      {
-                        textAlign: "center",
-                        writingDirection: isEnglish ? "ltr" : "rtl",
-                      },
-                    ]}
-                  >
-                    {t("latitudeLabel")}
-                  </Text>
-
-                  <Text style={styles.coordinateValue}>
-                    {selectedRegion.latitude.toFixed(6)}
-                  </Text>
-                </View>
-
-                <View style={styles.coordinateDivider} />
-
-                <View style={styles.coordinateItem}>
-                  <Text
-                    style={[
-                      styles.coordinateLabel,
-                      {
-                        textAlign: "center",
-                        writingDirection: isEnglish ? "ltr" : "rtl",
-                      },
-                    ]}
-                  >
-                    {t("longitudeLabel")}
-                  </Text>
-
-                  <Text style={styles.coordinateValue}>
-                    {selectedRegion.longitude.toFixed(6)}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.actions}>
-                <GlassButton
-                  label={t("confirmLocationButton")}
-                  icon="checkmark"
-                  iconPosition={isEnglish ? "left" : "right"}
-                  disabled={!isMapReady || isMovingMap || isResolvingAddress}
-                  onPress={handleConfirmLocation}
+                <Ionicons
+                  name="information-circle-outline"
+                  size={17}
+                  color={
+                    KhedmatPalette.warning
+                  }
                 />
 
-                <GlassButton
-                  label={t("manualAddressButton")}
-                  variant="secondary"
-                  icon="create-outline"
-                  iconPosition={isEnglish ? "left" : "right"}
-                  onPress={handleManualAddress}
-                />
+                <Text
+                  style={[
+                    styles.warningText,
+                    {
+                      textAlign: isRtl
+                        ? "right"
+                        : "left",
+                      writingDirection:
+                        isRtl
+                          ? "rtl"
+                          : "ltr",
+                    },
+                  ]}
+                >
+                  {addressError}
+                </Text>
               </View>
-            </GlassSurface>
-          </Animated.View>
+            ) : null}
+
+            <View
+              style={[
+                styles.coordinates,
+                {
+                  flexDirection: isRtl
+                    ? "row-reverse"
+                    : "row",
+                },
+              ]}
+            >
+              <View
+                style={
+                  styles.coordinateItem
+                }
+              >
+                <Text
+                  style={[
+                    styles.coordinateLabel,
+                    {
+                      writingDirection:
+                        isRtl
+                          ? "rtl"
+                          : "ltr",
+                    },
+                  ]}
+                >
+                  {t(
+                    "latitudeLabel",
+                  )}
+                </Text>
+
+                <Text
+                  style={
+                    styles.coordinateValue
+                  }
+                >
+                  {latitudeText}
+                </Text>
+              </View>
+
+              <View
+                style={
+                  styles.coordinateDivider
+                }
+              />
+
+              <View
+                style={
+                  styles.coordinateItem
+                }
+              >
+                <Text
+                  style={[
+                    styles.coordinateLabel,
+                    {
+                      writingDirection:
+                        isRtl
+                          ? "rtl"
+                          : "ltr",
+                    },
+                  ]}
+                >
+                  {t(
+                    "longitudeLabel",
+                  )}
+                </Text>
+
+                <Text
+                  style={
+                    styles.coordinateValue
+                  }
+                >
+                  {longitudeText}
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={styles.actions}
+            >
+              <KhedmatButton
+                label={t(
+                  "confirmLocationButton",
+                )}
+                disabled={
+                  confirmDisabled
+                }
+                loading={
+                  isResolvingAddress
+                }
+                onPress={
+                  handleConfirmLocation
+                }
+              />
+
+              <KhedmatButton
+                label={t(
+                  "manualAddressButton",
+                )}
+                variant="outline"
+                onPress={
+                  handleManualAddress
+                }
+              />
+            </View>
+          </KhedmatCard>
         </View>
       </SafeAreaView>
     </View>
   );
 }
 
+function formatCoordinate(
+  value: number,
+  useLocalizedDigits: boolean,
+): string {
+  const formatted =
+    value.toFixed(6);
+
+  return useLocalizedDigits
+    ? toLocalizedDigits(formatted)
+    : formatted;
+}
+
+function toLocalizedDigits(
+  value: string,
+): string {
+  const digits: Record<
+    string,
+    string
+  > = {
+    "0": "۰",
+    "1": "۱",
+    "2": "۲",
+    "3": "۳",
+    "4": "۴",
+    "5": "۵",
+    "6": "۶",
+    "7": "۷",
+    "8": "۸",
+    "9": "۹",
+  };
+
+  return value.replace(
+    /\d/g,
+    (digit) =>
+      digits[digit] ?? digit,
+  );
+}
+
+function getLocationErrorTitle(
+  language: string,
+): string {
+  if (language === "Dari") {
+    return "موقعیت پیدا نشد";
+  }
+
+  if (language === "Pashto") {
+    return "موقعیت ونه موندل شو";
+  }
+
+  return "Location unavailable";
+}
+
+function getLocationErrorMessage(
+  language: string,
+): string {
+  if (language === "Dari") {
+    return "لطفاً دسترسی موقعیت را فعال کنید و دوباره تلاش نمایید.";
+  }
+
+  if (language === "Pashto") {
+    return "مهرباني وکړئ د موقعیت اجازه فعاله کړئ او بیا هڅه وکړئ.";
+  }
+
+  return "Enable location access and try again.";
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor:
+      KhedmatPalette.blue050,
   },
 
   safeArea: {
     flex: 1,
-    justifyContent: "space-between",
-  },
-
-  mapAtmosphere: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(6, 10, 15, 0.08)",
+    justifyContent:
+      "space-between",
   },
 
   topControls: {
-    paddingHorizontal: Spacing.xl,
+    width: "100%",
+    paddingHorizontal:
+      Layout.screenPadding,
     paddingTop: Spacing.sm,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent:
+      "space-between",
+  },
+
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.surface,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    ...Shadows.small,
   },
 
   headerStatus: {
     minHeight: 44,
-  },
-
-  headerStatusContent: {
-    minHeight: 44,
-    paddingHorizontal: Spacing.lg,
+    maxWidth: "72%",
+    paddingHorizontal:
+      Spacing.lg,
     alignItems: "center",
     gap: Spacing.sm,
+    borderRadius: Radius.pill,
+    backgroundColor:
+      KhedmatPalette.surface,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    ...Shadows.small,
   },
 
   statusDot: {
     width: 7,
     height: 7,
+    flexShrink: 0,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.primary,
+    backgroundColor:
+      KhedmatPalette.blue500,
   },
 
   headerStatusText: {
     ...Typography.label,
-    color: Colors.textPrimary,
+    flexShrink: 1,
+    color:
+      KhedmatPalette.textPrimary,
   },
 
-  pinContainer: {
+  /*
+   * The container's bottom-center point is
+   * exactly at the center of the map.
+   *
+   * Width: 60
+   * Total pin height: 72
+   * marginLeft: -30
+   * marginTop: -72
+   */
+  centerPinAnchor: {
     position: "absolute",
-    top: "42%",
+    top: "50%",
     left: "50%",
-    width: 64,
-    height: 82,
-    marginLeft: -32,
-    marginTop: -62,
+    width: 60,
+    height: 72,
+    marginLeft: -30,
+    marginTop: -72,
     alignItems: "center",
+    justifyContent:
+      "flex-start",
   },
 
-  pinOuter: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    padding: 5,
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    ...Shadows.medium,
-  },
-
-  pinInner: {
-    flex: 1,
+  pinBody: {
+    width: 56,
+    height: 56,
+    zIndex: 2,
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primary,
+    backgroundColor:
+      KhedmatPalette.navy900,
+    borderWidth: 4,
+    borderColor:
+      KhedmatPalette.surface,
+    ...Shadows.medium,
   },
 
-  pinStem: {
-    width: 4,
-    height: 18,
-    marginTop: -2,
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.primary,
+  pinTip: {
+    width: 16,
+    height: 16,
+    zIndex: 1,
+    marginTop: -9,
+    backgroundColor:
+      KhedmatPalette.navy900,
+    transform: [
+      {
+        rotate: "45deg",
+      },
+    ],
   },
 
   pinShadow: {
     position: "absolute",
-    bottom: 2,
+    bottom: -4,
     width: 30,
     height: 9,
     borderRadius: Radius.pill,
-    backgroundColor: "rgba(0, 0, 0, 0.28)",
-    transform: [{ scaleX: 1.25 }],
+    backgroundColor:
+      "rgba(0, 27, 72, 0.22)",
+    transform: [
+      {
+        scaleX: 1.25,
+      },
+    ],
   },
 
   lowerArea: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.md,
-    gap: Spacing.md,
-  },
-
-  recenterWrapper: {
     width: "100%",
-    paddingHorizontal: Spacing.xs,
+    paddingHorizontal:
+      Layout.screenPadding,
+    paddingBottom: Spacing.sm,
+    gap: Spacing.sm,
   },
 
-  bottomSheet: {
+  recenterRow: {
     width: "100%",
-    backgroundColor: "rgba(18, 22, 31, 0.94)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
+    flexDirection: "row",
   },
 
-  bottomSheetContent: {
-    paddingHorizontal: Spacing.xl,
-    paddingTop: 0,
-    paddingBottom: Spacing.xl,
-  },
-
-  handleArea: {
-    paddingVertical: Spacing.sm,
-    width: "100%",
-    alignItems: "center",
-  },
-
-  sheetHandle: {
-    width: 36,
-    height: 4,
+  recenterButton: {
+    width: 48,
+    height: 48,
     borderRadius: Radius.pill,
-    backgroundColor: "rgba(255, 255, 255, 0.25)",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.surface,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    ...Shadows.small,
   },
 
-  sheetHeader: {
+  bottomCard: {
+    width: "100%",
+  },
+
+  bottomCardContent: {
+    padding: Spacing.lg,
+  },
+
+  addressHeader: {
+    width: "100%",
     alignItems: "flex-start",
     gap: Spacing.md,
   },
@@ -668,7 +1173,8 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
   },
 
   addressCopy: {
@@ -678,43 +1184,56 @@ const styles = StyleSheet.create({
 
   eyebrow: {
     ...Typography.captionStyle,
-    color: Colors.primary,
+    width: "100%",
+    color:
+      KhedmatPalette.blue500,
+    fontFamily: Fonts.medium,
   },
 
   addressTitle: {
     ...Typography.sectionTitle,
     width: "100%",
-    color: Colors.textPrimary,
+    color:
+      KhedmatPalette.textPrimary,
   },
 
   addressDetails: {
     ...Typography.bodyStyle,
     width: "100%",
-    color: Colors.textSecondary,
+    color:
+      KhedmatPalette.textSecondary,
+    lineHeight: 22,
   },
 
   warningRow: {
+    width: "100%",
     marginTop: Spacing.md,
     padding: Spacing.md,
     alignItems: "center",
     gap: Spacing.sm,
     borderRadius: Radius.md,
-    backgroundColor: "rgba(217, 154, 43, 0.10)",
+    backgroundColor:
+      KhedmatPalette.warningSoft,
   },
 
   warningText: {
     ...Typography.captionStyle,
     flex: 1,
-    color: Colors.textSecondary,
+    color:
+      KhedmatPalette.textSecondary,
   },
 
   coordinates: {
+    width: "100%",
     marginTop: Spacing.lg,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.md,
     alignItems: "center",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.separator,
+    borderTopWidth:
+      StyleSheet.hairlineWidth,
+    borderBottomWidth:
+      StyleSheet.hairlineWidth,
+    borderColor:
+      KhedmatPalette.border,
   },
 
   coordinateItem: {
@@ -725,25 +1244,43 @@ const styles = StyleSheet.create({
 
   coordinateLabel: {
     ...Typography.captionStyle,
-    color: Colors.textTertiary,
+    color:
+      KhedmatPalette.textMuted,
+    textAlign: "center",
   },
 
   coordinateValue: {
-    color: Colors.textPrimary,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "600",
-    fontVariant: ["tabular-nums"],
+    fontFamily: Fonts.medium,
+    color:
+      KhedmatPalette.textPrimary,
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: "center",
+    fontVariant: [
+      "tabular-nums",
+    ],
   },
 
   coordinateDivider: {
-    width: StyleSheet.hairlineWidth,
-    height: 30,
-    backgroundColor: Colors.separator,
+    width:
+      StyleSheet.hairlineWidth,
+    height: 32,
+    backgroundColor:
+      KhedmatPalette.border,
   },
 
   actions: {
+    width: "100%",
     marginTop: Spacing.lg,
     gap: Spacing.md,
+  },
+
+  pressed: {
+    opacity: 0.78,
+    transform: [
+      {
+        scale: 0.96,
+      },
+    ],
   },
 });
