@@ -40,7 +40,7 @@ export default function LocationPermissionScreen() {
   };
 
   const handleManualAddress = () => {
-    router.push("/confirm-location");
+    router.push("/manual-address");
   };
 
   return (
