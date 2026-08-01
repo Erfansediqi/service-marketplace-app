@@ -1,20 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
-    StyleSheet,
-    Text,
-    View,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import { GlassButton } from "../components/glass/glass-button";
 import { GlassSurface } from "../components/glass/glass-surface";
 import { AppScreen } from "../components/layout/app-screen";
 import {
-    Colors,
-    Radius,
-    Spacing,
-    Typography,
+  Colors,
+  Radius,
+  Spacing,
+  Typography,
 } from "../constants/theme";
+import { useSession } from "../context/session-context";
 
 const reviewSteps = [
   {
@@ -40,8 +41,20 @@ const reviewSteps = [
 export default function ProviderSubmittedScreen() {
   const router = useRouter();
 
+  const {
+    enterProviderWorkspace,
+  } = useSession();
+
   const handleContinue = () => {
-    router.replace("/(tabs)");
+    /*
+     * Temporary local provider identity.
+     *
+     * Later, the backend will return the real provider ID
+     * after registration or approval.
+     */
+    enterProviderWorkspace("provider-1");
+
+    router.replace("/(provider-tabs)");
   };
 
   return (
@@ -51,14 +64,15 @@ export default function ProviderSubmittedScreen() {
       footer={
         <View style={styles.footer}>
           <GlassButton
-            label="رفتن به صفحهٔ اصلی"
-            icon="home-outline"
+            label="رفتن به پنل ارائه‌دهنده"
+            icon="grid-outline"
             iconPosition="left"
             onPress={handleContinue}
           />
 
           <Text style={styles.helperText}>
-            تا زمان پایان بررسی، می‌توانید از بخش مشتری برنامه استفاده کنید.
+            وضعیت بررسی حساب شما در پنل ارائه‌دهنده
+            نمایش داده خواهد شد.
           </Text>
         </View>
       }
@@ -89,8 +103,9 @@ export default function ProviderSubmittedScreen() {
           </Text>
 
           <Text style={styles.subtitle}>
-            درخواست شما برای بررسی ارسال شده است. پس از تأیید، حساب
-            ارائه‌دهندهٔ شما فعال خواهد شد.
+            درخواست شما برای بررسی ارسال شده است.
+            پس از تأیید، حساب ارائه‌دهندهٔ شما به‌صورت
+            کامل فعال خواهد شد.
           </Text>
         </View>
       </View>
@@ -119,7 +134,8 @@ export default function ProviderSubmittedScreen() {
           </Text>
 
           <Text style={styles.statusSubtitle}>
-            بررسی معمولاً بین ۱ تا ۳ روز کاری زمان می‌گیرد.
+            بررسی معمولاً بین ۱ تا ۳ روز کاری زمان
+            می‌گیرد.
           </Text>
         </View>
       </GlassSurface>
@@ -137,7 +153,10 @@ export default function ProviderSubmittedScreen() {
 
         <View style={styles.steps}>
           {reviewSteps.map((step, index) => (
-            <View key={step.title} style={styles.stepWrapper}>
+            <View
+              key={step.title}
+              style={styles.stepWrapper}
+            >
               <GlassSurface
                 variant="regular"
                 radius={Radius.xl}
@@ -163,13 +182,18 @@ export default function ProviderSubmittedScreen() {
                 </View>
 
                 <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>
-                    {index + 1}
+                  <Text
+                    style={styles.stepNumberText}
+                  >
+                    {toDariDigits(
+                      (index + 1).toString(),
+                    )}
                   </Text>
                 </View>
               </GlassSurface>
 
-              {index < reviewSteps.length - 1 ? (
+              {index <
+              reviewSteps.length - 1 ? (
                 <View style={styles.connector} />
               ) : null}
             </View>
@@ -197,12 +221,35 @@ export default function ProviderSubmittedScreen() {
           </Text>
 
           <Text style={styles.noticeText}>
-            لطفاً اعلان‌های برنامه را فعال نگه دارید. اگر معلومات بیشتری
-            لازم باشد، از طریق برنامه با شما تماس گرفته می‌شود.
+            لطفاً اعلان‌های برنامه را فعال نگه دارید.
+            اگر معلومات بیشتری لازم باشد، از طریق
+            برنامه با شما تماس گرفته می‌شود.
           </Text>
         </View>
       </GlassSurface>
     </AppScreen>
+  );
+}
+
+function toDariDigits(
+  value: string,
+): string {
+  const digits: Record<string, string> = {
+    "0": "۰",
+    "1": "۱",
+    "2": "۲",
+    "3": "۳",
+    "4": "۴",
+    "5": "۵",
+    "6": "۶",
+    "7": "۷",
+    "8": "۸",
+    "9": "۹",
+  };
+
+  return value.replace(
+    /\d/g,
+    (digit) => digits[digit] ?? digit,
   );
 }
 
@@ -221,8 +268,10 @@ const styles = StyleSheet.create({
   successSurface: {
     width: 112,
     height: 112,
-    borderColor: "rgba(48, 183, 106, 0.44)",
-    backgroundColor: "rgba(48, 183, 106, 0.10)",
+    borderColor:
+      "rgba(48, 183, 106, 0.44)",
+    backgroundColor:
+      "rgba(48, 183, 106, 0.10)",
   },
 
   successContent: {
@@ -238,8 +287,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: Colors.success,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.26)",
+    borderWidth:
+      StyleSheet.hairlineWidth,
+    borderColor:
+      "rgba(255, 255, 255, 0.26)",
   },
 
   heroCopy: {
@@ -279,8 +330,10 @@ const styles = StyleSheet.create({
   statusCard: {
     width: "100%",
     marginTop: Spacing.screen,
-    borderColor: "rgba(217, 154, 43, 0.30)",
-    backgroundColor: "rgba(217, 154, 43, 0.06)",
+    borderColor:
+      "rgba(217, 154, 43, 0.30)",
+    backgroundColor:
+      "rgba(217, 154, 43, 0.06)",
   },
 
   statusContent: {
@@ -298,7 +351,8 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(217, 154, 43, 0.12)",
+    backgroundColor:
+      "rgba(217, 154, 43, 0.12)",
   },
 
   statusCopy: {
@@ -391,9 +445,12 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(76, 141, 255, 0.22)",
+    backgroundColor:
+      Colors.primarySoft,
+    borderWidth:
+      StyleSheet.hairlineWidth,
+    borderColor:
+      "rgba(76, 141, 255, 0.22)",
   },
 
   stepCopy: {
@@ -428,8 +485,10 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.glassStrong,
-    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor:
+      Colors.glassStrong,
+    borderWidth:
+      StyleSheet.hairlineWidth,
     borderColor: Colors.borderStrong,
   },
 
@@ -467,7 +526,8 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
+    backgroundColor:
+      Colors.primarySoft,
   },
 
   noticeCopy: {
@@ -505,5 +565,6 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     textAlign: "center",
     writingDirection: "rtl",
+    lineHeight: 19,
   },
 });

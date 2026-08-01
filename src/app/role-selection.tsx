@@ -2,10 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import { GlassButton } from "../components/glass/glass-button";
@@ -13,12 +13,13 @@ import { GlassIconButton } from "../components/glass/glass-icon-button";
 import { GlassSurface } from "../components/glass/glass-surface";
 import { AppScreen } from "../components/layout/app-screen";
 import {
-    Colors,
-    Radius,
-    Shadows,
-    Spacing,
-    Typography,
+  Colors,
+  Radius,
+  Shadows,
+  Spacing,
+  Typography,
 } from "../constants/theme";
+import { useSession } from "../context/session-context";
 
 type UserRole = "customer" | "provider";
 
@@ -48,24 +49,32 @@ const roleOptions: RoleOption[] = [
 
 export default function RoleSelectionScreen() {
   const router = useRouter();
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+
+  const {
+    enterCustomerWorkspace,
+  } = useSession();
+
+  const [selectedRole, setSelectedRole] =
+    useState<UserRole | null>(null);
 
   const handleContinue = () => {
-  if (!selectedRole) {
-    return;
-  }
+    if (!selectedRole) {
+      return;
+    }
 
-  if (selectedRole === "provider") {
-    router.replace("/provider-welcome");
-    return;
-  }
+    if (selectedRole === "provider") {
+      router.replace("/provider-welcome");
+      return;
+    }
 
-  router.replace("/(tabs)");
-};
+    enterCustomerWorkspace();
+    router.replace("/(tabs)");
+  };
+
   return (
     <AppScreen
-     scrollable
-     contentStyle={styles.screenContent}
+      scrollable
+      contentStyle={styles.screenContent}
       footer={
         <View style={styles.footer}>
           <GlassButton
@@ -105,7 +114,9 @@ export default function RoleSelectionScreen() {
         </GlassSurface>
 
         <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>نوع حساب</Text>
+          <Text style={styles.eyebrow}>
+            نوع حساب
+          </Text>
 
           <Text style={styles.title}>
             چگونه می‌خواهید از خدمت استفاده کنید؟
@@ -119,35 +130,52 @@ export default function RoleSelectionScreen() {
 
       <View style={styles.options}>
         {roleOptions.map((option) => {
-          const selected = selectedRole === option.id;
+          const selected =
+            selectedRole === option.id;
 
           return (
             <Pressable
               key={option.id}
               accessibilityRole="radio"
-              accessibilityState={{ selected }}
+              accessibilityState={{
+                selected,
+              }}
               accessibilityLabel={option.title}
-              onPress={() => setSelectedRole(option.id)}
+              onPress={() =>
+                setSelectedRole(option.id)
+              }
               style={({ pressed }) => [
                 styles.optionPressable,
-                pressed && styles.optionPressed,
+                pressed &&
+                  styles.optionPressed,
               ]}
             >
               <GlassSurface
-                variant={selected ? "prominent" : "regular"}
+                variant={
+                  selected
+                    ? "prominent"
+                    : "regular"
+                }
                 radius={Radius.xl}
                 style={[
                   styles.optionSurface,
-                  selected && styles.selectedOptionSurface,
-                  selected && Shadows.small,
+                  selected &&
+                    styles.selectedOptionSurface,
+                  selected &&
+                    Shadows.small,
                 ]}
-                contentStyle={styles.optionContent}
+                contentStyle={
+                  styles.optionContent
+                }
               >
-                <View style={styles.optionTopRow}>
+                <View
+                  style={styles.optionTopRow}
+                >
                   <View
                     style={[
                       styles.iconContainer,
-                      selected && styles.selectedIconContainer,
+                      selected &&
+                        styles.selectedIconContainer,
                     ]}
                   >
                     <Ionicons
@@ -164,10 +192,15 @@ export default function RoleSelectionScreen() {
                   <View
                     style={[
                       styles.radioOuter,
-                      selected && styles.radioOuterSelected,
+                      selected &&
+                        styles.radioOuterSelected,
                     ]}
                   >
-                    {selected ? <View style={styles.radioInner} /> : null}
+                    {selected ? (
+                      <View
+                        style={styles.radioInner}
+                      />
+                    ) : null}
                   </View>
                 </View>
 
@@ -175,13 +208,18 @@ export default function RoleSelectionScreen() {
                   <Text
                     style={[
                       styles.optionTitle,
-                      selected && styles.selectedOptionTitle,
+                      selected &&
+                        styles.selectedOptionTitle,
                     ]}
                   >
                     {option.title}
                   </Text>
 
-                  <Text style={styles.optionSubtitle}>
+                  <Text
+                    style={
+                      styles.optionSubtitle
+                    }
+                  >
                     {option.subtitle}
                   </Text>
                 </View>
@@ -215,8 +253,10 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     alignSelf: "flex-end",
-    backgroundColor: "rgba(76, 141, 255, 0.10)",
-    borderColor: "rgba(100, 158, 255, 0.28)",
+    backgroundColor:
+      "rgba(76, 141, 255, 0.10)",
+    borderColor:
+      "rgba(100, 158, 255, 0.28)",
   },
 
   headerIconContent: {
@@ -280,8 +320,10 @@ const styles = StyleSheet.create({
   },
 
   selectedOptionSurface: {
-    borderColor: "rgba(76, 141, 255, 0.58)",
-    backgroundColor: "rgba(76, 141, 255, 0.11)",
+    borderColor:
+      "rgba(76, 141, 255, 0.58)",
+    backgroundColor:
+      "rgba(76, 141, 255, 0.11)",
   },
 
   optionContent: {
@@ -302,13 +344,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: Colors.glass,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth:
+      StyleSheet.hairlineWidth,
     borderColor: Colors.border,
   },
 
   selectedIconContainer: {
     backgroundColor: Colors.primary,
-    borderColor: "rgba(255, 255, 255, 0.24)",
+    borderColor:
+      "rgba(255, 255, 255, 0.24)",
   },
 
   radioOuter: {
