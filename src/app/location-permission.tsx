@@ -1,30 +1,49 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
-import { GlassButton } from "../components/glass/glass-button";
-import { GlassIconButton } from "../components/glass/glass-icon-button";
-import { GlassSurface } from "../components/glass/glass-surface";
-import { AppScreen } from "../components/layout/app-screen";
-import { Colors, Radius, Spacing, Typography } from "../constants/theme";
+import { KhedmatButton } from "../components/khedmat/khedmat-button";
+import { KhedmatScreen } from "../components/khedmat/khedmat-screen";
+import {
+  KhedmatPalette,
+  Layout,
+  Radius,
+  Shadows,
+  Spacing,
+  Typography,
+} from "../constants/theme";
 import { useLanguage } from "../context/languagecontext";
 import { requestUserLocation } from "../services/location";
 
 export default function LocationPermissionScreen() {
   const router = useRouter();
-  const { t, language } = useLanguage();
 
-  // Check if English is selected so we only apply left-alignment/LTR for English
-  const isEnglish = language === "English";
+  const {
+    t,
+    language,
+  } = useLanguage();
+
+  const isRtl =
+    language === "Dari" ||
+    language === "Pashto";
 
   const handleAllowLocation = async () => {
-    const location = await requestUserLocation();
+    const location =
+      await requestUserLocation();
 
     if (!location) {
       return;
     }
 
-    console.log("User location:", location);
+    console.log(
+      "User location:",
+      location,
+    );
 
     router.push({
       pathname: "/confirm-location",
@@ -40,82 +59,75 @@ export default function LocationPermissionScreen() {
   };
 
   return (
-    <AppScreen
-      contentStyle={styles.screenContent}
+    <KhedmatScreen
+      contentStyle={
+        styles.screenContent
+      }
       footer={
         <View style={styles.footer}>
-          <GlassButton
+          <KhedmatButton
             label={t("allowLocation")}
-            icon="location-outline"
-            iconPosition={isEnglish ? "left" : "right"}
-            onPress={handleAllowLocation}
+            onPress={
+              handleAllowLocation
+            }
           />
 
-          <GlassButton
+          <KhedmatButton
             label={t("manualAddress")}
-            variant="secondary"
-            icon="create-outline"
-            iconPosition={isEnglish ? "left" : "right"}
-            onPress={handleManualAddress}
+            variant="outline"
+            onPress={
+              handleManualAddress
+            }
           />
         </View>
       }
     >
-      <View
-        style={[
-          styles.topBar,
-          { alignItems: isEnglish ? "flex-start" : "flex-end" },
-        ]}
-      >
-        <GlassIconButton
-          accessibilityLabel={t("backLabel")}
-          icon="chevron-back"
+      <View style={styles.topBar}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t(
+            "backLabel",
+          )}
           onPress={() => router.back()}
-        />
+          style={({ pressed }) => [
+            styles.backButton,
+            pressed &&
+              styles.backButtonPressed,
+          ]}
+        >
+          <Ionicons
+            name={
+              isRtl
+                ? "chevron-forward"
+                : "chevron-back"
+            }
+            size={24}
+            color={
+              KhedmatPalette.navy900
+            }
+          />
+        </Pressable>
       </View>
 
-      <View
-        style={[
-          styles.content,
-          { alignItems: isEnglish ? "flex-start" : "flex-end" },
-        ]}
-      >
-        <GlassSurface
-          variant="prominent"
-          radius={Radius.xxl}
-          style={[
-            styles.iconSurface,
-            { alignSelf: isEnglish ? "flex-start" : "flex-end" },
-          ]}
-          contentStyle={styles.iconContent}
-        >
-          <Ionicons name="location-outline" size={42} color={Colors.primary} />
-        </GlassSurface>
+      <View style={styles.centerContent}>
+        <View style={styles.locationIcon}>
+          <Ionicons
+            name="location"
+            size={52}
+            color={
+              KhedmatPalette.white
+            }
+          />
+        </View>
 
-        <View
-          style={[
-            styles.copy,
-            { alignItems: isEnglish ? "flex-start" : "flex-end" },
-          ]}
-        >
-          <Text
-            style={[
-              styles.eyebrow,
-              {
-                textAlign: isEnglish ? "left" : "right",
-                writingDirection: isEnglish ? "ltr" : "rtl",
-              },
-            ]}
-          >
-            {t("locationEyebrow")}
-          </Text>
-
+        <View style={styles.copy}>
           <Text
             style={[
               styles.title,
               {
-                textAlign: isEnglish ? "left" : "right",
-                writingDirection: isEnglish ? "ltr" : "rtl",
+                writingDirection: isRtl
+                  ? "rtl"
+                  : "ltr",
               },
             ]}
           >
@@ -126,70 +138,169 @@ export default function LocationPermissionScreen() {
             style={[
               styles.subtitle,
               {
-                textAlign: isEnglish ? "left" : "right",
-                writingDirection: isEnglish ? "ltr" : "rtl",
+                writingDirection: isRtl
+                  ? "rtl"
+                  : "ltr",
               },
             ]}
           >
             {t("locationSubtitle")}
           </Text>
         </View>
+
+        <View
+          style={[
+            styles.privacyNote,
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
+          ]}
+        >
+          <Ionicons
+            name="shield-checkmark-outline"
+            size={17}
+            color={
+              KhedmatPalette.blue500
+            }
+          />
+
+          <Text
+            numberOfLines={2}
+            style={[
+              styles.privacyText,
+              {
+                textAlign: isRtl
+                  ? "right"
+                  : "left",
+                writingDirection: isRtl
+                  ? "rtl"
+                  : "ltr",
+              },
+            ]}
+          >
+            {getPrivacyMessage(
+              language,
+            )}
+          </Text>
+        </View>
       </View>
-    </AppScreen>
+    </KhedmatScreen>
   );
+}
+
+function getPrivacyMessage(
+  language: string,
+): string {
+  if (language === "Dari") {
+    return "موقعیت شما فقط برای نمایش خدمات نزدیک و پیدا کردن آدرس استفاده می‌شود.";
+  }
+
+  if (language === "Pashto") {
+    return "ستاسو موقعیت یوازې د نږدې خدمتونو د ښودلو او د پته موندلو لپاره کارول کېږي.";
+  }
+
+  return "Your location is used only to show nearby services and help providers find your address.";
 }
 
 const styles = StyleSheet.create({
   screenContent: {
-    paddingTop: Spacing.md,
+    flex: 1,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xxl,
   },
 
   topBar: {
-    minHeight: 44,
+    width: "100%",
+    minHeight:
+      Layout.minimumTouchTarget,
+    alignItems: "flex-start",
   },
 
-  content: {
-    flex: 1,
-    justifyContent: "center",
-    paddingBottom: Spacing.hero,
-  },
-
-  iconSurface: {
-    width: 112,
-    height: 112,
-    marginBottom: Spacing.screen,
-    backgroundColor: "rgba(76,141,255,0.10)",
-    borderColor: "rgba(100,158,255,0.28)",
-  },
-
-  iconContent: {
-    flex: 1,
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.surface,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+  },
+
+  backButtonPressed: {
+    opacity: 0.78,
+    transform: [
+      {
+        scale: 0.96,
+      },
+    ],
+  },
+
+  centerContent: {
+    flex: 1,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingBottom: Spacing.screen,
+  },
+
+  locationIcon: {
+    width: 112,
+    height: 112,
+    marginBottom: Spacing.xxl,
+    borderRadius: Radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.navy900,
+    ...Shadows.darkAccent,
   },
 
   copy: {
     width: "100%",
+    maxWidth:
+      Layout.readableTextMaxWidth,
+    alignItems: "center",
     gap: Spacing.md,
-  },
-
-  eyebrow: {
-    ...Typography.captionStyle,
-    color: Colors.primary,
-    letterSpacing: 1,
   },
 
   title: {
     ...Typography.screenTitle,
-    color: Colors.textPrimary,
     width: "100%",
+    color:
+      KhedmatPalette.textPrimary,
+    textAlign: "center",
   },
 
   subtitle: {
-    ...Typography.bodyLarge,
-    color: Colors.textSecondary,
+    ...Typography.bodyStyle,
     width: "100%",
-    maxWidth: 440,
+    color:
+      KhedmatPalette.textSecondary,
+    textAlign: "center",
+    lineHeight: 24,
+  },
+
+  privacyNote: {
+    width: "100%",
+    maxWidth:
+      Layout.readableTextMaxWidth,
+    marginTop: Spacing.xxl,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+  },
+
+  privacyText: {
+    ...Typography.captionStyle,
+    flexShrink: 1,
+    color:
+      KhedmatPalette.textSecondary,
+    lineHeight: 18,
   },
 
   footer: {
