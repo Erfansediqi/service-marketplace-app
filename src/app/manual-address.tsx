@@ -1,10 +1,6 @@
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import {
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { GlassButton } from "../components/glass/glass-button";
 import { GlassIconButton } from "../components/glass/glass-icon-button";
@@ -14,15 +10,14 @@ import {
   GlassSelectOption,
 } from "../components/glass/glass-select";
 import { AppScreen } from "../components/layout/app-screen";
-import {
-  Colors,
-  Spacing,
-  Typography,
-} from "../constants/theme";
+import { Colors, Spacing, Typography } from "../constants/theme";
+import { useLanguage } from "../context/languagecontext";
 import { provinces } from "../data/afghanistan-addresses";
 
 export default function ManualAddressScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
+  const isEnglish = language === "English";
 
   const [provinceId, setProvinceId] = useState("");
   const [districtId, setDistrictId] = useState("");
@@ -36,21 +31,15 @@ export default function ManualAddressScreen() {
     () =>
       provinces.map((province) => ({
         id: province.id,
-        label: province.nameFa,
-        secondaryLabel: province.nameEn,
-        searchTerms: [
-          province.nameFa,
-          province.nameEn,
-        ],
+        label: isEnglish ? province.nameEn : province.nameFa,
+        secondaryLabel: isEnglish ? province.nameFa : province.nameEn,
+        searchTerms: [province.nameFa, province.nameEn],
       })),
-    [],
+    [isEnglish],
   );
 
   const selectedProvince = useMemo(
-    () =>
-      provinces.find(
-        (province) => province.id === provinceId,
-      ),
+    () => provinces.find((province) => province.id === provinceId),
     [provinceId],
   );
 
@@ -58,14 +47,11 @@ export default function ManualAddressScreen() {
     () =>
       selectedProvince?.districts.map((district) => ({
         id: district.id,
-        label: district.nameFa,
-        secondaryLabel: district.nameEn,
-        searchTerms: [
-          district.nameFa,
-          district.nameEn,
-        ],
+        label: isEnglish ? district.nameEn : district.nameFa,
+        secondaryLabel: isEnglish ? district.nameFa : district.nameEn,
+        searchTerms: [district.nameFa, district.nameEn],
       })) ?? [],
-    [selectedProvince],
+    [selectedProvince, isEnglish],
   );
 
   const selectedDistrict = useMemo(
@@ -77,18 +63,14 @@ export default function ManualAddressScreen() {
   );
 
   const provinceError =
-    submitted && !provinceId
-      ? "لطفاً ولایت خود را انتخاب کنید."
-      : undefined;
+    submitted && !provinceId ? t("provinceErrorText") : undefined;
 
   const districtError =
-    submitted && !districtId
-      ? "لطفاً شهر یا ولسوالی خود را انتخاب کنید."
-      : undefined;
+    submitted && !districtId ? t("districtErrorText") : undefined;
 
   const neighbourhoodError =
     submitted && neighbourhood.trim().length < 2
-      ? "لطفاً ناحیه یا محله را وارد کنید."
+      ? t("neighbourhoodErrorText")
       : undefined;
 
   const formIsValid =
@@ -96,13 +78,8 @@ export default function ManualAddressScreen() {
     Boolean(districtId) &&
     neighbourhood.trim().length >= 2;
 
-  const handleProvinceChange = (
-    value: string,
-    _option: GlassSelectOption,
-  ) => {
+  const handleProvinceChange = (value: string, _option: GlassSelectOption) => {
     setProvinceId(value);
-
-    // Reset the district because it belongs to the previous province.
     setDistrictId("");
 
     if (submitted) {
@@ -110,10 +87,7 @@ export default function ManualAddressScreen() {
     }
   };
 
-  const handleDistrictChange = (
-    value: string,
-    _option: GlassSelectOption,
-  ) => {
+  const handleDistrictChange = (value: string, _option: GlassSelectOption) => {
     setDistrictId(value);
 
     if (submitted) {
@@ -130,9 +104,17 @@ export default function ManualAddressScreen() {
 
     const address = {
       provinceId,
-      provinceName: selectedProvince?.nameFa ?? "",
+      provinceName: selectedProvince
+        ? isEnglish
+          ? selectedProvince.nameEn
+          : selectedProvince.nameFa
+        : "",
       districtId,
-      districtName: selectedDistrict?.nameFa ?? "",
+      districtName: selectedDistrict
+        ? isEnglish
+          ? selectedDistrict.nameEn
+          : selectedDistrict.nameFa
+        : "",
       neighbourhood: neighbourhood.trim(),
       street: street.trim(),
       house: house.trim(),
@@ -141,11 +123,6 @@ export default function ManualAddressScreen() {
     };
 
     console.log("Manual address:", address);
-
-    /*
-     * Later, save `address` to the authenticated user's profile
-     * or onboarding state before navigating to the next screen.
-     */
 
     router.replace("/role-selection");
   };
@@ -157,77 +134,110 @@ export default function ManualAddressScreen() {
       contentStyle={styles.content}
       footer={
         <GlassButton
-          label="ذخیره آدرس"
+          label={t("saveAddressButton")}
           icon="checkmark"
-          iconPosition="left"
+          iconPosition={isEnglish ? "left" : "right"}
           onPress={saveAddress}
         />
       }
     >
-      <View style={styles.topBar}>
+      <View
+        style={[
+          styles.topBar,
+          { alignItems: isEnglish ? "flex-start" : "flex-end" },
+        ]}
+      >
         <GlassIconButton
           icon="chevron-back"
-          accessibilityLabel="بازگشت"
+          accessibilityLabel={t("backLabel")}
           onPress={() => router.back()}
         />
       </View>
 
-      <View style={styles.header}>
-        <Text style={styles.eyebrow}>
-          آدرس دستی
+      <View
+        style={[
+          styles.header,
+          { alignItems: isEnglish ? "flex-start" : "flex-end" },
+        ]}
+      >
+        <Text
+          style={[
+            styles.eyebrow,
+            {
+              textAlign: isEnglish ? "left" : "right",
+              writingDirection: isEnglish ? "ltr" : "rtl",
+            },
+          ]}
+        >
+          {t("manualEyebrow")}
         </Text>
 
-        <Text style={styles.title}>
-          آدرس خود را وارد کنید
+        <Text
+          style={[
+            styles.title,
+            {
+              textAlign: isEnglish ? "left" : "right",
+              writingDirection: isEnglish ? "ltr" : "rtl",
+            },
+          ]}
+        >
+          {t("manualTitle")}
         </Text>
 
-        <Text style={styles.subtitle}>
-          ولایت و ولسوالی را انتخاب کنید و سپس جزئیات
-          آدرس خود را وارد نمایید.
+        <Text
+          style={[
+            styles.subtitle,
+            {
+              textAlign: isEnglish ? "left" : "right",
+              writingDirection: isEnglish ? "ltr" : "rtl",
+            },
+          ]}
+        >
+          {t("manualSubtitle")}
         </Text>
       </View>
 
       <View style={styles.form}>
         <GlassSelect
-          label="ولایت"
-          placeholder="انتخاب ولایت"
-          title="انتخاب ولایت"
-          subtitle="ولایت محل سکونت خود را انتخاب کنید."
+          label={t("provinceLabel")}
+          placeholder={t("provincePlaceholder")}
+          title={t("provinceTitle")}
+          subtitle={t("provinceSubtitle")}
           options={provinceOptions}
           value={provinceId}
           onChange={handleProvinceChange}
           searchable
-          searchPlaceholder="جستجوی ولایت..."
-          emptyMessage="ولایتی پیدا نشد."
+          searchPlaceholder={t("provinceSearch")}
+          emptyMessage={t("provinceEmpty")}
           error={provinceError}
         />
 
         <GlassSelect
-          label="شهر / ولسوالی"
+          label={t("districtLabel")}
           placeholder={
             provinceId
-              ? "انتخاب شهر یا ولسوالی"
-              : "ابتدا ولایت را انتخاب کنید"
+              ? t("districtPlaceholder")
+              : t("districtPlaceholderDisabled")
           }
-          title="انتخاب شهر یا ولسوالی"
+          title={t("districtTitle")}
           subtitle={
             selectedProvince
-              ? `شهر یا ولسوالی مورد نظر در ولایت ${selectedProvince.nameFa} را انتخاب کنید.`
-              : "ابتدا ولایت خود را انتخاب کنید."
+              ? `${t("districtSubtitle")}`
+              : t("provincePlaceholder")
           }
           options={districtOptions}
           value={districtId}
           onChange={handleDistrictChange}
           searchable
-          searchPlaceholder="جستجوی شهر یا ولسوالی..."
-          emptyMessage="شهر یا ولسوالی پیدا نشد."
+          searchPlaceholder={t("districtSearch")}
+          emptyMessage={t("districtEmpty")}
           disabled={!provinceId}
           error={districtError}
         />
 
         <GlassInput
-          label="ناحیه / محله"
-          placeholder="مثلاً ناحیه پنجم"
+          label={t("neighbourhoodLabel")}
+          placeholder={t("neighbourhoodPlaceholder")}
           value={neighbourhood}
           onChangeText={(value) => {
             setNeighbourhood(value);
@@ -239,34 +249,52 @@ export default function ManualAddressScreen() {
           error={neighbourhoodError}
           autoCapitalize="words"
           returnKeyType="next"
+          style={{
+            textAlign: isEnglish ? "left" : "right",
+            writingDirection: isEnglish ? "ltr" : "rtl",
+          }}
         />
 
         <GlassInput
-          label="کوچه یا سرک"
-          placeholder="نام کوچه یا سرک"
+          label={t("streetLabel")}
+          placeholder={t("streetPlaceholder")}
           value={street}
           onChangeText={setStreet}
           autoCapitalize="words"
           returnKeyType="next"
+          style={{
+            textAlign: isEnglish ? "left" : "right",
+            writingDirection: isEnglish ? "ltr" : "rtl",
+          }}
         />
 
         <GlassInput
-          label="شماره خانه / آپارتمان"
-          placeholder="اختیاری"
+          label={t("houseLabel")}
+          placeholder={t("housePlaceholder")}
           value={house}
           onChangeText={setHouse}
           returnKeyType="next"
+          style={{
+            textAlign: isEnglish ? "left" : "right",
+            writingDirection: isEnglish ? "ltr" : "rtl",
+          }}
         />
 
         <GlassInput
-          label="توضیحات بیشتر"
-          placeholder="مثلاً کنار مسجد، روبه‌روی مکتب..."
+          label={t("detailsLabel")}
+          placeholder={t("detailsPlaceholder")}
           value={details}
           onChangeText={setDetails}
           multiline
           numberOfLines={4}
           textAlignVertical="top"
-          style={styles.notes}
+          style={[
+            styles.notes,
+            {
+              textAlign: isEnglish ? "left" : "right",
+              writingDirection: isEnglish ? "ltr" : "rtl",
+            },
+          ]}
           returnKeyType="done"
         />
       </View>
@@ -282,29 +310,23 @@ const styles = StyleSheet.create({
 
   topBar: {
     minHeight: 44,
-    alignItems: "flex-start",
   },
 
   header: {
     marginTop: Spacing.xl,
     gap: Spacing.sm,
-    alignItems: "flex-end",
   },
 
   eyebrow: {
     ...Typography.captionStyle,
     width: "100%",
     color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 
   title: {
     ...Typography.screenTitle,
     width: "100%",
     color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 
   subtitle: {
@@ -312,8 +334,6 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 440,
     color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 
   form: {
@@ -325,7 +345,5 @@ const styles = StyleSheet.create({
   notes: {
     minHeight: 110,
     paddingTop: Spacing.lg,
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 });

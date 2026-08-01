@@ -1,25 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import {
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { GlassButton } from "../components/glass/glass-button";
 import { GlassIconButton } from "../components/glass/glass-icon-button";
 import { GlassSurface } from "../components/glass/glass-surface";
 import { AppScreen } from "../components/layout/app-screen";
-import {
-    Colors,
-    Radius,
-    Spacing,
-    Typography,
-} from "../constants/theme";
+import { Colors, Radius, Spacing, Typography } from "../constants/theme";
+import { useLanguage } from "../context/languagecontext";
 import { requestUserLocation } from "../services/location";
 
 export default function LocationPermissionScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
+
+  // Check if English is selected so we only apply left-alignment/LTR for English
+  const isEnglish = language === "English";
 
   const handleAllowLocation = async () => {
     const location = await requestUserLocation();
@@ -49,57 +45,93 @@ export default function LocationPermissionScreen() {
       footer={
         <View style={styles.footer}>
           <GlassButton
-            label="اجازه هنگام استفاده از برنامه"
+            label={t("allowLocation")}
             icon="location-outline"
-            iconPosition="left"
+            iconPosition={isEnglish ? "left" : "right"}
             onPress={handleAllowLocation}
           />
 
           <GlassButton
-            label="وارد کردن دستی آدرس"
+            label={t("manualAddress")}
             variant="secondary"
             icon="create-outline"
-            iconPosition="left"
+            iconPosition={isEnglish ? "left" : "right"}
             onPress={handleManualAddress}
           />
         </View>
       }
     >
-      <View style={styles.topBar}>
+      <View
+        style={[
+          styles.topBar,
+          { alignItems: isEnglish ? "flex-start" : "flex-end" },
+        ]}
+      >
         <GlassIconButton
-          accessibilityLabel="بازگشت"
+          accessibilityLabel={t("backLabel")}
           icon="chevron-back"
           onPress={() => router.back()}
         />
       </View>
 
-      <View style={styles.content}>
+      <View
+        style={[
+          styles.content,
+          { alignItems: isEnglish ? "flex-start" : "flex-end" },
+        ]}
+      >
         <GlassSurface
           variant="prominent"
           radius={Radius.xxl}
-          style={styles.iconSurface}
+          style={[
+            styles.iconSurface,
+            { alignSelf: isEnglish ? "flex-start" : "flex-end" },
+          ]}
           contentStyle={styles.iconContent}
         >
-          <Ionicons
-            name="location-outline"
-            size={42}
-            color={Colors.primary}
-          />
+          <Ionicons name="location-outline" size={42} color={Colors.primary} />
         </GlassSurface>
 
-        <View style={styles.copy}>
-          <Text style={styles.eyebrow}>
-            تنظیم حساب
+        <View
+          style={[
+            styles.copy,
+            { alignItems: isEnglish ? "flex-start" : "flex-end" },
+          ]}
+        >
+          <Text
+            style={[
+              styles.eyebrow,
+              {
+                textAlign: isEnglish ? "left" : "right",
+                writingDirection: isEnglish ? "ltr" : "rtl",
+              },
+            ]}
+          >
+            {t("locationEyebrow")}
           </Text>
 
-          <Text style={styles.title}>
-            اجازهٔ دسترسی به موقعیت
+          <Text
+            style={[
+              styles.title,
+              {
+                textAlign: isEnglish ? "left" : "right",
+                writingDirection: isEnglish ? "ltr" : "rtl",
+              },
+            ]}
+          >
+            {t("locationTitle")}
           </Text>
 
-          <Text style={styles.subtitle}>
-            برای نمایش خدمات و ارائه‌دهندگان نزدیک شما،
-            پیشنهادهای دقیق‌تر و تعیین خودکار آدرس،
-            لطفاً اجازهٔ دسترسی به موقعیت مکانی را بدهید.
+          <Text
+            style={[
+              styles.subtitle,
+              {
+                textAlign: isEnglish ? "left" : "right",
+                writingDirection: isEnglish ? "ltr" : "rtl",
+              },
+            ]}
+          >
+            {t("locationSubtitle")}
           </Text>
         </View>
       </View>
@@ -114,20 +146,17 @@ const styles = StyleSheet.create({
 
   topBar: {
     minHeight: 44,
-    alignItems: "flex-start",
   },
 
   content: {
     flex: 1,
     justifyContent: "center",
-    alignItems: "flex-end",
     paddingBottom: Spacing.hero,
   },
 
   iconSurface: {
     width: 112,
     height: 112,
-    alignSelf: "center",
     marginBottom: Spacing.screen,
     backgroundColor: "rgba(76,141,255,0.10)",
     borderColor: "rgba(100,158,255,0.28)",
@@ -142,30 +171,23 @@ const styles = StyleSheet.create({
   copy: {
     width: "100%",
     gap: Spacing.md,
-    alignItems: "flex-end",
   },
 
   eyebrow: {
     ...Typography.captionStyle,
     color: Colors.primary,
     letterSpacing: 1,
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 
   title: {
     ...Typography.screenTitle,
     color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
     width: "100%",
   },
 
   subtitle: {
     ...Typography.bodyLarge,
     color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
     width: "100%",
     maxWidth: 440,
   },

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  PanResponder,
   StyleSheet,
   Text,
   View,
@@ -21,6 +23,7 @@ import {
   Spacing,
   Typography,
 } from "../constants/theme";
+import { useLanguage } from "../context/languagecontext";
 import { reverseGeocode } from "../services/location";
 
 const DEFAULT_LOCATION = {
@@ -50,18 +53,23 @@ function parseCoordinate(
 
 function joinAddressParts(
   values: Array<string | null | undefined>,
+  isEnglish: boolean,
 ): string {
+  const separator = isEnglish ? ", " : "، ";
   return values
     .map((value) => value?.trim())
     .filter(
       (value, index, array): value is string =>
         Boolean(value) && array.indexOf(value) === index,
     )
-    .join("، ");
+    .join(separator);
 }
 
 export default function ConfirmLocationScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
+  const isEnglish = language === "English";
+
   const params = useLocalSearchParams<{
     lat?: string | string[];
     lng?: string | string[];
@@ -71,20 +79,12 @@ export default function ConfirmLocationScreen() {
   const geocodeRequestRef = useRef(0);
 
   const initialLatitude = useMemo(
-    () =>
-      parseCoordinate(
-        params.lat,
-        DEFAULT_LOCATION.latitude,
-      ),
+    () => parseCoordinate(params.lat, DEFAULT_LOCATION.latitude),
     [params.lat],
   );
 
   const initialLongitude = useMemo(
-    () =>
-      parseCoordinate(
-        params.lng,
-        DEFAULT_LOCATION.longitude,
-      ),
+    () => parseCoordinate(params.lng, DEFAULT_LOCATION.longitude),
     [params.lng],
   );
 
@@ -97,22 +97,68 @@ export default function ConfirmLocationScreen() {
     [initialLatitude, initialLongitude],
   );
 
-  const [selectedRegion, setSelectedRegion] =
-    useState<Region>(initialRegion);
+  const [selectedRegion, setSelectedRegion] = useState<Region>(initialRegion);
 
   const [address, setAddress] = useState<AddressState>({
-    title: "در حال یافتن آدرس...",
-    details: "لطفاً چند لحظه صبر کنید.",
+    title: t("defaultAddressTitle"),
+    details: t("defaultAddressDetails"),
   });
 
-  const [isResolvingAddress, setIsResolvingAddress] =
-    useState(true);
-
+  const [isResolvingAddress, setIsResolvingAddress] = useState(true);
   const [isMapReady, setIsMapReady] = useState(false);
   const [isMovingMap, setIsMovingMap] = useState(false);
-  const [addressError, setAddressError] = useState<
-    string | null
-  >(null);
+  const [addressError, setAddressError] = useState<string | null>(null);
+
+  // Collapsible Bottom Sheet Animation & Drag Handling
+  const sheetTranslateY = useRef(new Animated.Value(0)).current;
+  const [isSheetCollapsed, setIsSheetCollapsed] = useState(false);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dy) > 5;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          sheetTranslateY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 80 || gestureState.vy > 0.5) {
+          // Collapse / Minimize Sheet downwards
+          Animated.timing(sheetTranslateY, {
+            toValue: 280,
+            duration: 250,
+            useNativeDriver: true,
+          }).start(() => setIsSheetCollapsed(true));
+        } else {
+          // Snap back to Expanded
+          Animated.spring(sheetTranslateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 4,
+          }).start(() => setIsSheetCollapsed(false));
+        }
+      },
+    }),
+  ).current;
+
+  const toggleSheet = () => {
+    if (isSheetCollapsed) {
+      Animated.spring(sheetTranslateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        bounciness: 4,
+      }).start(() => setIsSheetCollapsed(false));
+    } else {
+      Animated.timing(sheetTranslateY, {
+        toValue: 280,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(() => setIsSheetCollapsed(true));
+    }
+  };
 
   useEffect(() => {
     const requestId = geocodeRequestRef.current + 1;
@@ -134,27 +180,24 @@ export default function ConfirmLocationScreen() {
 
         if (!result) {
           setAddress({
-            title: "موقعیت انتخاب‌شده",
-            details: "آدرس دقیق این موقعیت پیدا نشد.",
+            title: t("fallbackLocationTitle"),
+            details: t("fallbackAddressDetails"),
           });
 
           return;
         }
 
         const title =
-          joinAddressParts([
-            result.name,
-            result.street,
-            result.district,
-          ]) || "موقعیت انتخاب‌شده";
+          joinAddressParts(
+            [result.name, result.street, result.district],
+            isEnglish,
+          ) || t("fallbackLocationTitle");
 
         const details =
-          joinAddressParts([
-            result.city,
-            result.subregion,
-            result.region,
-            result.country,
-          ]) || "آدرس دقیق در دسترس نیست.";
+          joinAddressParts(
+            [result.city, result.subregion, result.region, result.country],
+            isEnglish,
+          ) || t("fallbackAddressDetails");
 
         setAddress({
           title,
@@ -167,13 +210,11 @@ export default function ConfirmLocationScreen() {
           return;
         }
 
-        setAddressError(
-          "در حال حاضر دریافت آدرس ممکن نیست.",
-        );
+        setAddressError(t("coordinatesUnavailable"));
 
         setAddress({
-          title: "موقعیت انتخاب‌شده",
-          details: "مختصات موقعیت با موفقیت دریافت شد.",
+          title: t("fallbackLocationTitle"),
+          details: t("coordinatesSuccess"),
         });
       } finally {
         if (requestId === geocodeRequestRef.current) {
@@ -183,10 +224,7 @@ export default function ConfirmLocationScreen() {
     }, 650);
 
     return () => clearTimeout(timer);
-  }, [
-    selectedRegion.latitude,
-    selectedRegion.longitude,
-  ]);
+  }, [selectedRegion.latitude, selectedRegion.longitude, isEnglish, t]);
 
   const handleRegionChangeComplete = (region: Region) => {
     setSelectedRegion(region);
@@ -196,36 +234,28 @@ export default function ConfirmLocationScreen() {
   const handleRecenter = () => {
     setIsMovingMap(true);
 
-    mapRef.current?.animateToRegion(
-      initialRegion,
-      500,
-    );
+    const targetRegion = {
+      latitude: initialLatitude,
+      longitude: initialLongitude,
+      ...DEFAULT_DELTA,
+    };
 
-    setSelectedRegion(initialRegion);
+    mapRef.current?.animateToRegion(targetRegion, 600);
+    setSelectedRegion(targetRegion);
   };
 
   const handleConfirmLocation = () => {
     Alert.alert(
-      "تأیید موقعیت",
+      t("confirmLocationHeader"),
       `${address.title}\n${address.details}`,
       [
         {
-          text: "ویرایش",
+          text: t("editAction"),
           style: "cancel",
         },
         {
-          text: "تأیید",
+          text: t("confirmAction"),
           onPress: () => {
-            /*
-             * Later, save these values to the authenticated
-             * user's profile or onboarding state:
-             *
-             * selectedRegion.latitude
-             * selectedRegion.longitude
-             * address.title
-             * address.details
-             */
-
             router.replace("/role-selection");
           },
         },
@@ -234,15 +264,7 @@ export default function ConfirmLocationScreen() {
   };
 
   const handleManualAddress = () => {
-    Alert.alert(
-      "وارد کردن دستی آدرس",
-      "صفحهٔ انتخاب ولایت، شهر، ناحیه و آدرس دقیق در مرحلهٔ بعد ساخته می‌شود.",
-      [
-        {
-          text: "باشه",
-        },
-      ],
-    );
+    router.push("/manual-address");
   };
 
   return (
@@ -261,21 +283,18 @@ export default function ConfirmLocationScreen() {
         onRegionChangeComplete={handleRegionChangeComplete}
       />
 
-      <View
-        pointerEvents="none"
-        style={styles.mapAtmosphere}
-      />
+      <View pointerEvents="none" style={styles.mapAtmosphere} />
 
-      <SafeAreaView
-        pointerEvents="box-none"
-        style={styles.safeArea}
-      >
+      <SafeAreaView pointerEvents="box-none" style={styles.safeArea}>
         <View
           pointerEvents="box-none"
-          style={styles.topControls}
+          style={[
+            styles.topControls,
+            { flexDirection: isEnglish ? "row" : "row-reverse" },
+          ]}
         >
           <GlassIconButton
-            accessibilityLabel="بازگشت"
+            accessibilityLabel={t("back")}
             icon="chevron-back"
             onPress={() => router.back()}
           />
@@ -284,157 +303,224 @@ export default function ConfirmLocationScreen() {
             variant="regular"
             radius={Radius.pill}
             style={styles.headerStatus}
-            contentStyle={styles.headerStatusContent}
+            contentStyle={[
+              styles.headerStatusContent,
+              { flexDirection: isEnglish ? "row" : "row-reverse" },
+            ]}
           >
             <View style={styles.statusDot} />
 
-            <Text style={styles.headerStatusText}>
-              انتخاب موقعیت
+            <Text
+              style={[
+                styles.headerStatusText,
+                {
+                  textAlign: isEnglish ? "left" : "right",
+                  writingDirection: isEnglish ? "ltr" : "rtl",
+                },
+              ]}
+            >
+              {t("confirmLocationHeader")}
             </Text>
           </GlassSurface>
         </View>
 
-        <View
-          pointerEvents="none"
-          style={styles.pinContainer}
-        >
+        <View pointerEvents="none" style={styles.pinContainer}>
           <View style={styles.pinShadow} />
 
           <View style={styles.pinOuter}>
             <View style={styles.pinInner}>
-              <Ionicons
-                name="location"
-                size={28}
-                color={Colors.white}
-              />
+              <Ionicons name="location" size={28} color={Colors.white} />
             </View>
           </View>
 
           <View style={styles.pinStem} />
         </View>
 
-        <View
-          pointerEvents="box-none"
-          style={styles.recenterContainer}
-        >
-          <GlassIconButton
-            accessibilityLabel="بازگشت به موقعیت فعلی"
-            icon="navigate-outline"
-            size={22}
-            onPress={handleRecenter}
-          />
-        </View>
-
-        <View style={styles.bottomArea}>
-          <GlassSurface
-            variant="prominent"
-            radius={Radius.xxl}
-            style={[styles.bottomSheet, Shadows.medium]}
-            contentStyle={styles.bottomSheetContent}
+        <View style={styles.lowerArea}>
+          <View
+            style={[
+              styles.recenterWrapper,
+              { alignItems: isEnglish ? "flex-end" : "flex-start" },
+            ]}
           >
-            <View style={styles.sheetHandle} />
+            <GlassIconButton
+              accessibilityLabel={t("recenterLabel")}
+              icon="navigate-outline"
+              size={22}
+              onPress={handleRecenter}
+            />
+          </View>
 
-            <View style={styles.sheetHeader}>
-              <View style={styles.addressIcon}>
-                {isResolvingAddress ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={Colors.primary}
-                  />
-                ) : (
+          <Animated.View
+            style={{
+              transform: [{ translateY: sheetTranslateY }],
+            }}
+          >
+            <GlassSurface
+              variant="prominent"
+              radius={Radius.xxl}
+              style={[styles.bottomSheet, Shadows.medium]}
+              contentStyle={styles.bottomSheetContent}
+            >
+              <View {...panResponder.panHandlers} style={styles.handleArea}>
+                <View style={styles.sheetHandle} />
+              </View>
+
+              <View
+                style={[
+                  styles.sheetHeader,
+                  { flexDirection: isEnglish ? "row" : "row-reverse" },
+                ]}
+              >
+                <View style={styles.addressIcon}>
+                  {isResolvingAddress ? (
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                  ) : (
+                    <Ionicons
+                      name="location-outline"
+                      size={22}
+                      color={Colors.primary}
+                    />
+                  )}
+                </View>
+
+                <View
+                  style={[
+                    styles.addressCopy,
+                    { alignItems: isEnglish ? "flex-start" : "flex-end" },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.eyebrow,
+                      {
+                        textAlign: isEnglish ? "left" : "right",
+                        writingDirection: isEnglish ? "ltr" : "rtl",
+                      },
+                    ]}
+                  >
+                    {t("selectedLocationEyebrow")}
+                  </Text>
+
+                  <Text
+                    numberOfLines={2}
+                    style={[
+                      styles.addressTitle,
+                      {
+                        textAlign: isEnglish ? "left" : "right",
+                        writingDirection: isEnglish ? "ltr" : "rtl",
+                      },
+                    ]}
+                  >
+                    {isMovingMap ? t("movingMapTitle") : address.title}
+                  </Text>
+
+                  <Text
+                    numberOfLines={2}
+                    style={[
+                      styles.addressDetails,
+                      {
+                        textAlign: isEnglish ? "left" : "right",
+                        writingDirection: isEnglish ? "ltr" : "rtl",
+                      },
+                    ]}
+                  >
+                    {isMovingMap ? t("movingMapDetails") : address.details}
+                  </Text>
+                </View>
+              </View>
+
+              {addressError ? (
+                <View
+                  style={[
+                    styles.warningRow,
+                    { flexDirection: isEnglish ? "row" : "row-reverse" },
+                  ]}
+                >
                   <Ionicons
-                    name="location-outline"
-                    size={22}
-                    color={Colors.primary}
+                    name="information-circle-outline"
+                    size={17}
+                    color={Colors.warning}
                   />
-                )}
+
+                  <Text
+                    style={[
+                      styles.warningText,
+                      {
+                        textAlign: isEnglish ? "left" : "right",
+                        writingDirection: isEnglish ? "ltr" : "rtl",
+                      },
+                    ]}
+                  >
+                    {addressError}
+                  </Text>
+                </View>
+              ) : null}
+
+              <View
+                style={[
+                  styles.coordinates,
+                  { flexDirection: isEnglish ? "row" : "row-reverse" },
+                ]}
+              >
+                <View style={styles.coordinateItem}>
+                  <Text
+                    style={[
+                      styles.coordinateLabel,
+                      {
+                        textAlign: "center",
+                        writingDirection: isEnglish ? "ltr" : "rtl",
+                      },
+                    ]}
+                  >
+                    {t("latitudeLabel")}
+                  </Text>
+
+                  <Text style={styles.coordinateValue}>
+                    {selectedRegion.latitude.toFixed(6)}
+                  </Text>
+                </View>
+
+                <View style={styles.coordinateDivider} />
+
+                <View style={styles.coordinateItem}>
+                  <Text
+                    style={[
+                      styles.coordinateLabel,
+                      {
+                        textAlign: "center",
+                        writingDirection: isEnglish ? "ltr" : "rtl",
+                      },
+                    ]}
+                  >
+                    {t("longitudeLabel")}
+                  </Text>
+
+                  <Text style={styles.coordinateValue}>
+                    {selectedRegion.longitude.toFixed(6)}
+                  </Text>
+                </View>
               </View>
 
-              <View style={styles.addressCopy}>
-                <Text style={styles.eyebrow}>
-                  موقعیت انتخاب‌شده
-                </Text>
-
-                <Text
-                  numberOfLines={2}
-                  style={styles.addressTitle}
-                >
-                  {isMovingMap
-                    ? "در حال انتخاب موقعیت..."
-                    : address.title}
-                </Text>
-
-                <Text
-                  numberOfLines={2}
-                  style={styles.addressDetails}
-                >
-                  {isMovingMap
-                    ? "نشانگر را روی محل مورد نظر قرار دهید."
-                    : address.details}
-                </Text>
-              </View>
-            </View>
-
-            {addressError ? (
-              <View style={styles.warningRow}>
-                <Ionicons
-                  name="information-circle-outline"
-                  size={17}
-                  color={Colors.warning}
+              <View style={styles.actions}>
+                <GlassButton
+                  label={t("confirmLocationButton")}
+                  icon="checkmark"
+                  iconPosition={isEnglish ? "left" : "right"}
+                  disabled={!isMapReady || isMovingMap || isResolvingAddress}
+                  onPress={handleConfirmLocation}
                 />
 
-                <Text style={styles.warningText}>
-                  {addressError}
-                </Text>
+                <GlassButton
+                  label={t("manualAddressButton")}
+                  variant="secondary"
+                  icon="create-outline"
+                  iconPosition={isEnglish ? "left" : "right"}
+                  onPress={handleManualAddress}
+                />
               </View>
-            ) : null}
-
-            <View style={styles.coordinates}>
-              <View style={styles.coordinateItem}>
-                <Text style={styles.coordinateLabel}>
-                  عرض جغرافیایی
-                </Text>
-
-                <Text style={styles.coordinateValue}>
-                  {selectedRegion.latitude.toFixed(6)}
-                </Text>
-              </View>
-
-              <View style={styles.coordinateDivider} />
-
-              <View style={styles.coordinateItem}>
-                <Text style={styles.coordinateLabel}>
-                  طول جغرافیایی
-                </Text>
-
-                <Text style={styles.coordinateValue}>
-                  {selectedRegion.longitude.toFixed(6)}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.actions}>
-              <GlassButton
-                label="تأیید این موقعیت"
-                icon="checkmark"
-                iconPosition="left"
-                disabled={
-                  !isMapReady ||
-                  isMovingMap ||
-                  isResolvingAddress
-                }
-                onPress={handleConfirmLocation}
-              />
-
-              <GlassButton
-                label="وارد کردن دستی آدرس"
-                variant="secondary"
-                icon="create-outline"
-                iconPosition="left"
-                onPress={handleManualAddress}
-              />
-            </View>
-          </GlassSurface>
+            </GlassSurface>
+          </Animated.View>
         </View>
       </SafeAreaView>
     </View>
@@ -454,13 +540,12 @@ const styles = StyleSheet.create({
 
   mapAtmosphere: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(6, 10, 15, 0.10)",
+    backgroundColor: "rgba(6, 10, 15, 0.08)",
   },
 
   topControls: {
     paddingHorizontal: Spacing.xl,
     paddingTop: Spacing.sm,
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
@@ -472,7 +557,6 @@ const styles = StyleSheet.create({
   headerStatusContent: {
     minHeight: 44,
     paddingHorizontal: Spacing.lg,
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: Spacing.sm,
   },
@@ -487,7 +571,6 @@ const styles = StyleSheet.create({
   headerStatusText: {
     ...Typography.label,
     color: Colors.textPrimary,
-    writingDirection: "rtl",
   },
 
   pinContainer: {
@@ -506,7 +589,7 @@ const styles = StyleSheet.create({
     height: 58,
     borderRadius: 29,
     padding: 5,
-    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
     ...Shadows.medium,
   },
 
@@ -536,38 +619,44 @@ const styles = StyleSheet.create({
     transform: [{ scaleX: 1.25 }],
   },
 
-  recenterContainer: {
-    position: "absolute",
-    right: Spacing.xl,
-    bottom: 370,
+  lowerArea: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
+    gap: Spacing.md,
   },
 
-  bottomArea: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.sm,
+  recenterWrapper: {
+    width: "100%",
+    paddingHorizontal: Spacing.xs,
   },
 
   bottomSheet: {
     width: "100%",
+    backgroundColor: "rgba(18, 22, 31, 0.94)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
   },
 
   bottomSheetContent: {
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.md,
+    paddingTop: 0,
     paddingBottom: Spacing.xl,
   },
 
+  handleArea: {
+    paddingVertical: Spacing.sm,
+    width: "100%",
+    alignItems: "center",
+  },
+
   sheetHandle: {
-    width: 42,
+    width: 36,
     height: 4,
-    alignSelf: "center",
-    marginBottom: Spacing.xl,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.borderStrong,
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
   },
 
   sheetHeader: {
-    flexDirection: "row-reverse",
     alignItems: "flex-start",
     gap: Spacing.md,
   },
@@ -584,37 +673,29 @@ const styles = StyleSheet.create({
 
   addressCopy: {
     flex: 1,
-    alignItems: "flex-end",
     gap: Spacing.xs,
   },
 
   eyebrow: {
     ...Typography.captionStyle,
     color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 
   addressTitle: {
     ...Typography.sectionTitle,
     width: "100%",
     color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 
   addressDetails: {
     ...Typography.bodyStyle,
     width: "100%",
     color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 
   warningRow: {
     marginTop: Spacing.md,
     padding: Spacing.md,
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: Spacing.sm,
     borderRadius: Radius.md,
@@ -625,14 +706,11 @@ const styles = StyleSheet.create({
     ...Typography.captionStyle,
     flex: 1,
     color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 
   coordinates: {
-    marginTop: Spacing.xl,
-    paddingVertical: Spacing.md,
-    flexDirection: "row-reverse",
+    marginTop: Spacing.lg,
+    paddingVertical: Spacing.sm,
     alignItems: "center",
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -648,8 +726,6 @@ const styles = StyleSheet.create({
   coordinateLabel: {
     ...Typography.captionStyle,
     color: Colors.textTertiary,
-    textAlign: "center",
-    writingDirection: "rtl",
   },
 
   coordinateValue: {
@@ -662,12 +738,12 @@ const styles = StyleSheet.create({
 
   coordinateDivider: {
     width: StyleSheet.hairlineWidth,
-    height: 34,
+    height: 30,
     backgroundColor: Colors.separator,
   },
 
   actions: {
-    marginTop: Spacing.xl,
+    marginTop: Spacing.lg,
     gap: Spacing.md,
   },
 });
