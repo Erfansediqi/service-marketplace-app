@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -35,6 +36,9 @@ const DEFAULT_DELTA = {
   latitudeDelta: 0.012,
   longitudeDelta: 0.012,
 };
+
+// How far down (in px) the bottom sheet travels when collapsed.
+const COLLAPSED_Y = 280;
 
 type AddressState = {
   title: string;
@@ -112,6 +116,9 @@ export default function ConfirmLocationScreen() {
   // Collapsible Bottom Sheet Animation & Drag Handling
   const sheetTranslateY = useRef(new Animated.Value(0)).current;
   const [isSheetCollapsed, setIsSheetCollapsed] = useState(false);
+  // Wherever the sheet actually is when a new drag gesture starts —
+  // captured fresh each time so drags never jump or lag.
+  const sheetBaseValue = useRef(0);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -119,45 +126,38 @@ export default function ConfirmLocationScreen() {
       onMoveShouldSetPanResponder: (_, gestureState) => {
         return Math.abs(gestureState.dy) > 5;
       },
+      onPanResponderGrant: () => {
+        // Snapshot the sheet's current position (even mid-animation)
+        // so the upcoming move events are relative to reality, not to 0.
+        sheetTranslateY.stopAnimation((value) => {
+          sheetBaseValue.current = value;
+        });
+      },
       onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dy > 0) {
-          sheetTranslateY.setValue(gestureState.dy);
-        }
+        const next = sheetBaseValue.current + gestureState.dy;
+        const clamped = Math.max(0, Math.min(COLLAPSED_Y, next));
+        sheetTranslateY.setValue(clamped);
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 80 || gestureState.vy > 0.5) {
-          // Collapse / Minimize Sheet downwards
-          Animated.timing(sheetTranslateY, {
-            toValue: 280,
-            duration: 250,
-            useNativeDriver: true,
-          }).start(() => setIsSheetCollapsed(true));
-        } else {
-          // Snap back to Expanded
-          Animated.spring(sheetTranslateY, {
-            toValue: 0,
-            useNativeDriver: true,
-            bounciness: 4,
-          }).start(() => setIsSheetCollapsed(false));
-        }
+        const next = sheetBaseValue.current + gestureState.dy;
+        const shouldCollapse = next > COLLAPSED_Y / 2 || gestureState.vy > 0.5;
+
+        Animated.spring(sheetTranslateY, {
+          toValue: shouldCollapse ? COLLAPSED_Y : 0,
+          useNativeDriver: true,
+          bounciness: 4,
+        }).start(() => setIsSheetCollapsed(shouldCollapse));
       },
     }),
   ).current;
 
   const toggleSheet = () => {
-    if (isSheetCollapsed) {
-      Animated.spring(sheetTranslateY, {
-        toValue: 0,
-        useNativeDriver: true,
-        bounciness: 4,
-      }).start(() => setIsSheetCollapsed(false));
-    } else {
-      Animated.timing(sheetTranslateY, {
-        toValue: 280,
-        duration: 250,
-        useNativeDriver: true,
-      }).start(() => setIsSheetCollapsed(true));
-    }
+    const target = isSheetCollapsed ? 0 : COLLAPSED_Y;
+    Animated.spring(sheetTranslateY, {
+      toValue: target,
+      useNativeDriver: true,
+      bounciness: 4,
+    }).start(() => setIsSheetCollapsed(!isSheetCollapsed));
   };
 
   useEffect(() => {
@@ -231,17 +231,45 @@ export default function ConfirmLocationScreen() {
     setIsMovingMap(false);
   };
 
-  const handleRecenter = () => {
-    setIsMovingMap(true);
+  const handleRecenter = async () => {
+    try {
+      setIsMovingMap(true);
 
-    const targetRegion = {
-      latitude: initialLatitude,
-      longitude: initialLongitude,
-      ...DEFAULT_DELTA,
-    };
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== "granted") {
+        const { status: requested } =
+          await Location.requestForegroundPermissionsAsync();
+        if (requested !== "granted") {
+          setIsMovingMap(false);
+          Alert.alert(
+            "Location permission needed",
+            "Enable location access in Settings to recenter the map.",
+          );
+          return;
+        }
+      }
 
-    mapRef.current?.animateToRegion(targetRegion, 600);
-    setSelectedRegion(targetRegion);
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const targetRegion = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        ...DEFAULT_DELTA,
+      };
+
+      mapRef.current?.animateToRegion(targetRegion, 600);
+      setSelectedRegion(targetRegion);
+      // isMovingMap is cleared by onRegionChangeComplete once the animation settles
+    } catch (error) {
+      console.error("Failed to get current location:", error);
+      setIsMovingMap(false);
+      Alert.alert(
+        "Couldn't get your location",
+        "Check your device location settings and try again.",
+      );
+    }
   };
 
   const handleConfirmLocation = () => {
@@ -285,6 +313,27 @@ export default function ConfirmLocationScreen() {
 
       <View pointerEvents="none" style={styles.mapAtmosphere} />
 
+      {/*
+        The pin lives OUTSIDE SafeAreaView on purpose. SafeAreaView pads its
+        content for the notch/status bar, which shifts its coordinate space
+        away from the full-screen MapView underneath. Since `selectedRegion`
+        is always the MapView's true geometric center, the pin has to be
+        positioned against that same full-screen box (top: "50%" of
+        `container`) or it will drift away from the coordinate you're
+        actually capturing.
+      */}
+      <View pointerEvents="none" style={styles.pinContainer}>
+        <View style={styles.pinShadow} />
+
+        <View style={styles.pinOuter}>
+          <View style={styles.pinInner}>
+            <Ionicons name="location" size={28} color={Colors.white} />
+          </View>
+        </View>
+
+        <View style={styles.pinStem} />
+      </View>
+
       <SafeAreaView pointerEvents="box-none" style={styles.safeArea}>
         <View
           pointerEvents="box-none"
@@ -324,18 +373,6 @@ export default function ConfirmLocationScreen() {
           </GlassSurface>
         </View>
 
-        <View pointerEvents="none" style={styles.pinContainer}>
-          <View style={styles.pinShadow} />
-
-          <View style={styles.pinOuter}>
-            <View style={styles.pinInner}>
-              <Ionicons name="location" size={28} color={Colors.white} />
-            </View>
-          </View>
-
-          <View style={styles.pinStem} />
-        </View>
-
         <View style={styles.lowerArea}>
           <View
             style={[
@@ -352,6 +389,7 @@ export default function ConfirmLocationScreen() {
           </View>
 
           <Animated.View
+            {...panResponder.panHandlers}
             style={{
               transform: [{ translateY: sheetTranslateY }],
             }}
@@ -362,7 +400,7 @@ export default function ConfirmLocationScreen() {
               style={[styles.bottomSheet, Shadows.medium]}
               contentStyle={styles.bottomSheetContent}
             >
-              <View {...panResponder.panHandlers} style={styles.handleArea}>
+              <View style={styles.handleArea}>
                 <View style={styles.sheetHandle} />
               </View>
 
@@ -575,12 +613,15 @@ const styles = StyleSheet.create({
 
   pinContainer: {
     position: "absolute",
-    top: "42%",
+    top: "50%",
     left: "50%",
     width: 64,
     height: 82,
     marginLeft: -32,
-    marginTop: -62,
+    // The tip of the pin (bottom edge of this box, where pinShadow sits)
+    // is the point that represents the selected coordinate — so the full
+    // box height is pulled up to land that tip exactly on the 50% mark.
+    marginTop: -82,
     alignItems: "center",
   },
 

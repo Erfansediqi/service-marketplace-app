@@ -17,7 +17,9 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [language, setLanguage] = useState<Language>("English");
 
   const t = (key: TranslationKeys): string => {
-    return translations[language]?.[key] || key;
+    // Safely check if translations exist for the current language, fallback to English
+    const currentLangDict = translations[language] || translations["English"];
+    return currentLangDict[key] || translations["English"][key] || key;
   };
 
   return (

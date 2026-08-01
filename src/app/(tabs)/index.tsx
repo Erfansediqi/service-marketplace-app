@@ -19,10 +19,7 @@ import {
   Spacing,
   Typography,
 } from "../../constants/theme";
-import {
-  ProviderProfile,
-  providers,
-} from "../../data/providers";
+import { ProviderProfile, providers } from "../../data/providers";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -30,15 +27,6 @@ type ServiceCategory = {
   id: string;
   title: string;
   subtitle: string;
-  icon: IconName;
-};
-
-type RecentBooking = {
-  id: string;
-  service: string;
-  providerName: string;
-  date: string;
-  status: "pending" | "confirmed" | "completed";
   icon: IconName;
 };
 
@@ -79,7 +67,25 @@ const serviceCategories: ServiceCategory[] = [
     subtitle: "موبایل و کمپیوتر",
     icon: "laptop-outline",
   },
- ];
+  {
+    id: "painter",
+    title: "رنگ‌کاری",
+    subtitle: "نقاشی دیوار و ساختمان",
+    icon: "color-palette-outline",
+  },
+  {
+    id: "gardener",
+    title: "باغبانی",
+    subtitle: "تنظیم باغچه و گل",
+    icon: "leaf-outline",
+  },
+  {
+    id: "appliance-repair",
+    title: "لوازم خانگی",
+    subtitle: "یخچال، ماشین لباسشویی",
+    icon: "settings-outline",
+  },
+];
 
 const featuredProviders = [...providers]
   .sort((first, second) => {
@@ -95,25 +101,6 @@ const featuredProviders = [...providers]
   })
   .slice(0, 4);
 
-const recentBookings: RecentBooking[] = [
-  {
-    id: "booking-1",
-    service: "ترمیم سیم‌کشی برق",
-    providerName: "احمد ولی",
-    date: "امروز، ساعت ۳:۰۰",
-    status: "confirmed",
-    icon: "flash-outline",
-  },
-  {
-    id: "booking-2",
-    service: "نظافت عمومی خانه",
-    providerName: "مریم احمدی",
-    date: "۲۸ سرطان",
-    status: "completed",
-    icon: "sparkles-outline",
-  },
-];
-
 export default function HomeScreen() {
   const router = useRouter();
 
@@ -128,10 +115,6 @@ export default function HomeScreen() {
         category: categoryId,
       },
     });
-  };
-
-  const openBookings = () => {
-    router.push("/(tabs)/bookings");
   };
 
   return (
@@ -160,40 +143,6 @@ export default function HomeScreen() {
             </GlassSurface>
           </Pressable>
 
-          <View style={styles.locationBlock}>
-            <Text style={styles.locationEyebrow}>
-              موقعیت فعلی
-            </Text>
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="تغییر موقعیت"
-              style={({ pressed }) => [
-                styles.locationButton,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Ionicons
-                name="chevron-down"
-                size={16}
-                color={Colors.textSecondary}
-              />
-
-              <Text
-                numberOfLines={1}
-                style={styles.locationText}
-              >
-                کابل، ناحیه دهم
-              </Text>
-
-              <Ionicons
-                name="location"
-                size={18}
-                color={Colors.primary}
-              />
-            </Pressable>
-          </View>
-
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="اعلان‌ها"
@@ -221,13 +170,7 @@ export default function HomeScreen() {
         <View style={styles.hero}>
           <Text style={styles.greeting}>سلام، احمد</Text>
 
-          <Text style={styles.heroTitle}>
-            امروز به کدام خدمت نیاز دارید؟
-          </Text>
-
-          <Text style={styles.heroSubtitle}>
-            ارائه‌دهندگان تأییدشده و نزدیک خود را پیدا کنید.
-          </Text>
+          <Text style={styles.heroTitle}>امروز به کدام خدمت نیاز دارید؟</Text>
         </View>
 
         <Pressable
@@ -267,35 +210,6 @@ export default function HomeScreen() {
           </GlassSurface>
         </Pressable>
 
-        <GlassSurface
-          variant="regular"
-          radius={Radius.xl}
-          style={styles.promoCard}
-          contentStyle={styles.promoContent}
-        >
-          <View style={styles.promoIcon}>
-            <Ionicons
-              name="shield-checkmark-outline"
-              size={27}
-              color={Colors.primary}
-            />
-          </View>
-
-          <View style={styles.promoCopy}>
-            <Text style={styles.promoEyebrow}>
-              خدمت مطمئن
-            </Text>
-
-            <Text style={styles.promoTitle}>
-              تمام ارائه‌دهندگان هویت‌سنجی می‌شوند
-            </Text>
-
-            <Text style={styles.promoSubtitle}>
-              با امتیازها، نظرهای واقعی و سابقهٔ کاری تصمیم بگیرید.
-            </Text>
-          </View>
-        </GlassSurface>
-
         <View style={styles.section}>
           <SectionHeader
             title="خدمات محبوب"
@@ -329,14 +243,9 @@ export default function HomeScreen() {
                     />
                   </View>
 
-                  <Text style={styles.categoryTitle}>
-                    {category.title}
-                  </Text>
+                  <Text style={styles.categoryTitle}>{category.title}</Text>
 
-                  <Text
-                    numberOfLines={1}
-                    style={styles.categorySubtitle}
-                  >
+                  <Text numberOfLines={1} style={styles.categorySubtitle}>
                     {category.subtitle}
                   </Text>
                 </GlassSurface>
@@ -353,10 +262,10 @@ export default function HomeScreen() {
           />
 
           <ScrollView
-  horizontal
-  showsHorizontalScrollIndicator={false}
-  contentContainerStyle={styles.providersRow}
->
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.providersRow}
+          >
             {featuredProviders.map((provider) => (
               <ProviderCard
                 key={provider.id}
@@ -373,24 +282,6 @@ export default function HomeScreen() {
             ))}
           </ScrollView>
         </View>
-
-        <View style={styles.section}>
-          <SectionHeader
-            title="رزروهای اخیر"
-            actionLabel="مشاهده همه"
-            onPress={openBookings}
-          />
-
-          <View style={styles.bookingsList}>
-            {recentBookings.map((booking) => (
-              <BookingCard
-                key={booking.id}
-                booking={booking}
-                onPress={openBookings}
-              />
-            ))}
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -402,11 +293,7 @@ type SectionHeaderProps = {
   onPress: () => void;
 };
 
-function SectionHeader({
-  title,
-  actionLabel,
-  onPress,
-}: SectionHeaderProps) {
+function SectionHeader({ title, actionLabel, onPress }: SectionHeaderProps) {
   return (
     <View style={styles.sectionHeader}>
       <Pressable
@@ -417,15 +304,9 @@ function SectionHeader({
           pressed && styles.pressed,
         ]}
       >
-        <Ionicons
-          name="chevron-back"
-          size={16}
-          color={Colors.primary}
-        />
+        <Ionicons name="chevron-back" size={16} color={Colors.primary} />
 
-        <Text style={styles.sectionActionText}>
-          {actionLabel}
-        </Text>
+        <Text style={styles.sectionActionText}>{actionLabel}</Text>
       </Pressable>
 
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -440,7 +321,6 @@ function ProviderCard({
   provider: ProviderProfile;
   onPress: () => void;
 }) {
-
   return (
     <Pressable
       accessibilityRole="button"
@@ -461,56 +341,39 @@ function ProviderCard({
           <View
             style={[
               styles.availabilityBadge,
-              !provider.availableToday &&
-                styles.unavailableBadge,
+              !provider.availableToday && styles.unavailableBadge,
             ]}
           >
             <View
               style={[
                 styles.availabilityDot,
-                !provider.availableToday &&
-                  styles.unavailableDot,
+                !provider.availableToday && styles.unavailableDot,
               ]}
             />
 
             <Text style={styles.availabilityText}>
-              {provider.availableToday
-                ? "امروز آماده"
-                : "فعلاً مصروف"}
+              {provider.availableToday ? "امروز آماده" : "فعلاً مصروف"}
             </Text>
           </View>
 
           <View style={styles.providerAvatar}>
-            <Text style={styles.providerInitials}>
-              {provider.initials}
-            </Text>
+            <Text style={styles.providerInitials}>{provider.initials}</Text>
 
             {provider.verified ? (
               <View style={styles.verifiedBadge}>
-                <Ionicons
-                  name="checkmark"
-                  size={11}
-                  color={Colors.white}
-                />
+                <Ionicons name="checkmark" size={11} color={Colors.white} />
               </View>
             ) : null}
           </View>
         </View>
 
         <View style={styles.providerCopy}>
-          <Text style={styles.providerName}>
-            {provider.name}
-          </Text>
+          <Text style={styles.providerName}>{provider.name}</Text>
 
-          <Text style={styles.providerProfession}>
-            {provider.profession}
-          </Text>
+          <Text style={styles.providerProfession}>{provider.profession}</Text>
 
           <View style={styles.providerLocation}>
-            <Text
-              numberOfLines={1}
-              style={styles.providerLocationText}
-            >
+            <Text numberOfLines={1} style={styles.providerLocationText}>
               {provider.locationLabel}
             </Text>
 
@@ -546,91 +409,12 @@ function ProviderCard({
               {toDariDigits(provider.rating.toFixed(1))}
             </Text>
 
-            <Ionicons
-              name="star"
-              size={15}
-              color={Colors.warning}
-            />
+            <Ionicons name="star" size={15} color={Colors.warning} />
 
             <Text style={styles.reviewCount}>
               ({toDariDigits(provider.reviewCount.toString())})
             </Text>
           </View>
-        </View>
-      </GlassSurface>
-    </Pressable>
-  );
-}
-
-function BookingCard({
-  booking,
-  onPress,
-}: {
-  booking: RecentBooking;
-  onPress: () => void;
-}) {
-  const status = getBookingStatus(booking.status);
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={booking.service}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.bookingPressable,
-        pressed && styles.cardPressed,
-      ]}
-    >
-      <GlassSurface
-        variant="regular"
-        radius={Radius.xl}
-        style={styles.bookingSurface}
-        contentStyle={styles.bookingContent}
-      >
-        <View style={styles.bookingIcon}>
-          <Ionicons
-            name={booking.icon}
-            size={23}
-            color={Colors.primary}
-          />
-        </View>
-
-        <View style={styles.bookingCopy}>
-          <Text style={styles.bookingService}>
-            {booking.service}
-          </Text>
-
-          <Text style={styles.bookingProvider}>
-            {booking.providerName}
-          </Text>
-
-          <View style={styles.bookingDateRow}>
-            <Text style={styles.bookingDate}>
-              {booking.date}
-            </Text>
-
-            <Ionicons
-              name="time-outline"
-              size={14}
-              color={Colors.textTertiary}
-            />
-          </View>
-        </View>
-
-        <View
-          style={[
-            styles.statusBadge,
-            { backgroundColor: status.backgroundColor },
-          ]}
-        >
-          <Text
-            style={[
-              styles.statusText,
-              { color: status.color },
-            ]}
-          >
-            {status.label}
-          </Text>
         </View>
       </GlassSurface>
     </Pressable>
@@ -655,36 +439,7 @@ function toDariDigits(value: string): string {
     "9": "۹",
   };
 
-  return value.replace(
-    /\d/g,
-    (digit) => digits[digit] ?? digit,
-  );
-}
-
-function getBookingStatus(
-  status: RecentBooking["status"],
-) {
-  if (status === "confirmed") {
-    return {
-      label: "تأییدشده",
-      color: Colors.primary,
-      backgroundColor: Colors.primarySoft,
-    };
-  }
-
-  if (status === "completed") {
-    return {
-      label: "تکمیل‌شده",
-      color: Colors.success,
-      backgroundColor: "rgba(48, 183, 106, 0.12)",
-    };
-  }
-
-  return {
-    label: "در انتظار",
-    color: Colors.warning,
-    backgroundColor: "rgba(217, 154, 43, 0.12)",
-  };
+  return value.replace(/\d/g, (digit) => digits[digit] ?? digit);
 }
 
 const styles = StyleSheet.create({
@@ -729,36 +484,6 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontSize: 17,
     fontWeight: "700",
-  },
-
-  locationBlock: {
-    flex: 1,
-    marginHorizontal: Spacing.md,
-    alignItems: "center",
-    gap: 2,
-  },
-
-  locationEyebrow: {
-    ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-
-  locationButton: {
-    maxWidth: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.xs,
-  },
-
-  locationText: {
-    ...Typography.label,
-    maxWidth: 210,
-    color: Colors.textPrimary,
-    textAlign: "center",
-    writingDirection: "rtl",
   },
 
   notificationPressable: {
@@ -814,14 +539,6 @@ const styles = StyleSheet.create({
     lineHeight: 35,
   },
 
-  heroSubtitle: {
-    ...Typography.bodyStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
   searchPressable: {
     width: "100%",
     marginTop: Spacing.xxl,
@@ -865,64 +582,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: Colors.glass,
-  },
-
-  promoCard: {
-    width: "100%",
-    marginTop: Spacing.xl,
-    borderColor: "rgba(76, 141, 255, 0.22)",
-    backgroundColor: "rgba(76, 141, 255, 0.06)",
-  },
-
-  promoContent: {
-    minHeight: 110,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  promoIcon: {
-    width: 54,
-    height: 54,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-  },
-
-  promoCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: 3,
-  },
-
-  promoEyebrow: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  promoTitle: {
-    ...Typography.label,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 16,
-    lineHeight: 22,
-  },
-
-  promoSubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    lineHeight: 19,
   },
 
   section: {
@@ -1017,9 +676,9 @@ const styles = StyleSheet.create({
   },
 
   providersRow: {
-  flexDirection: "row-reverse",
-  gap: Spacing.md,
-  paddingHorizontal: 1,
+    flexDirection: "row-reverse",
+    gap: Spacing.md,
+    paddingHorizontal: 1,
   },
 
   providerPressable: {
@@ -1051,7 +710,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(76, 141, 255, 0.30)",
   },
-
 
   providerInitials: {
     color: Colors.primary,
@@ -1146,7 +804,6 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
 
-
   providerPrice: {
     ...Typography.captionStyle,
     width: "100%",
@@ -1184,90 +841,6 @@ const styles = StyleSheet.create({
   reviewCount: {
     ...Typography.captionStyle,
     color: Colors.textTertiary,
-  },
-
-  bookingsList: {
-    width: "100%",
-    gap: Spacing.md,
-  },
-
-  bookingPressable: {
-    width: "100%",
-    borderRadius: Radius.xl,
-  },
-
-  bookingSurface: {
-    width: "100%",
-  },
-
-  bookingContent: {
-    minHeight: 104,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  bookingIcon: {
-    width: 50,
-    height: 50,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-  },
-
-  bookingCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: 2,
-  },
-
-  bookingService: {
-    ...Typography.label,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 16,
-  },
-
-  bookingProvider: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  bookingDateRow: {
-    width: "100%",
-    marginTop: 3,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 4,
-  },
-
-  bookingDate: {
-    ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  statusBadge: {
-    flexShrink: 0,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-    borderRadius: Radius.pill,
-  },
-
-  statusText: {
-    ...Typography.captionStyle,
-    textAlign: "center",
-    writingDirection: "rtl",
-    fontSize: 11,
   },
 
   pressed: {
