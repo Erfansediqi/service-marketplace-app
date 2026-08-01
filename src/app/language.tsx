@@ -1,23 +1,23 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
 import {
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { useLanguage } from "../context/languagecontext";
 
 export default function LanguageScreen() {
   const router = useRouter();
-  const [selectedLanguage, setSelectedLanguage] = useState("English");
+  const { language, setLanguage, t } = useLanguage();
 
   const languages = [
     { id: "English", label: "English" },
     { id: "Dari", label: "دری" },
     { id: "Pashto", label: "پښتو" },
-  ];
+  ] as const;
 
   const handleContinue = () => {
     router.push("/onboarding-1");
@@ -34,21 +34,19 @@ export default function LanguageScreen() {
             color="#6C5CE7"
             style={styles.globeIcon}
           />
-          <Text style={styles.title}>Choose your language</Text>
-          <Text style={styles.subtitle}>
-            You can change this later in settings
-          </Text>
+          <Text style={styles.title}>{t("chooseLanguage")}</Text>
+          <Text style={styles.subtitle}>{t("subtitle")}</Text>
         </View>
 
         {/* Language Options Cards */}
         <View style={styles.optionsContainer}>
           {languages.map((lang) => {
-            const isSelected = selectedLanguage === lang.id;
+            const isSelected = language === lang.id;
             return (
               <TouchableOpacity
                 key={lang.id}
                 style={[styles.card, isSelected && styles.selectedCard]}
-                onPress={() => setSelectedLanguage(lang.id)}
+                onPress={() => setLanguage(lang.id)}
                 activeOpacity={0.8}
               >
                 <Text
@@ -78,7 +76,7 @@ export default function LanguageScreen() {
           style={styles.continueButton}
           onPress={handleContinue}
         >
-          <Text style={styles.continueButtonText}>Continue</Text>
+          <Text style={styles.continueButtonText}>{t("continue")}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

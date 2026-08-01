@@ -1,17 +1,18 @@
 import { useRouter } from "expo-router";
-
 import { OnboardingScreen } from "../components/onboarding-screen";
+import { useLanguage } from "../context/languagecontext";
 
 export default function OnboardingScreenOne() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   return (
     <OnboardingScreen
-      title="هر خدمتی را در چند دقیقه رزرو کنید"
-      subtitle="برق‌کار، لوله‌کش، نظافت‌چی و خدمات دیگر — همه بررسی‌شده و دارای امتیاز و نظر واقعی."
+      title={t("onboarding1Title")}
+      subtitle={t("onboarding1Subtitle")}
       icon="sparkles-outline"
       activePage={0}
-      buttonLabel="بعدی"
+      buttonLabel={t("next")}
       onPress={() => router.push("/onboarding-2")}
     />
   );

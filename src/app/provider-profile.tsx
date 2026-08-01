@@ -1,41 +1,34 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { ComponentProps, useMemo } from "react";
 import {
-    useLocalSearchParams,
-    useRouter,
-} from "expo-router";
-import {
-    ComponentProps,
-    useMemo,
-} from "react";
-import {
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import { GlassButton } from "../components/glass/glass-button";
 import { GlassIconButton } from "../components/glass/glass-icon-button";
 import { GlassSurface } from "../components/glass/glass-surface";
 import {
-    Colors,
-    Layout,
-    Radius,
-    Shadows,
-    Spacing,
-    Typography,
+  Colors,
+  Layout,
+  Radius,
+  Shadows,
+  Spacing,
+  Typography,
 } from "../constants/theme";
 import {
-    getProviderById,
-    ProviderProfile,
-    ProviderReview,
-    providers,
+  getProviderById,
+  ProviderProfile,
+  ProviderReview,
+  providers,
 } from "../data/providers";
 
-type IconName =
-  ComponentProps<typeof Ionicons>["name"];
+type IconName = ComponentProps<typeof Ionicons>["name"];
 
 export default function ProviderProfileScreen() {
   const router = useRouter();
@@ -44,14 +37,10 @@ export default function ProviderProfileScreen() {
     providerId?: string | string[];
   }>();
 
-  const providerId = getSingleParam(
-    params.providerId,
-  );
+  const providerId = getSingleParam(params.providerId);
 
   const provider = useMemo<ProviderProfile>(
-    () =>
-      getProviderById(providerId) ??
-      getProviderById("provider-1")!,
+    () => getProviderById(providerId) ?? getProviderById("provider-1")!,
     [providerId],
   );
 
@@ -60,14 +49,9 @@ export default function ProviderProfileScreen() {
       providers
         .filter(
           (item) =>
-            item.id !== provider.id &&
-            item.categoryId ===
-              provider.categoryId,
+            item.id !== provider.id && item.categoryId === provider.categoryId,
         )
-        .sort(
-          (first, second) =>
-            second.rating - first.rating,
-        )
+        .sort((first, second) => second.rating - first.rating)
         .slice(0, 3),
     [provider.categoryId, provider.id],
   );
@@ -90,9 +74,7 @@ export default function ProviderProfileScreen() {
     } as never);
   };
 
-  const openRelatedProvider = (
-    providerIdToOpen: string,
-  ) => {
+  const openRelatedProvider = (providerIdToOpen: string) => {
     router.push({
       pathname: "/provider-profile",
       params: {
@@ -105,9 +87,7 @@ export default function ProviderProfileScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={
-          styles.scrollContent
-        }
+        contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.topBar}>
           <GlassIconButton
@@ -121,10 +101,7 @@ export default function ProviderProfileScreen() {
               icon="share-social-outline"
               accessibilityLabel="اشتراک‌گذاری پروفایل"
               onPress={() => {
-                console.log(
-                  "Share provider:",
-                  provider.id,
-                );
+                console.log("Share provider:", provider.id);
               }}
             />
 
@@ -132,10 +109,7 @@ export default function ProviderProfileScreen() {
               icon="heart-outline"
               accessibilityLabel="ذخیره ارائه‌دهنده"
               onPress={() => {
-                console.log(
-                  "Save provider:",
-                  provider.id,
-                );
+                console.log("Save provider:", provider.id);
               }}
             />
           </View>
@@ -146,39 +120,22 @@ export default function ProviderProfileScreen() {
             <GlassSurface
               variant="prominent"
               radius={Radius.pill}
-              style={[
-                styles.avatarSurface,
-                Shadows.medium,
-              ]}
-              contentStyle={
-                styles.avatarContent
-              }
+              style={[styles.avatarSurface, Shadows.medium]}
+              contentStyle={styles.avatarContent}
             >
-              <Text
-                style={styles.avatarInitials}
-              >
-                {provider.initials}
-              </Text>
+              <Text style={styles.avatarInitials}>{provider.initials}</Text>
             </GlassSurface>
 
             {provider.verified ? (
-              <View
-                style={styles.verifiedBadge}
-              >
-                <Ionicons
-                  name="checkmark"
-                  size={15}
-                  color={Colors.white}
-                />
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="checkmark" size={15} color={Colors.white} />
               </View>
             ) : null}
           </View>
 
           <View style={styles.heroCopy}>
             <View style={styles.nameRow}>
-              <Text style={styles.providerName}>
-                {provider.name}
-              </Text>
+              <Text style={styles.providerName}>{provider.name}</Text>
 
               {provider.verified ? (
                 <Ionicons
@@ -189,9 +146,7 @@ export default function ProviderProfileScreen() {
               ) : null}
             </View>
 
-            <Text style={styles.profession}>
-              {provider.profession}
-            </Text>
+            <Text style={styles.profession}>{provider.profession}</Text>
 
             <View style={styles.locationRow}>
               <Ionicons
@@ -200,42 +155,28 @@ export default function ProviderProfileScreen() {
                 color={Colors.textTertiary}
               />
 
-              <Text style={styles.locationText}>
-                {provider.locationLabel}
-              </Text>
+              <Text style={styles.locationText}>{provider.locationLabel}</Text>
 
               <Text style={styles.distanceText}>
-                •{" "}
-                {toDariDigits(
-                  provider.distanceKm.toFixed(1),
-                )}{" "}
-                کیلومتر
+                • {toDariDigits(provider.distanceKm.toFixed(1))} کیلومتر
               </Text>
             </View>
 
-            <View
-              style={styles.availabilityRow}
-            >
+            <View style={styles.availabilityRow}>
               <View
                 style={[
                   styles.availabilityBadge,
-                  !provider.availableToday &&
-                    styles.unavailableBadge,
+                  !provider.availableToday && styles.unavailableBadge,
                 ]}
               >
                 <View
                   style={[
                     styles.availabilityDot,
-                    !provider.availableToday &&
-                      styles.unavailableDot,
+                    !provider.availableToday && styles.unavailableDot,
                   ]}
                 />
 
-                <Text
-                  style={
-                    styles.availabilityText
-                  }
-                >
+                <Text style={styles.availabilityText}>
                   {provider.availableToday
                     ? "امروز آمادهٔ کار"
                     : "امروز در دسترس نیست"}
@@ -244,37 +185,21 @@ export default function ProviderProfileScreen() {
 
               {provider.acceptsUrgentRequests ? (
                 <View style={styles.urgentBadge}>
-                  <Ionicons
-                    name="flash"
-                    size={13}
-                    color={Colors.warning}
-                  />
+                  <Ionicons name="flash" size={13} color={Colors.warning} />
 
-                  <Text style={styles.urgentText}>
-                    درخواست فوری
-                  </Text>
+                  <Text style={styles.urgentText}>درخواست فوری</Text>
                 </View>
               ) : null}
 
               {provider.instantBooking ? (
-                <View
-                  style={
-                    styles.availabilityBadge
-                  }
-                >
+                <View style={styles.availabilityBadge}>
                   <Ionicons
                     name="calendar-outline"
                     size={13}
                     color={Colors.success}
                   />
 
-                  <Text
-                    style={
-                      styles.availabilityText
-                    }
-                  >
-                    رزرو فوری
-                  </Text>
+                  <Text style={styles.availabilityText}>رزرو فوری</Text>
                 </View>
               ) : null}
             </View>
@@ -284,20 +209,14 @@ export default function ProviderProfileScreen() {
         <View style={styles.statsGrid}>
           <StatCard
             icon="star"
-            value={toDariDigits(
-              provider.rating.toFixed(1),
-            )}
-            label={`${toDariDigits(
-              provider.reviewCount.toString(),
-            )} نظر`}
+            value={toDariDigits(provider.rating.toFixed(1))}
+            label={`${toDariDigits(provider.reviewCount.toString())} نظر`}
             iconColor={Colors.warning}
           />
 
           <StatCard
             icon="briefcase-outline"
-            value={toDariDigits(
-              provider.completedJobs.toString(),
-            )}
+            value={toDariDigits(provider.completedJobs.toString())}
             label="کار تکمیل‌شده"
           />
 
@@ -312,168 +231,88 @@ export default function ProviderProfileScreen() {
           variant="regular"
           radius={Radius.xl}
           style={styles.responseStatsCard}
-          contentStyle={
-            styles.responseStatsContent
-          }
+          contentStyle={styles.responseStatsContent}
         >
           <View style={styles.responseStat}>
-            <Text
-              style={
-                styles.responseStatValue
-              }
-            >
-              {toDariDigits(
-                provider.responseRate.toString(),
-              )}
-              ٪
+            <Text style={styles.responseStatValue}>
+              {toDariDigits(provider.responseRate.toString())}٪
             </Text>
 
-            <Text
-              style={
-                styles.responseStatLabel
-              }
-            >
-              نرخ پاسخ
-            </Text>
+            <Text style={styles.responseStatLabel}>نرخ پاسخ</Text>
           </View>
 
-          <View
-            style={
-              styles.responseStatDivider
-            }
-          />
+          <View style={styles.responseStatDivider} />
 
           <View style={styles.responseStat}>
-            <Text
-              style={
-                styles.responseStatValue
-              }
-            >
-              {toDariDigits(
-                provider.averageResponseMinutes.toString(),
-              )}{" "}
-              دقیقه
+            <Text style={styles.responseStatValue}>
+              {toDariDigits(provider.averageResponseMinutes.toString())} دقیقه
             </Text>
 
-            <Text
-              style={
-                styles.responseStatLabel
-              }
-            >
-              زمان پاسخ
-            </Text>
+            <Text style={styles.responseStatLabel}>زمان پاسخ</Text>
           </View>
 
-          <View
-            style={
-              styles.responseStatDivider
-            }
-          />
+          <View style={styles.responseStatDivider} />
 
           <View style={styles.responseStat}>
-            <Text
-              style={
-                styles.responseStatValue
-              }
-            >
-              از{" "}
-              {formatCurrency(
-                provider.minimumPrice,
-              )}
+            <Text style={styles.responseStatValue}>
+              از {formatCurrency(provider.minimumPrice)}
             </Text>
 
-            <Text
-              style={
-                styles.responseStatLabel
-              }
-            >
-              قیمت ابتدایی
-            </Text>
+            <Text style={styles.responseStatLabel}>قیمت ابتدایی</Text>
           </View>
         </GlassSurface>
 
         <View style={styles.section}>
-          <SectionHeader
-            title="خدمات ارائه‌شده"
-          />
+          <SectionHeader title="خدمات ارائه‌شده" />
 
           <View style={styles.servicesGrid}>
-            {provider.services.map(
-              (service) => (
-                <GlassSurface
-                  key={service.id}
-                  variant="regular"
-                  radius={Radius.lg}
-                  style={styles.serviceCard}
-                  contentStyle={
-                    styles.serviceContent
-                  }
-                >
-                  <View
-                    style={styles.serviceIcon}
-                  >
-                    <Ionicons
-                      name={getServiceIcon(
-                        service.id,
-                      )}
-                      size={21}
-                      color={Colors.primary}
-                    />
-                  </View>
+            {provider.services.map((service) => (
+              <GlassSurface
+                key={service.id}
+                variant="regular"
+                radius={Radius.lg}
+                style={styles.serviceCard}
+                contentStyle={styles.serviceContent}
+              >
+                <View style={styles.serviceIcon}>
+                  <Ionicons
+                    name={getServiceIcon(service.id)}
+                    size={21}
+                    color={Colors.primary}
+                  />
+                </View>
 
-                  <Text
-                    style={styles.serviceTitle}
-                  >
-                    {service.title}
-                  </Text>
+                <Text style={styles.serviceTitle}>{service.title}</Text>
 
-                  <Text
-                    style={styles.servicePrice}
-                  >
-                    از{" "}
-                    {formatCurrency(
-                      service.estimatedPrice,
-                    )}
-                  </Text>
-                </GlassSurface>
-              ),
-            )}
+                <Text style={styles.servicePrice}>
+                  از {formatCurrency(service.estimatedPrice)}
+                </Text>
+              </GlassSurface>
+            ))}
           </View>
         </View>
 
         <View style={styles.section}>
-          <SectionHeader
-            title="دربارهٔ ارائه‌دهنده"
-          />
+          <SectionHeader title="دربارهٔ ارائه‌دهنده" />
 
           <GlassSurface
             variant="regular"
             radius={Radius.xl}
             style={styles.descriptionCard}
-            contentStyle={
-              styles.descriptionContent
-            }
+            contentStyle={styles.descriptionContent}
           >
-            <Text
-              style={styles.descriptionText}
-            >
-              {provider.description}
-            </Text>
+            <Text style={styles.descriptionText}>{provider.description}</Text>
           </GlassSurface>
         </View>
 
         <View style={styles.section}>
-          <SectionHeader
-            title="محدوده و برنامهٔ کاری"
-          />
+          <SectionHeader title="محدوده و برنامهٔ کاری" />
 
           <GlassSurface
             variant="regular"
             radius={Radius.xl}
             style={styles.detailsCard}
-            contentStyle={
-              styles.detailsContent
-            }
+            contentStyle={styles.detailsContent}
           >
             <ProfileDetail
               icon="navigate-outline"
@@ -483,30 +322,22 @@ export default function ProviderProfileScreen() {
               )} کیلومتر`}
             />
 
-            <View
-              style={styles.detailDivider}
-            />
+            <View style={styles.detailDivider} />
 
             <ProfileDetail
               icon="calendar-outline"
               label="روزهای کاری"
-              value={formatWorkingDays(
-                provider.workingDays,
-              )}
+              value={formatWorkingDays(provider.workingDays)}
             />
 
-            <View
-              style={styles.detailDivider}
-            />
+            <View style={styles.detailDivider} />
 
             <ProfileDetail
               icon="time-outline"
               label="ساعت کاری"
               value={`${formatTimeForDari(
                 provider.startTime,
-              )} تا ${formatTimeForDari(
-                provider.endTime,
-              )}`}
+              )} تا ${formatTimeForDari(provider.endTime)}`}
             />
           </GlassSurface>
         </View>
@@ -515,17 +346,12 @@ export default function ProviderProfileScreen() {
           <SectionHeader
             title="نمونه‌کارها"
             actionLabel={
-              provider.portfolio.length > 0
-                ? "مشاهده همه"
-                : undefined
+              provider.portfolio.length > 0 ? "مشاهده همه" : undefined
             }
             onPress={
               provider.portfolio.length > 0
                 ? () => {
-                    console.log(
-                      "Open portfolio:",
-                      provider.id,
-                    );
+                    console.log("Open portfolio:", provider.id);
                   }
                 : undefined
             }
@@ -534,44 +360,26 @@ export default function ProviderProfileScreen() {
           {provider.portfolio.length > 0 ? (
             <ScrollView
               horizontal
-              showsHorizontalScrollIndicator={
-                false
-              }
-              contentContainerStyle={
-                styles.portfolioRow
-              }
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.portfolioRow}
             >
-              {provider.portfolio.map(
-                (item) => (
-                  <GlassSurface
-                    key={item.id}
-                    variant="regular"
-                    radius={Radius.xl}
-                    style={
-                      styles.portfolioCard
-                    }
-                    contentStyle={
-                      styles.portfolioContent
-                    }
-                  >
-                    <Ionicons
-                      name="image-outline"
-                      size={32}
-                      color={
-                        Colors.textTertiary
-                      }
-                    />
+              {provider.portfolio.map((item) => (
+                <GlassSurface
+                  key={item.id}
+                  variant="regular"
+                  radius={Radius.xl}
+                  style={styles.portfolioCard}
+                  contentStyle={styles.portfolioContent}
+                >
+                  <Ionicons
+                    name="image-outline"
+                    size={32}
+                    color={Colors.textTertiary}
+                  />
 
-                    <Text
-                      style={
-                        styles.portfolioText
-                      }
-                    >
-                      {item.title}
-                    </Text>
-                  </GlassSurface>
-                ),
-              )}
+                  <Text style={styles.portfolioText}>{item.title}</Text>
+                </GlassSurface>
+              ))}
             </ScrollView>
           ) : (
             <EmptySection
@@ -587,35 +395,23 @@ export default function ProviderProfileScreen() {
             title="نظرهای مشتریان"
             actionLabel={
               provider.reviewCount > 0
-                ? `همهٔ ${toDariDigits(
-                    provider.reviewCount.toString(),
-                  )} نظر`
+                ? `همهٔ ${toDariDigits(provider.reviewCount.toString())} نظر`
                 : undefined
             }
             onPress={
               provider.reviewCount > 0
                 ? () => {
-                    console.log(
-                      "Open all reviews:",
-                      provider.id,
-                    );
+                    console.log("Open all reviews:", provider.id);
                   }
                 : undefined
             }
           />
 
           {provider.reviews.length > 0 ? (
-            <View
-              style={styles.reviewsList}
-            >
-              {provider.reviews.map(
-                (review) => (
-                  <ReviewCard
-                    key={review.id}
-                    review={review}
-                  />
-                ),
-              )}
+            <View style={styles.reviewsList}>
+              {provider.reviews.map((review) => (
+                <ReviewCard key={review.id} review={review} />
+              ))}
             </View>
           ) : (
             <EmptySection
@@ -628,126 +424,66 @@ export default function ProviderProfileScreen() {
 
         {relatedProviders.length > 0 ? (
           <View style={styles.section}>
-            <SectionHeader
-              title="ارائه‌دهندگان مشابه"
-            />
+            <SectionHeader title="ارائه‌دهندگان مشابه" />
 
             <View style={styles.relatedList}>
-              {relatedProviders.map(
-                (relatedProvider) => (
-                  <Pressable
-                    key={relatedProvider.id}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      relatedProvider.name
-                    }
-                    onPress={() =>
-                      openRelatedProvider(
-                        relatedProvider.id,
-                      )
-                    }
-                    style={({ pressed }) => [
-                      styles.relatedPressable,
-                      pressed &&
-                        styles.pressed,
-                    ]}
+              {relatedProviders.map((relatedProvider) => (
+                <Pressable
+                  key={relatedProvider.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={relatedProvider.name}
+                  onPress={() => openRelatedProvider(relatedProvider.id)}
+                  style={({ pressed }) => [
+                    styles.relatedPressable,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <GlassSurface
+                    variant="regular"
+                    radius={Radius.xl}
+                    style={styles.relatedCard}
+                    contentStyle={styles.relatedContent}
                   >
-                    <GlassSurface
-                      variant="regular"
-                      radius={Radius.xl}
-                      style={
-                        styles.relatedCard
-                      }
-                      contentStyle={
-                        styles.relatedContent
-                      }
-                    >
-                      <View
-                        style={
-                          styles.relatedAvatar
-                        }
-                      >
-                        <Text
-                          style={
-                            styles.relatedInitials
-                          }
-                        >
-                          {
-                            relatedProvider.initials
-                          }
+                    <View style={styles.relatedAvatar}>
+                      <Text style={styles.relatedInitials}>
+                        {relatedProvider.initials}
+                      </Text>
+                    </View>
+
+                    <View style={styles.relatedCopy}>
+                      <Text style={styles.relatedName}>
+                        {relatedProvider.name}
+                      </Text>
+
+                      <Text style={styles.relatedProfession}>
+                        {relatedProvider.profession}
+                      </Text>
+
+                      <View style={styles.relatedMeta}>
+                        <Ionicons
+                          name="star"
+                          size={13}
+                          color={Colors.warning}
+                        />
+
+                        <Text style={styles.relatedMetaText}>
+                          {toDariDigits(relatedProvider.rating.toFixed(1))}
+                        </Text>
+
+                        <Text style={styles.relatedMetaText}>
+                          · {relatedProvider.locationLabel}
                         </Text>
                       </View>
+                    </View>
 
-                      <View
-                        style={
-                          styles.relatedCopy
-                        }
-                      >
-                        <Text
-                          style={
-                            styles.relatedName
-                          }
-                        >
-                          {relatedProvider.name}
-                        </Text>
-
-                        <Text
-                          style={
-                            styles.relatedProfession
-                          }
-                        >
-                          {
-                            relatedProvider.profession
-                          }
-                        </Text>
-
-                        <View
-                          style={
-                            styles.relatedMeta
-                          }
-                        >
-                          <Ionicons
-                            name="star"
-                            size={13}
-                            color={
-                              Colors.warning
-                            }
-                          />
-
-                          <Text
-                            style={
-                              styles.relatedMetaText
-                            }
-                          >
-                            {toDariDigits(
-                              relatedProvider.rating.toFixed(
-                                1,
-                              ),
-                            )}
-                          </Text>
-
-                          <Text
-                            style={
-                              styles.relatedMetaText
-                            }
-                          >
-                            ·{" "}
-                            {relatedProvider.locationLabel}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <Ionicons
-                        name="chevron-back"
-                        size={18}
-                        color={
-                          Colors.textTertiary
-                        }
-                      />
-                    </GlassSurface>
-                  </Pressable>
-                ),
-              )}
+                    <Ionicons
+                      name="chevron-back"
+                      size={18}
+                      color={Colors.textTertiary}
+                    />
+                  </GlassSurface>
+                </Pressable>
+              ))}
             </View>
           </View>
         ) : null}
@@ -757,12 +493,9 @@ export default function ProviderProfileScreen() {
           radius={Radius.xl}
           style={[
             styles.safetyCard,
-            !provider.verified &&
-              styles.unverifiedSafetyCard,
+            !provider.verified && styles.unverifiedSafetyCard,
           ]}
-          contentStyle={
-            styles.safetyContent
-          }
+          contentStyle={styles.safetyContent}
         >
           <View style={styles.safetyIcon}>
             <Ionicons
@@ -772,11 +505,7 @@ export default function ProviderProfileScreen() {
                   : "alert-circle-outline"
               }
               size={24}
-              color={
-                provider.verified
-                  ? Colors.success
-                  : Colors.warning
-              }
+              color={provider.verified ? Colors.success : Colors.warning}
             />
           </View>
 
@@ -787,9 +516,7 @@ export default function ProviderProfileScreen() {
                 : "حساب هنوز تأیید نشده است"}
             </Text>
 
-            <Text
-              style={styles.safetySubtitle}
-            >
+            <Text style={styles.safetySubtitle}>
               {provider.verified
                 ? "هویت و معلومات حرفه‌ای این ارائه‌دهنده توسط خدمت بررسی شده است."
                 : "پیش از رزرو، جزئیات حساب، نظرها و شرایط خدمت را با دقت بررسی کنید."}
@@ -839,23 +566,13 @@ function StatCard({
       style={styles.statCard}
       contentStyle={styles.statContent}
     >
-      <Ionicons
-        name={icon}
-        size={20}
-        color={iconColor}
-      />
+      <Ionicons name={icon} size={20} color={iconColor} />
 
-      <Text
-        numberOfLines={1}
-        style={styles.statValue}
-      >
+      <Text numberOfLines={1} style={styles.statValue}>
         {value}
       </Text>
 
-      <Text
-        numberOfLines={2}
-        style={styles.statLabel}
-      >
+      <Text numberOfLines={2} style={styles.statLabel}>
         {label}
       </Text>
     </GlassSurface>
@@ -882,27 +599,15 @@ function SectionHeader({
             pressed && styles.pressed,
           ]}
         >
-          <Ionicons
-            name="chevron-back"
-            size={16}
-            color={Colors.primary}
-          />
+          <Ionicons name="chevron-back" size={16} color={Colors.primary} />
 
-          <Text
-            style={
-              styles.sectionActionText
-            }
-          >
-            {actionLabel}
-          </Text>
+          <Text style={styles.sectionActionText}>{actionLabel}</Text>
         </Pressable>
       ) : (
         <View />
       )}
 
-      <Text style={styles.sectionTitle}>
-        {title}
-      </Text>
+      <Text style={styles.sectionTitle}>{title}</Text>
     </View>
   );
 }
@@ -919,31 +624,19 @@ function ProfileDetail({
   return (
     <View style={styles.detailRow}>
       <View style={styles.detailIcon}>
-        <Ionicons
-          name={icon}
-          size={19}
-          color={Colors.primary}
-        />
+        <Ionicons name={icon} size={19} color={Colors.primary} />
       </View>
 
       <View style={styles.detailCopy}>
-        <Text style={styles.detailLabel}>
-          {label}
-        </Text>
+        <Text style={styles.detailLabel}>{label}</Text>
 
-        <Text style={styles.detailValue}>
-          {value}
-        </Text>
+        <Text style={styles.detailValue}>{value}</Text>
       </View>
     </View>
   );
 }
 
-function ReviewCard({
-  review,
-}: {
-  review: ProviderReview;
-}) {
+function ReviewCard({ review }: { review: ProviderReview }) {
   return (
     <GlassSurface
       variant="regular"
@@ -953,17 +646,11 @@ function ReviewCard({
     >
       <View style={styles.reviewHeader}>
         <View style={styles.reviewAvatar}>
-          <Text
-            style={styles.reviewInitials}
-          >
-            {review.customerInitials}
-          </Text>
+          <Text style={styles.reviewInitials}>{review.customerInitials}</Text>
         </View>
 
         <View style={styles.reviewCopy}>
-          <Text style={styles.reviewName}>
-            {review.customerName}
-          </Text>
+          <Text style={styles.reviewName}>{review.customerName}</Text>
 
           <View style={styles.reviewMeta}>
             <View style={styles.stars}>
@@ -972,31 +659,21 @@ function ReviewCard({
               }).map((_, index) => (
                 <Ionicons
                   key={index}
-                  name={
-                    index < review.rating
-                      ? "star"
-                      : "star-outline"
-                  }
+                  name={index < review.rating ? "star" : "star-outline"}
                   size={13}
                   color={Colors.warning}
                 />
               ))}
             </View>
 
-            <Text
-              style={styles.reviewDate}
-            >
-              {formatReviewDate(
-                review.createdAt,
-              )}
+            <Text style={styles.reviewDate}>
+              {formatReviewDate(review.createdAt)}
             </Text>
           </View>
         </View>
       </View>
 
-      <Text style={styles.reviewComment}>
-        {review.comment}
-      </Text>
+      <Text style={styles.reviewComment}>{review.comment}</Text>
     </GlassSurface>
   );
 }
@@ -1015,34 +692,18 @@ function EmptySection({
       variant="regular"
       radius={Radius.xl}
       style={styles.emptySectionCard}
-      contentStyle={
-        styles.emptySectionContent
-      }
+      contentStyle={styles.emptySectionContent}
     >
-      <Ionicons
-        name={icon}
-        size={30}
-        color={Colors.textTertiary}
-      />
+      <Ionicons name={icon} size={30} color={Colors.textTertiary} />
 
-      <Text
-        style={styles.emptySectionTitle}
-      >
-        {title}
-      </Text>
+      <Text style={styles.emptySectionTitle}>{title}</Text>
 
-      <Text
-        style={styles.emptySectionText}
-      >
-        {text}
-      </Text>
+      <Text style={styles.emptySectionText}>{text}</Text>
     </GlassSurface>
   );
 }
 
-function getSingleParam(
-  value: string | string[] | undefined,
-): string {
+function getSingleParam(value: string | string[] | undefined): string {
   if (Array.isArray(value)) {
     return value[0] ?? "";
   }
@@ -1050,37 +711,24 @@ function getSingleParam(
   return value ?? "";
 }
 
-function getServiceIcon(
-  serviceId: string,
-): IconName {
-  if (
-    serviceId.includes("wiring")
-  ) {
+function getServiceIcon(serviceId: string): IconName {
+  if (serviceId.includes("wiring")) {
     return "git-branch-outline";
   }
 
-  if (
-    serviceId.includes("lighting")
-  ) {
+  if (serviceId.includes("lighting")) {
     return "bulb-outline";
   }
 
-  if (
-    serviceId.includes("generator")
-  ) {
+  if (serviceId.includes("generator")) {
     return "battery-charging-outline";
   }
 
-  if (
-    serviceId.includes("socket") ||
-    serviceId.includes("breaker")
-  ) {
+  if (serviceId.includes("socket") || serviceId.includes("breaker")) {
     return "flash-outline";
   }
 
-  if (
-    serviceId.includes("heater")
-  ) {
+  if (serviceId.includes("heater")) {
     return "flame-outline";
   }
 
@@ -1100,9 +748,7 @@ function getServiceIcon(
     return "hammer-outline";
   }
 
-  if (
-    serviceId.includes("clean")
-  ) {
+  if (serviceId.includes("clean")) {
     return "sparkles-outline";
   }
 
@@ -1117,9 +763,7 @@ function getServiceIcon(
   return "construct-outline";
 }
 
-function formatWorkingDays(
-  days: string[],
-): string {
+function formatWorkingDays(days: string[]): string {
   const labels: Record<string, string> = {
     saturday: "شنبه",
     sunday: "یک‌شنبه",
@@ -1130,20 +774,15 @@ function formatWorkingDays(
     friday: "جمعه",
   };
 
-  return days
-    .map((day) => labels[day] ?? day)
-    .join("، ");
+  return days.map((day) => labels[day] ?? day).join("، ");
 }
 
-function formatTimeForDari(
-  value: string,
-): string {
+function formatTimeForDari(value: string): string {
   if (!value) {
     return "نامشخص";
   }
 
-  const [hourText, minute = "00"] =
-    value.split(":");
+  const [hourText, minute = "00"] = value.split(":");
 
   const hour = Number(hourText);
 
@@ -1152,54 +791,35 @@ function formatTimeForDari(
   }
 
   if (hour === 12) {
-    return `${toDariDigits(
-      `12:${minute}`,
-    )} ظهر`;
+    return `${toDariDigits(`12:${minute}`)} ظهر`;
   }
 
   if (hour > 12) {
-    return `${toDariDigits(
-      `${hour - 12}:${minute}`,
-    )} بعد از ظهر`;
+    return `${toDariDigits(`${hour - 12}:${minute}`)} بعد از ظهر`;
   }
 
-  return `${toDariDigits(
-    `${hour}:${minute}`,
-  )} صبح`;
+  return `${toDariDigits(`${hour}:${minute}`)} صبح`;
 }
 
-function formatCurrency(
-  amount: number,
-): string {
-  return `${new Intl.NumberFormat(
-    "fa-AF",
-  ).format(amount)} افغانی`;
+function formatCurrency(amount: number): string {
+  return `${new Intl.NumberFormat("fa-AF").format(amount)} افغانی`;
 }
 
-function formatReviewDate(
-  value: string,
-): string {
+function formatReviewDate(value: string): string {
   const date = new Date(value);
 
-  if (
-    Number.isNaN(date.getTime())
-  ) {
+  if (Number.isNaN(date.getTime())) {
     return value;
   }
 
-  return new Intl.DateTimeFormat(
-    "fa-AF",
-    {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    },
-  ).format(date);
+  return new Intl.DateTimeFormat("fa-AF", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(date);
 }
 
-function toDariDigits(
-  value: string,
-): string {
+function toDariDigits(value: string): string {
   const digits: Record<string, string> = {
     "0": "۰",
     "1": "۱",
@@ -1213,11 +833,7 @@ function toDariDigits(
     "9": "۹",
   };
 
-  return value.replace(
-    /\d/g,
-    (digit) =>
-      digits[digit] ?? digit,
-  );
+  return value.replace(/\d/g, (digit) => digits[digit] ?? digit);
 }
 
 const styles = StyleSheet.create({
@@ -1919,5 +1535,4 @@ const styles = StyleSheet.create({
     borderColor: "rgba(217, 154, 43, 0.28)",
     backgroundColor: "rgba(217, 154, 43, 0.06)",
   },
-
 });

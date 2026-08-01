@@ -1,18 +1,19 @@
 import { useRouter } from "expo-router";
-
 import { OnboardingScreen } from "../components/onboarding-screen";
+import { useLanguage } from "../context/languagecontext";
 
 export default function OnboardingScreenThree() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   return (
     <OnboardingScreen
-      title="در وقت و انرژی صرفه‌جویی کنید"
-      subtitle="رزروهای خود را مدیریت کنید، با متخصصان گفتگو کنید و کارهایتان را آسان‌تر انجام دهید."
-      icon="time-outline"
+      title={t("onboarding3Title")}
+      subtitle={t("onboarding3Subtitle")}
+      icon="shield-checkmark-outline"
       activePage={2}
-      buttonLabel="شروع"
-      onPress={() => router.push("/signup")}
+      buttonLabel={t("continue")}
+      onPress={() => router.push("/role-selection")}
     />
   );
 }

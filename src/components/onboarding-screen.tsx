@@ -1,17 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { ComponentProps } from "react";
-import {
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
-import {
-  Colors,
-  Radius,
-  Spacing,
-  Typography,
-} from "../constants/theme";
+import { Colors, Radius, Spacing, Typography } from "../constants/theme";
+import { useLanguage } from "../context/languagecontext";
 import { GlassButton } from "./glass/glass-button";
 import { GlassSurface } from "./glass/glass-surface";
 import { AppScreen } from "./layout/app-screen";
@@ -35,6 +27,9 @@ export function OnboardingScreen({
   buttonLabel,
   onPress,
 }: OnboardingScreenProps) {
+  const { language } = useLanguage();
+  const isEnglish = language === "English";
+
   return (
     <AppScreen
       contentStyle={styles.screenContent}
@@ -42,46 +37,72 @@ export function OnboardingScreen({
         <View style={styles.footer}>
           <GlassButton
             label={buttonLabel}
-            icon="arrow-back"
-            iconPosition="left"
+            icon={isEnglish ? "arrow-forward" : "arrow-back"}
+            iconPosition={isEnglish ? "right" : "left"}
             onPress={onPress}
           />
         </View>
       }
     >
-      <View style={styles.content}>
+      <View
+        style={[
+          styles.content,
+          { alignItems: isEnglish ? "flex-start" : "flex-end" },
+        ]}
+      >
         <GlassSurface
           variant="prominent"
           radius={Radius.xxl}
           style={styles.iconSurface}
           contentStyle={styles.iconContent}
         >
-          <Ionicons
-            name={icon}
-            size={38}
-            color={Colors.primary}
-          />
+          <Ionicons name={icon} size={38} color={Colors.primary} />
         </GlassSurface>
 
-        <View style={styles.copy}>
-          <Text style={styles.title}>{title}</Text>
+        <View
+          style={[
+            styles.copy,
+            { alignItems: isEnglish ? "flex-start" : "flex-end" },
+          ]}
+        >
+          <Text
+            style={[
+              styles.title,
+              {
+                textAlign: isEnglish ? "left" : "right",
+                writingDirection: isEnglish ? "ltr" : "rtl",
+              },
+            ]}
+          >
+            {title}
+          </Text>
 
-          <Text style={styles.subtitle}>{subtitle}</Text>
+          <Text
+            style={[
+              styles.subtitle,
+              {
+                textAlign: isEnglish ? "left" : "right",
+                writingDirection: isEnglish ? "ltr" : "rtl",
+              },
+            ]}
+          >
+            {subtitle}
+          </Text>
         </View>
 
         <GlassSurface
           variant="regular"
           radius={Radius.pill}
           style={styles.paginationSurface}
-          contentStyle={styles.pagination}
+          contentStyle={[
+            styles.pagination,
+            { flexDirection: isEnglish ? "row" : "row-reverse" },
+          ]}
         >
           {[0, 1, 2].map((page) => (
             <View
               key={page}
-              style={[
-                styles.dot,
-                activePage === page && styles.activeDot,
-              ]}
+              style={[styles.dot, activePage === page && styles.activeDot]}
             />
           ))}
         </GlassSurface>
@@ -97,7 +118,6 @@ const styles = StyleSheet.create({
 
   content: {
     flex: 1,
-    alignItems: "flex-end",
     justifyContent: "center",
     paddingBottom: Spacing.section,
   },
@@ -119,7 +139,6 @@ const styles = StyleSheet.create({
 
   copy: {
     width: "100%",
-    alignItems: "flex-end",
     gap: Spacing.lg,
   },
 
@@ -127,8 +146,6 @@ const styles = StyleSheet.create({
     ...Typography.screenTitle,
     width: "100%",
     color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 
   subtitle: {
@@ -136,8 +153,6 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 430,
     color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 
   paginationSurface: {
@@ -146,7 +161,6 @@ const styles = StyleSheet.create({
   },
 
   pagination: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: Spacing.sm,
     paddingHorizontal: Spacing.md,

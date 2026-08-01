@@ -1,22 +1,13 @@
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import {
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { GlassButton } from "../components/glass/glass-button";
 import { GlassIconButton } from "../components/glass/glass-icon-button";
 import { GlassInput } from "../components/glass/glass-input";
 import { GlassSurface } from "../components/glass/glass-surface";
 import { AppScreen } from "../components/layout/app-screen";
-import {
-  Colors,
-  Radius,
-  Spacing,
-  Typography,
-} from "../constants/theme";
+import { Colors, Radius, Spacing, Typography } from "../constants/theme";
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -72,13 +63,9 @@ export default function SignupScreen() {
           />
 
           <Text style={styles.legalText}>
-            با ادامه، شما{" "}
-            <Text style={styles.legalLink}>شرایط استفاده</Text>
-            {" "}و{" "}
-            <Text style={styles.legalLink}>
-              سیاست حفظ حریم خصوصی
-            </Text>
-            {" "}ما را می‌پذیرید.
+            با ادامه، شما <Text style={styles.legalLink}>شرایط استفاده</Text> و{" "}
+            <Text style={styles.legalLink}>سیاست حفظ حریم خصوصی</Text> ما را
+            می‌پذیرید.
           </Text>
         </View>
       }
@@ -104,9 +91,7 @@ export default function SignupScreen() {
         <View style={styles.heading}>
           <Text style={styles.eyebrow}>حساب خدمت</Text>
 
-          <Text style={styles.title}>
-            حساب کاربری خود را بسازید
-          </Text>
+          <Text style={styles.title}>حساب کاربری خود را بسازید</Text>
 
           <Text style={styles.subtitle}>
             فقط با وارد کردن نام و شماره تلفن، شروع کنید.
