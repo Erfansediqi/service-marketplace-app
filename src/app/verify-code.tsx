@@ -60,7 +60,7 @@ export default function VerifyCodeScreen() {
       return;
     }
 
-    router.replace("/explore");
+    router.replace("/location-permission");
   };
 
   const handleResend = () => {

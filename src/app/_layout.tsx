@@ -10,6 +10,7 @@ export default function RootLayout() {
       <Stack.Screen name="onboarding-3" />
       <Stack.Screen name="signup" />
       <Stack.Screen name="verify-code" />
+      <Stack.Screen name="location-permission" />
       <Stack.Screen name="explore" />
     </Stack>
   );
