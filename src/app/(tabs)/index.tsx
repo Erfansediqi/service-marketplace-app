@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ComponentProps } from "react";
+import { ComponentProps, useMemo } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -8,107 +8,243 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 
-import { GlassSurface } from "../../components/glass/glass-surface";
 import {
-  Colors,
+  Fonts,
+  KhedmatPalette,
   Layout,
   Radius,
   Shadows,
   Spacing,
   Typography,
 } from "../../constants/theme";
-import { ProviderProfile, providers } from "../../data/providers";
+import { useLanguage } from "../../context/languagecontext";
+import {
+  ProviderProfile,
+  providers,
+} from "../../data/providers";
 
-type IconName = ComponentProps<typeof Ionicons>["name"];
+type IconName =
+  ComponentProps<typeof Ionicons>["name"];
+
+type LanguageName =
+  | "English"
+  | "Dari"
+  | "Pashto";
+
+type LocalizedText = {
+  English: string;
+  Dari: string;
+  Pashto: string;
+};
 
 type ServiceCategory = {
   id: string;
-  title: string;
-  subtitle: string;
+  title: LocalizedText;
+  subtitle: LocalizedText;
   icon: IconName;
 };
 
-const serviceCategories: ServiceCategory[] = [
+const SERVICE_CATEGORIES: ServiceCategory[] = [
   {
     id: "electrician",
-    title: "برق‌کاری",
-    subtitle: "نصب و ترمیم برق",
+    title: {
+      English: "Electrician",
+      Dari: "برق‌کاری",
+      Pashto: "برېښناکار",
+    },
+    subtitle: {
+      English: "Installation and repairs",
+      Dari: "نصب و ترمیم برق",
+      Pashto: "نصب او ترمیم",
+    },
     icon: "flash-outline",
   },
   {
     id: "plumber",
-    title: "لوله‌کشی",
-    subtitle: "آب و فاضلاب",
+    title: {
+      English: "Plumber",
+      Dari: "لوله‌کشی",
+      Pashto: "نلدوان",
+    },
+    subtitle: {
+      English: "Water and drainage",
+      Dari: "آب و فاضلاب",
+      Pashto: "اوبه او فاضلاب",
+    },
     icon: "water-outline",
   },
   {
     id: "cleaner",
-    title: "نظافت",
-    subtitle: "خانه و دفتر",
+    title: {
+      English: "Cleaning",
+      Dari: "نظافت",
+      Pashto: "پاک‌کاري",
+    },
+    subtitle: {
+      English: "Home and office",
+      Dari: "خانه و دفتر",
+      Pashto: "کور او دفتر",
+    },
     icon: "sparkles-outline",
   },
   {
     id: "construction",
-    title: "ساختمان",
-    subtitle: "ترمیم و بازسازی",
+    title: {
+      English: "Construction",
+      Dari: "ساختمان",
+      Pashto: "ساختماني کار",
+    },
+    subtitle: {
+      English: "Repair and renovation",
+      Dari: "ترمیم و بازسازی",
+      Pashto: "ترمیم او بیارغونه",
+    },
     icon: "construct-outline",
   },
   {
     id: "carpenter",
-    title: "نجاری",
-    subtitle: "وسایل چوبی",
+    title: {
+      English: "Carpenter",
+      Dari: "نجاری",
+      Pashto: "ترکاڼ",
+    },
+    subtitle: {
+      English: "Furniture and woodwork",
+      Dari: "وسایل چوبی",
+      Pashto: "لرګین وسایل",
+    },
     icon: "hammer-outline",
   },
   {
     id: "computer-repair",
-    title: "تخنیک",
-    subtitle: "موبایل و کمپیوتر",
+    title: {
+      English: "Tech repair",
+      Dari: "تخنیک",
+      Pashto: "تخنیکي ترمیم",
+    },
+    subtitle: {
+      English: "Phones and computers",
+      Dari: "موبایل و کمپیوتر",
+      Pashto: "موبایل او کمپیوټر",
+    },
     icon: "laptop-outline",
   },
   {
     id: "painter",
-    title: "رنگ‌کاری",
-    subtitle: "نقاشی دیوار و ساختمان",
+    title: {
+      English: "Painting",
+      Dari: "رنگ‌کاری",
+      Pashto: "رنګمالي",
+    },
+    subtitle: {
+      English: "Walls and buildings",
+      Dari: "نقاشی دیوار و ساختمان",
+      Pashto: "دیوالونه او ودانۍ",
+    },
     icon: "color-palette-outline",
   },
   {
     id: "gardener",
-    title: "باغبانی",
-    subtitle: "تنظیم باغچه و گل",
+    title: {
+      English: "Gardening",
+      Dari: "باغبانی",
+      Pashto: "باغواني",
+    },
+    subtitle: {
+      English: "Gardens and plants",
+      Dari: "تنظیم باغچه و گل",
+      Pashto: "باغ او بوټي",
+    },
     icon: "leaf-outline",
   },
   {
     id: "appliance-repair",
-    title: "لوازم خانگی",
-    subtitle: "یخچال، ماشین لباسشویی",
+    title: {
+      English: "Appliances",
+      Dari: "لوازم خانگی",
+      Pashto: "کورني وسایل",
+    },
+    subtitle: {
+      English: "Home appliance repair",
+      Dari: "ترمیم لوازم خانه",
+      Pashto: "د کور وسایلو ترمیم",
+    },
     icon: "settings-outline",
   },
 ];
 
-const featuredProviders = [...providers]
+const FEATURED_PROVIDERS = [...providers]
   .sort((first, second) => {
-    if (first.availableToday !== second.availableToday) {
-      return first.availableToday ? -1 : 1;
+    if (
+      first.availableToday !==
+      second.availableToday
+    ) {
+      return first.availableToday
+        ? -1
+        : 1;
     }
 
-    if (first.rating !== second.rating) {
-      return second.rating - first.rating;
+    if (
+      first.rating !== second.rating
+    ) {
+      return (
+        second.rating - first.rating
+      );
     }
 
-    return first.distanceKm - second.distanceKm;
+    return (
+      first.distanceKm -
+      second.distanceKm
+    );
   })
   .slice(0, 4);
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { language } = useLanguage();
+  const { width } = useWindowDimensions();
+
+  const activeLanguage =
+    normalizeLanguage(language);
+
+  const isRtl =
+    activeLanguage === "Dari" ||
+    activeLanguage === "Pashto";
+
+  const copy = getHomeCopy(
+    activeLanguage,
+  );
+
+  const compactGrid = width < 370;
+
+  const categories = useMemo(
+    () =>
+      SERVICE_CATEGORIES.map(
+        (category) => ({
+          ...category,
+          localizedTitle:
+            category.title[
+              activeLanguage
+            ],
+          localizedSubtitle:
+            category.subtitle[
+              activeLanguage
+            ],
+        }),
+      ),
+    [activeLanguage],
+  );
 
   const openSearch = () => {
     router.push("/(tabs)/search");
   };
 
-  const openCategory = (categoryId: string) => {
+  const openCategory = (
+    categoryId: string,
+  ) => {
     router.push({
       pathname: "/(tabs)/search",
       params: {
@@ -117,169 +253,290 @@ export default function HomeScreen() {
     });
   };
 
+  const openProvider = (
+    providerId: string,
+  ) => {
+    router.push({
+      pathname: "/provider-profile",
+      params: {
+        providerId,
+      },
+    });
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={styles.safeArea}
+    >
       <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={
+          false
+        }
+        contentContainerStyle={
+          styles.scrollContent
+        }
       >
-        <View style={styles.topBar}>
+        <View
+          style={[
+            styles.topBar,
+            {
+              flexDirection: isRtl
+                ? "row"
+                : "row-reverse",
+            },
+          ]}
+        >
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="باز کردن پروفایل"
-            onPress={() => router.push("/(tabs)/profile")}
+            accessibilityLabel={
+              copy.profileAccessibility
+            }
+            onPress={() =>
+              router.push(
+                "/(tabs)/profile",
+              )
+            }
             style={({ pressed }) => [
-              styles.avatarPressable,
+              styles.avatarButton,
               pressed && styles.pressed,
             ]}
           >
-            <GlassSurface
-              variant="prominent"
-              radius={Radius.pill}
-              style={styles.avatarSurface}
-              contentStyle={styles.avatarContent}
+            <Text
+              style={styles.avatarText}
             >
-              <Text style={styles.avatarText}>ا</Text>
-            </GlassSurface>
+              {activeLanguage ===
+              "English"
+                ? "A"
+                : "ا"}
+            </Text>
           </Pressable>
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="اعلان‌ها"
+            accessibilityLabel={
+              copy.notificationsAccessibility
+            }
             style={({ pressed }) => [
-              styles.notificationPressable,
+              styles.notificationButton,
               pressed && styles.pressed,
             ]}
           >
-            <GlassSurface
-              radius={Radius.pill}
-              style={styles.notificationSurface}
-              contentStyle={styles.notificationContent}
-            >
-              <Ionicons
-                name="notifications-outline"
-                size={21}
-                color={Colors.textPrimary}
-              />
+            <Ionicons
+              name="notifications-outline"
+              size={22}
+              color={
+                KhedmatPalette.navy900
+              }
+            />
 
-              <View style={styles.notificationDot} />
-            </GlassSurface>
+            <View
+              style={
+                styles.notificationDot
+              }
+            />
           </Pressable>
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.greeting}>سلام، احمد</Text>
+          <Text
+            style={[
+              styles.greeting,
+              directionStyle(isRtl),
+            ]}
+          >
+            {copy.greeting}
+          </Text>
 
-          <Text style={styles.heroTitle}>امروز به کدام خدمت نیاز دارید؟</Text>
+          <Text
+            style={[
+              styles.heroTitle,
+              directionStyle(isRtl),
+            ]}
+          >
+            {copy.heroTitle}
+          </Text>
         </View>
 
         <Pressable
           accessibilityRole="search"
-          accessibilityLabel="جستجوی خدمات"
+          accessibilityLabel={
+            copy.searchAccessibility
+          }
           onPress={openSearch}
           style={({ pressed }) => [
-            styles.searchPressable,
+            styles.searchBox,
             pressed && styles.pressed,
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
           ]}
         >
-          <GlassSurface
-            variant="prominent"
-            radius={Radius.xl}
-            style={[styles.searchSurface, Shadows.small]}
-            contentStyle={styles.searchContent}
+          <View
+            style={styles.searchIcon}
           >
-            <View style={styles.searchIcon}>
-              <Ionicons
-                name="search-outline"
-                size={22}
-                color={Colors.primary}
-              />
-            </View>
+            <Ionicons
+              name="search-outline"
+              size={22}
+              color={
+                KhedmatPalette.white
+              }
+            />
+          </View>
 
-            <Text style={styles.searchPlaceholder}>
-              جستجوی خدمت یا ارائه‌دهنده...
-            </Text>
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.searchPlaceholder,
+              directionStyle(isRtl),
+            ]}
+          >
+            {copy.searchPlaceholder}
+          </Text>
 
-            <View style={styles.filterIcon}>
-              <Ionicons
-                name="options-outline"
-                size={20}
-                color={Colors.textSecondary}
-              />
-            </View>
-          </GlassSurface>
+          <View
+            style={styles.filterIcon}
+          >
+            <Ionicons
+              name="options-outline"
+              size={20}
+              color={
+                KhedmatPalette.navy700
+              }
+            />
+          </View>
         </Pressable>
 
         <View style={styles.section}>
           <SectionHeader
-            title="خدمات محبوب"
-            actionLabel="مشاهده همه"
+            title={copy.popularServices}
+            actionLabel={copy.viewAll}
+            isRtl={isRtl}
             onPress={openSearch}
           />
 
-          <View style={styles.categoriesGrid}>
-            {serviceCategories.map((category) => (
-              <Pressable
-                key={category.id}
-                accessibilityRole="button"
-                accessibilityLabel={category.title}
-                onPress={() => openCategory(category.id)}
-                style={({ pressed }) => [
-                  styles.categoryPressable,
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <GlassSurface
-                  variant="regular"
-                  radius={Radius.xl}
-                  style={styles.categorySurface}
-                  contentStyle={styles.categoryContent}
+          <View
+            style={styles.categoriesGrid}
+          >
+            {categories.map(
+              (category) => (
+                <Pressable
+                  key={category.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    category.localizedTitle
+                  }
+                  onPress={() =>
+                    openCategory(
+                      category.id,
+                    )
+                  }
+                  style={({ pressed }) => [
+                    styles.categoryCard,
+                    compactGrid &&
+                      styles.categoryCardCompact,
+                    pressed &&
+                      styles.cardPressed,
+                  ]}
                 >
-                  <View style={styles.categoryIcon}>
+                  <View
+                    style={
+                      styles.categoryIcon
+                    }
+                  >
                     <Ionicons
                       name={category.icon}
-                      size={25}
-                      color={Colors.primary}
+                      size={
+                        compactGrid
+                          ? 24
+                          : 27
+                      }
+                      color={
+                        KhedmatPalette
+                          .blue500
+                      }
                     />
                   </View>
 
-                  <Text style={styles.categoryTitle}>{category.title}</Text>
-
-                  <Text numberOfLines={1} style={styles.categorySubtitle}>
-                    {category.subtitle}
+                  <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.82}
+                    style={[
+                      styles.categoryTitle,
+                      directionStyle(
+                        isRtl,
+                      ),
+                    ]}
+                  >
+                    {
+                      category.localizedTitle
+                    }
                   </Text>
-                </GlassSurface>
-              </Pressable>
-            ))}
+
+                  <Text
+                    numberOfLines={2}
+                    style={[
+                      styles.categorySubtitle,
+                      directionStyle(
+                        isRtl,
+                      ),
+                    ]}
+                  >
+                    {
+                      category.localizedSubtitle
+                    }
+                  </Text>
+                </Pressable>
+              ),
+            )}
           </View>
         </View>
 
         <View style={styles.section}>
           <SectionHeader
-            title="ارائه‌دهندگان نزدیک"
-            actionLabel="مشاهده همه"
+            title={copy.nearbyProviders}
+            actionLabel={copy.viewAll}
+            isRtl={isRtl}
             onPress={openSearch}
           />
 
           <ScrollView
             horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.providersRow}
+            showsHorizontalScrollIndicator={
+              false
+            }
+            contentContainerStyle={
+              styles.providersRow
+            }
+            style={[
+              styles.providersScroll,
+              {
+                direction: isRtl
+                  ? "rtl"
+                  : "ltr",
+              },
+            ]}
           >
-            {featuredProviders.map((provider) => (
-              <ProviderCard
-                key={provider.id}
-                provider={provider}
-                onPress={() =>
-                  router.push({
-                    pathname: "/provider-profile",
-                    params: {
-                      providerId: provider.id,
-                    },
-                  })
-                }
-              />
-            ))}
+            {FEATURED_PROVIDERS.map(
+              (provider) => (
+                <ProviderCard
+                  key={provider.id}
+                  provider={provider}
+                  language={
+                    activeLanguage
+                  }
+                  isRtl={isRtl}
+                  copy={copy}
+                  onPress={() =>
+                    openProvider(
+                      provider.id,
+                    )
+                  }
+                />
+              ),
+            )}
           </ScrollView>
         </View>
       </ScrollView>
@@ -290,143 +547,405 @@ export default function HomeScreen() {
 type SectionHeaderProps = {
   title: string;
   actionLabel: string;
+  isRtl: boolean;
   onPress: () => void;
 };
 
-function SectionHeader({ title, actionLabel, onPress }: SectionHeaderProps) {
+function SectionHeader({
+  title,
+  actionLabel,
+  isRtl,
+  onPress,
+}: SectionHeaderProps) {
   return (
-    <View style={styles.sectionHeader}>
+    <View
+      style={[
+        styles.sectionHeader,
+        {
+          flexDirection: isRtl
+            ? "row"
+            : "row-reverse",
+        },
+      ]}
+    >
+      <Text
+        style={[
+          styles.sectionTitle,
+          directionStyle(isRtl),
+        ]}
+      >
+        {title}
+      </Text>
+
       <Pressable
         accessibilityRole="button"
         onPress={onPress}
         style={({ pressed }) => [
           styles.sectionAction,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
           pressed && styles.pressed,
         ]}
       >
-        <Ionicons name="chevron-back" size={16} color={Colors.primary} />
+        <Text
+          style={[
+            styles.sectionActionText,
+            directionStyle(isRtl),
+          ]}
+        >
+          {actionLabel}
+        </Text>
 
-        <Text style={styles.sectionActionText}>{actionLabel}</Text>
+        <Ionicons
+          name={
+            isRtl
+              ? "chevron-back"
+              : "chevron-forward"
+          }
+          size={15}
+          color={
+            KhedmatPalette.blue500
+          }
+        />
       </Pressable>
-
-      <Text style={styles.sectionTitle}>{title}</Text>
     </View>
   );
 }
 
+type ProviderCardProps = {
+  provider: ProviderProfile;
+  language: LanguageName;
+  isRtl: boolean;
+  copy: ReturnType<
+    typeof getHomeCopy
+  >;
+  onPress: () => void;
+};
+
 function ProviderCard({
   provider,
+  language,
+  isRtl,
+  copy,
   onPress,
-}: {
-  provider: ProviderProfile;
-  onPress: () => void;
-}) {
+}: ProviderCardProps) {
+  const useLocalizedDigits =
+    language !== "English";
+
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={provider.name}
+      accessibilityLabel={
+        provider.name
+      }
       onPress={onPress}
       style={({ pressed }) => [
-        styles.providerPressable,
+        styles.providerCard,
         pressed && styles.cardPressed,
       ]}
     >
-      <GlassSurface
-        variant="regular"
-        radius={Radius.xl}
-        style={styles.providerSurface}
-        contentStyle={styles.providerContent}
+      <View
+        style={[
+          styles.providerTopRow,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
       >
-        <View style={styles.providerTopRow}>
-          <View
-            style={[
-              styles.availabilityBadge,
-              !provider.availableToday && styles.unavailableBadge,
-            ]}
+        <View
+          style={
+            styles.providerAvatar
+          }
+        >
+          <Text
+            style={
+              styles.providerInitials
+            }
           >
+            {provider.initials}
+          </Text>
+
+          {provider.verified ? (
             <View
-              style={[
-                styles.availabilityDot,
-                !provider.availableToday && styles.unavailableDot,
-              ]}
-            />
-
-            <Text style={styles.availabilityText}>
-              {provider.availableToday ? "امروز آماده" : "فعلاً مصروف"}
-            </Text>
-          </View>
-
-          <View style={styles.providerAvatar}>
-            <Text style={styles.providerInitials}>{provider.initials}</Text>
-
-            {provider.verified ? (
-              <View style={styles.verifiedBadge}>
-                <Ionicons name="checkmark" size={11} color={Colors.white} />
-              </View>
-            ) : null}
-          </View>
+              style={
+                styles.verifiedBadge
+              }
+            >
+              <Ionicons
+                name="checkmark"
+                size={11}
+                color={
+                  KhedmatPalette.white
+                }
+              />
+            </View>
+          ) : null}
         </View>
 
-        <View style={styles.providerCopy}>
-          <Text style={styles.providerName}>{provider.name}</Text>
+        <View
+          style={[
+            styles.availabilityBadge,
+            !provider.availableToday &&
+              styles.unavailableBadge,
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.availabilityDot,
+              !provider.availableToday &&
+                styles.unavailableDot,
+            ]}
+          />
 
-          <Text style={styles.providerProfession}>{provider.profession}</Text>
+          <Text
+            style={[
+              styles.availabilityText,
+              directionStyle(isRtl),
+            ]}
+          >
+            {provider.availableToday
+              ? copy.availableToday
+              : copy.currentlyBusy}
+          </Text>
+        </View>
+      </View>
 
-          <View style={styles.providerLocation}>
-            <Text numberOfLines={1} style={styles.providerLocationText}>
-              {provider.locationLabel}
-            </Text>
+      <View
+        style={[
+          styles.providerCopy,
+          {
+            alignItems: isRtl
+              ? "flex-end"
+              : "flex-start",
+          },
+        ]}
+      >
+        <Text
+          numberOfLines={1}
+          style={[
+            styles.providerName,
+            directionStyle(isRtl),
+          ]}
+        >
+          {provider.name}
+        </Text>
 
-            <Ionicons
-              name="location-outline"
-              size={15}
-              color={Colors.textTertiary}
-            />
-          </View>
+        <Text
+          numberOfLines={1}
+          style={[
+            styles.providerProfession,
+            directionStyle(isRtl),
+          ]}
+        >
+          {provider.profession}
+        </Text>
 
-          <Text style={styles.providerPrice}>
-            از {formatCurrency(provider.minimumPrice)}
+        <View
+          style={[
+            styles.providerLocation,
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
+          ]}
+        >
+          <Ionicons
+            name="location-outline"
+            size={15}
+            color={
+              KhedmatPalette.textMuted
+            }
+          />
+
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.providerLocationText,
+              directionStyle(isRtl),
+            ]}
+          >
+            {provider.locationLabel}
           </Text>
         </View>
 
-        <View style={styles.providerDivider} />
+        <Text
+          style={[
+            styles.providerPrice,
+            directionStyle(isRtl),
+          ]}
+        >
+          {copy.fromPrice}{" "}
+          {formatCurrency(
+            provider.minimumPrice,
+            language,
+          )}
+        </Text>
+      </View>
 
-        <View style={styles.providerStats}>
-          <View style={styles.providerStat}>
-            <Ionicons
-              name="briefcase-outline"
-              size={15}
-              color={Colors.textTertiary}
-            />
+      <View
+        style={styles.providerDivider}
+      />
 
-            <Text style={styles.providerStatText}>
-              {toDariDigits(provider.completedJobs.toString())} کار
-            </Text>
-          </View>
+      <View
+        style={[
+          styles.providerStats,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.providerStat,
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
+          ]}
+        >
+          <Ionicons
+            name="briefcase-outline"
+            size={15}
+            color={
+              KhedmatPalette.textMuted
+            }
+          />
 
-          <View style={styles.providerStat}>
-            <Text style={styles.providerStatText}>
-              {toDariDigits(provider.rating.toFixed(1))}
-            </Text>
-
-            <Ionicons name="star" size={15} color={Colors.warning} />
-
-            <Text style={styles.reviewCount}>
-              ({toDariDigits(provider.reviewCount.toString())})
-            </Text>
-          </View>
+          <Text
+            style={
+              styles.providerStatText
+            }
+          >
+            {formatDigits(
+              provider.completedJobs.toString(),
+              useLocalizedDigits,
+            )}{" "}
+            {copy.jobs}
+          </Text>
         </View>
-      </GlassSurface>
+
+        <View
+          style={[
+            styles.providerStat,
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
+          ]}
+        >
+          <Ionicons
+            name="star"
+            size={15}
+            color="#D99A2B"
+          />
+
+          <Text
+            style={
+              styles.providerStatText
+            }
+          >
+            {formatDigits(
+              provider.rating.toFixed(
+                1,
+              ),
+              useLocalizedDigits,
+            )}
+          </Text>
+
+          <Text
+            style={
+              styles.reviewCount
+            }
+          >
+            (
+            {formatDigits(
+              provider.reviewCount.toString(),
+              useLocalizedDigits,
+            )}
+            )
+          </Text>
+        </View>
+      </View>
     </Pressable>
   );
 }
 
-function formatCurrency(amount: number): string {
-  return `${new Intl.NumberFormat("fa-AF").format(amount)} افغانی`;
+function normalizeLanguage(
+  language: string,
+): LanguageName {
+  if (language === "Dari") {
+    return "Dari";
+  }
+
+  if (language === "Pashto") {
+    return "Pashto";
+  }
+
+  return "English";
 }
 
-function toDariDigits(value: string): string {
-  const digits: Record<string, string> = {
+function directionStyle(
+  isRtl: boolean,
+) {
+  return {
+    textAlign: isRtl
+      ? ("right" as const)
+      : ("left" as const),
+
+    writingDirection: isRtl
+      ? ("rtl" as const)
+      : ("ltr" as const),
+  };
+}
+
+function formatCurrency(
+  amount: number,
+  language: LanguageName,
+): string {
+  const formatted =
+    new Intl.NumberFormat(
+      "en-US",
+    ).format(amount);
+
+  if (language === "English") {
+    return `${formatted} AFN`;
+  }
+
+  const localized =
+    formatDigits(formatted, true);
+
+  return language === "Dari"
+    ? `${localized} افغانی`
+    : `${localized} افغانۍ`;
+}
+
+function formatDigits(
+  value: string,
+  localized: boolean,
+): string {
+  if (!localized) {
+    return value;
+  }
+
+  const digits: Record<
+    string,
+    string
+  > = {
     "0": "۰",
     "1": "۱",
     "2": "۲",
@@ -439,149 +958,234 @@ function toDariDigits(value: string): string {
     "9": "۹",
   };
 
-  return value.replace(/\d/g, (digit) => digits[digit] ?? digit);
+  return value.replace(
+    /\d/g,
+    (digit) =>
+      digits[digit] ?? digit,
+  );
+}
+
+function getHomeCopy(
+  language: LanguageName,
+) {
+  if (language === "Dari") {
+    return {
+      greeting: "سلام، احمد",
+      heroTitle:
+        "امروز به کدام خدمت نیاز دارید؟",
+      searchPlaceholder:
+        "جستجوی خدمت یا ارائه‌دهنده",
+      popularServices:
+        "خدمات محبوب",
+      nearbyProviders:
+        "ارائه‌دهندگان نزدیک",
+      viewAll: "مشاهده همه",
+      availableToday:
+        "امروز آماده",
+      currentlyBusy: "فعلاً مصروف",
+      fromPrice: "از",
+      jobs: "کار",
+      profileAccessibility:
+        "باز کردن پروفایل",
+      notificationsAccessibility:
+        "اعلان‌ها",
+      searchAccessibility:
+        "جستجوی خدمات",
+    };
+  }
+
+  if (language === "Pashto") {
+    return {
+      greeting: "سلام، احمد",
+      heroTitle:
+        "نن کوم خدمت ته اړتیا لرئ؟",
+      searchPlaceholder:
+        "خدمت یا خدمت وړاندې کوونکی ولټوئ",
+      popularServices:
+        "مشهور خدمتونه",
+      nearbyProviders:
+        "نږدې خدمت وړاندې کوونکي",
+      viewAll: "ټول وګورئ",
+      availableToday:
+        "نن چمتو دی",
+      currentlyBusy:
+        "اوس بوخت دی",
+      fromPrice: "له",
+      jobs: "کارونه",
+      profileAccessibility:
+        "پروفایل پرانیستل",
+      notificationsAccessibility:
+        "خبرتیاوې",
+      searchAccessibility:
+        "خدمتونه ولټوئ",
+    };
+  }
+
+  return {
+    greeting: "Hello, Ahmad",
+    heroTitle:
+      "What service do you need today?",
+    searchPlaceholder:
+      "Search services or providers",
+    popularServices:
+      "Popular services",
+    nearbyProviders:
+      "Providers near you",
+    viewAll: "View all",
+    availableToday:
+      "Available today",
+    currentlyBusy:
+      "Currently busy",
+    fromPrice: "From",
+    jobs: "jobs",
+    profileAccessibility:
+      "Open profile",
+    notificationsAccessibility:
+      "Notifications",
+    searchAccessibility:
+      "Search services",
+  };
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor:
+      KhedmatPalette.blue050,
   },
 
   scrollContent: {
     width: "100%",
-    maxWidth: Layout.contentMaxWidth,
+    maxWidth:
+      Layout.contentMaxWidth,
     alignSelf: "center",
-    paddingHorizontal: Layout.screenPadding,
+    paddingHorizontal:
+      Layout.screenPadding,
     paddingTop: Spacing.md,
-    paddingBottom: 130,
+    paddingBottom: 125,
   },
 
   topBar: {
-    minHeight: Layout.minimumTouchTarget,
-    flexDirection: "row-reverse",
+    width: "100%",
+    minHeight:
+      Layout.minimumTouchTarget,
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent:
+      "space-between",
   },
 
-  avatarPressable: {
-    width: Layout.minimumTouchTarget,
-    height: Layout.minimumTouchTarget,
+  avatarButton: {
+    width: 46,
+    height: 46,
     borderRadius: Radius.pill,
-  },
-
-  avatarSurface: {
-    flex: 1,
-  },
-
-  avatarContent: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.navy900,
+    ...Shadows.small,
   },
 
   avatarText: {
-    color: Colors.textPrimary,
+    fontFamily: Fonts.bold,
+    color:
+      KhedmatPalette.white,
     fontSize: 17,
-    fontWeight: "700",
+    lineHeight: 22,
   },
 
-  notificationPressable: {
-    width: Layout.minimumTouchTarget,
-    height: Layout.minimumTouchTarget,
+  notificationButton: {
+    width: 46,
+    height: 46,
     borderRadius: Radius.pill,
-  },
-
-  notificationSurface: {
-    flex: 1,
-  },
-
-  notificationContent: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.surface,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
   },
 
   notificationDot: {
     position: "absolute",
-    top: 8,
-    right: 8,
+    top: 9,
+    right: 9,
     width: 7,
     height: 7,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.error,
+    backgroundColor:
+      KhedmatPalette.error,
     borderWidth: 1.5,
-    borderColor: Colors.background,
+    borderColor:
+      KhedmatPalette.surface,
   },
 
   hero: {
     width: "100%",
-    marginTop: Spacing.xxl,
-    alignItems: "flex-end",
+    marginTop: Spacing.xl,
     gap: Spacing.xs,
   },
 
   greeting: {
     ...Typography.label,
     width: "100%",
-    color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.blue500,
   },
 
   heroTitle: {
     ...Typography.screenTitle,
     width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 28,
-    lineHeight: 35,
+    maxWidth: 430,
+    color:
+      KhedmatPalette.textPrimary,
+    fontSize: 26,
+    lineHeight: 33,
   },
 
-  searchPressable: {
+  searchBox: {
     width: "100%",
-    marginTop: Spacing.xxl,
-    borderRadius: Radius.xl,
-  },
-
-  searchSurface: {
-    width: "100%",
-  },
-
-  searchContent: {
-    minHeight: 62,
-    flexDirection: "row-reverse",
+    minHeight: 58,
+    marginTop: Spacing.xl,
+    paddingHorizontal: Spacing.md,
     alignItems: "center",
     gap: Spacing.md,
-    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.xl,
+    backgroundColor:
+      KhedmatPalette.surface,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    ...Shadows.small,
   },
 
   searchIcon: {
+    width: 40,
+    height: 40,
+    flexShrink: 0,
+    borderRadius: Radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.blue500,
+  },
+
+  searchPlaceholder: {
+    ...Typography.bodyStyle,
+    flex: 1,
+    color:
+      KhedmatPalette.textMuted,
+  },
+
+  filterIcon: {
     width: 38,
     height: 38,
     flexShrink: 0,
     borderRadius: Radius.md,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-  },
-
-  searchPlaceholder: {
-    ...Typography.bodyStyle,
-    flex: 1,
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  filterIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.glass,
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
   },
 
   section: {
@@ -592,112 +1196,123 @@ const styles = StyleSheet.create({
 
   sectionHeader: {
     width: "100%",
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent:
+      "space-between",
   },
 
   sectionTitle: {
     ...Typography.sectionTitle,
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 21,
-    lineHeight: 28,
+    color:
+      KhedmatPalette.textPrimary,
+    fontSize: 20,
+    lineHeight: 26,
   },
 
   sectionAction: {
     minHeight: 36,
-    flexDirection: "row",
     alignItems: "center",
     gap: 2,
   },
 
   sectionActionText: {
     ...Typography.captionStyle,
-    color: Colors.primary,
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.blue500,
+    fontFamily: Fonts.medium,
   },
 
   categoriesGrid: {
     width: "100%",
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    justifyContent:
+      "space-between",
     rowGap: Spacing.md,
   },
 
-  categoryPressable: {
+  categoryCard: {
     width: "31.5%",
-    minWidth: 96,
-    borderRadius: Radius.xl,
-  },
-
-  categorySurface: {
-    width: "100%",
-  },
-
-  categoryContent: {
-    minHeight: 128,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.sm,
+    minHeight: 154,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.md,
+    alignItems: "center",
+    justifyContent:
+      "flex-start",
+    borderRadius: Radius.xl,
+    backgroundColor:
+      KhedmatPalette.surface,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    ...Shadows.small,
+  },
+
+  categoryCardCompact: {
+    minHeight: 144,
   },
 
   categoryIcon: {
-    width: 50,
-    height: 50,
+    width: 54,
+    height: 54,
+    marginBottom: Spacing.md,
     borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(76, 141, 255, 0.22)",
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
   },
 
   categoryTitle: {
     ...Typography.label,
     width: "100%",
-    color: Colors.textPrimary,
+    color:
+      KhedmatPalette.textPrimary,
     textAlign: "center",
-    writingDirection: "rtl",
-    fontSize: 15,
+    fontSize: 14,
+    lineHeight: 19,
   },
 
   categorySubtitle: {
     ...Typography.captionStyle,
     width: "100%",
-    color: Colors.textTertiary,
+    marginTop: Spacing.xs,
+    color:
+      KhedmatPalette.textMuted,
     textAlign: "center",
-    writingDirection: "rtl",
     fontSize: 11,
+    lineHeight: 15,
+  },
+
+  providersScroll: {
+    overflow: "visible",
   },
 
   providersRow: {
-    flexDirection: "row-reverse",
     gap: Spacing.md,
-    paddingHorizontal: 1,
+    paddingRight: 2,
+    paddingLeft: 2,
+    paddingBottom: Spacing.sm,
   },
 
-  providerPressable: {
-    width: 274,
-    borderRadius: Radius.xl,
-  },
-
-  providerSurface: {
-    width: "100%",
-  },
-
-  providerContent: {
+  providerCard: {
+    width: 286,
+    minHeight: 260,
     padding: Spacing.lg,
+    borderRadius: Radius.xl,
+    backgroundColor:
+      KhedmatPalette.surface,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    ...Shadows.small,
   },
 
   providerTopRow: {
-    flexDirection: "row-reverse",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
+    width: "100%",
+    alignItems: "center",
+    justifyContent:
+      "space-between",
   },
 
   providerAvatar: {
@@ -706,76 +1321,78 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(76, 141, 255, 0.30)",
+    backgroundColor:
+      KhedmatPalette.navy900,
   },
 
   providerInitials: {
-    color: Colors.primary,
-    fontSize: 19,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
+    fontSize: 18,
+    color:
+      KhedmatPalette.white,
   },
 
   verifiedBadge: {
     position: "absolute",
     right: -2,
-    bottom: -2,
+    bottom: -1,
     width: 20,
     height: 20,
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primary,
+    backgroundColor:
+      KhedmatPalette.blue500,
     borderWidth: 2,
-    borderColor: Colors.backgroundRaised,
+    borderColor:
+      KhedmatPalette.surface,
   },
 
   availabilityBadge: {
-    minHeight: 28,
-    flexDirection: "row-reverse",
+    minHeight: 30,
+    paddingHorizontal: Spacing.md,
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: Spacing.sm,
+    gap: Spacing.xs,
     borderRadius: Radius.pill,
-    backgroundColor: "rgba(48, 183, 106, 0.10)",
+    backgroundColor:
+      KhedmatPalette.successSoft,
   },
 
   unavailableBadge: {
-    backgroundColor: Colors.glass,
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
   },
 
   availabilityDot: {
-    width: 6,
-    height: 6,
+    width: 7,
+    height: 7,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.success,
+    backgroundColor:
+      KhedmatPalette.success,
   },
 
   unavailableDot: {
-    backgroundColor: Colors.textTertiary,
+    backgroundColor:
+      KhedmatPalette.textMuted,
   },
 
   availabilityText: {
     ...Typography.captionStyle,
-    color: Colors.textSecondary,
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textSecondary,
     fontSize: 11,
   },
 
   providerCopy: {
     width: "100%",
-    marginTop: Spacing.md,
-    alignItems: "flex-end",
-    gap: 3,
+    marginTop: Spacing.lg,
   },
 
   providerName: {
     ...Typography.sectionTitle,
     width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textPrimary,
     fontSize: 19,
     lineHeight: 25,
   },
@@ -783,72 +1400,78 @@ const styles = StyleSheet.create({
   providerProfession: {
     ...Typography.bodyStyle,
     width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    marginTop: 2,
+    color:
+      KhedmatPalette.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
   },
 
   providerLocation: {
     width: "100%",
-    marginTop: 3,
-    flexDirection: "row-reverse",
+    marginTop: Spacing.md,
     alignItems: "center",
-    gap: 4,
+    gap: Spacing.xs,
   },
 
   providerLocationText: {
     ...Typography.captionStyle,
     flex: 1,
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textMuted,
   },
 
   providerPrice: {
-    ...Typography.captionStyle,
+    ...Typography.label,
     width: "100%",
-    color: Colors.success,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontWeight: "600",
+    marginTop: Spacing.sm,
+    color:
+      KhedmatPalette.success,
   },
 
   providerDivider: {
     width: "100%",
-    height: StyleSheet.hairlineWidth,
-    marginVertical: Spacing.md,
-    backgroundColor: Colors.separator,
+    height:
+      StyleSheet.hairlineWidth,
+    marginVertical: Spacing.lg,
+    backgroundColor:
+      KhedmatPalette.border,
   },
 
   providerStats: {
-    flexDirection: "row-reverse",
+    width: "100%",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent:
+      "space-between",
   },
 
   providerStat: {
-    flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 4,
+    gap: Spacing.xs,
   },
 
   providerStatText: {
     ...Typography.captionStyle,
-    color: Colors.textSecondary,
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textSecondary,
   },
 
   reviewCount: {
     ...Typography.captionStyle,
-    color: Colors.textTertiary,
+    color:
+      KhedmatPalette.textMuted,
   },
 
   pressed: {
-    opacity: 0.82,
+    opacity: 0.78,
   },
 
   cardPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.992 }],
+    opacity: 0.86,
+    transform: [
+      {
+        scale: 0.985,
+      },
+    ],
   },
 });

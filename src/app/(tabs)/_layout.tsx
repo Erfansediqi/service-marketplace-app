@@ -7,12 +7,31 @@ import {
 } from "react-native";
 
 import {
-  Colors,
+  Fonts,
+  KhedmatPalette,
   Radius,
   Shadows,
 } from "../../constants/theme";
+import { useLanguage } from "../../context/languagecontext";
 
-export default function ProviderTabsLayout() {
+type LanguageName =
+  | "English"
+  | "Dari"
+  | "Pashto";
+
+export default function CustomerTabsLayout() {
+  const { language } = useLanguage();
+
+  const activeLanguage =
+    normalizeLanguage(language);
+
+  const copy =
+    getTabCopy(activeLanguage);
+
+  const isRtl =
+    activeLanguage === "Dari" ||
+    activeLanguage === "Pashto";
+
   return (
     <Tabs
       initialRouteName="index"
@@ -20,15 +39,23 @@ export default function ProviderTabsLayout() {
         headerShown: false,
 
         tabBarActiveTintColor:
-          Colors.primary,
+          KhedmatPalette.navy900,
 
         tabBarInactiveTintColor:
-          Colors.textTertiary,
+          KhedmatPalette.textMuted,
 
         tabBarHideOnKeyboard: true,
         tabBarShowLabel: true,
 
-        tabBarLabelStyle: styles.label,
+        tabBarLabelStyle: [
+          styles.label,
+          {
+            writingDirection: isRtl
+              ? "rtl"
+              : "ltr",
+          },
+        ],
+
         tabBarStyle: styles.tabBar,
         tabBarItemStyle: styles.tabItem,
 
@@ -44,7 +71,11 @@ export default function ProviderTabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "داشبورد",
+          title: copy.home,
+
+          tabBarAccessibilityLabel:
+            copy.home,
+
           tabBarIcon: ({
             color,
             focused,
@@ -52,17 +83,21 @@ export default function ProviderTabsLayout() {
             <TabIcon
               color={color}
               focused={focused}
-              activeIcon="grid"
-              inactiveIcon="grid-outline"
+              activeIcon="home"
+              inactiveIcon="home-outline"
             />
           ),
         }}
       />
 
       <Tabs.Screen
-        name="requests"
+        name="search"
         options={{
-          title: "درخواست‌ها",
+          title: copy.search,
+
+          tabBarAccessibilityLabel:
+            copy.search,
+
           tabBarIcon: ({
             color,
             focused,
@@ -70,18 +105,21 @@ export default function ProviderTabsLayout() {
             <TabIcon
               color={color}
               focused={focused}
-              activeIcon="briefcase"
-              inactiveIcon="briefcase-outline"
-              badgeCount={3}
+              activeIcon="search"
+              inactiveIcon="search-outline"
             />
           ),
         }}
       />
 
       <Tabs.Screen
-        name="calendar"
+        name="bookings"
         options={{
-          title: "تقویم",
+          title: copy.bookings,
+
+          tabBarAccessibilityLabel:
+            copy.bookings,
+
           tabBarIcon: ({
             color,
             focused,
@@ -99,7 +137,11 @@ export default function ProviderTabsLayout() {
       <Tabs.Screen
         name="messages"
         options={{
-          title: "پیام‌ها",
+          title: copy.messages,
+
+          tabBarAccessibilityLabel:
+            copy.messages,
+
           tabBarIcon: ({
             color,
             focused,
@@ -118,7 +160,11 @@ export default function ProviderTabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "حساب",
+          title: copy.profile,
+
+          tabBarAccessibilityLabel:
+            copy.profile,
+
           tabBarIcon: ({
             color,
             focused,
@@ -139,10 +185,13 @@ export default function ProviderTabsLayout() {
 type TabIconProps = {
   color: string;
   focused: boolean;
+
   activeIcon:
     keyof typeof Ionicons.glyphMap;
+
   inactiveIcon:
     keyof typeof Ionicons.glyphMap;
+
   badgeCount?: number;
 };
 
@@ -158,6 +207,7 @@ function TabIcon({
       <View
         style={[
           styles.iconContainer,
+
           focused &&
             styles.activeIconContainer,
         ]}
@@ -186,31 +236,91 @@ function TabIcon({
   );
 }
 
+function normalizeLanguage(
+  language: string,
+): LanguageName {
+  if (language === "Dari") {
+    return "Dari";
+  }
+
+  if (language === "Pashto") {
+    return "Pashto";
+  }
+
+  return "English";
+}
+
+function getTabCopy(
+  language: LanguageName,
+) {
+  if (language === "Dari") {
+    return {
+      home: "خانه",
+      search: "جستجو",
+      bookings: "رزروها",
+      messages: "پیام‌ها",
+      profile: "حساب",
+    };
+  }
+
+  if (language === "Pashto") {
+    return {
+      home: "کور",
+      search: "لټون",
+      bookings: "رزرفونه",
+      messages: "پیغامونه",
+      profile: "حساب",
+    };
+  }
+
+  return {
+    home: "Home",
+    search: "Search",
+    bookings: "Bookings",
+    messages: "Messages",
+    profile: "Account",
+  };
+}
+
 const styles = StyleSheet.create({
   tabBar: {
     position: "absolute",
+
     right: 12,
-    bottom:
-      Platform.OS === "ios" ? 8 : 12,
     left: 12,
 
-    height:
-      Platform.OS === "ios" ? 82 : 70,
+    bottom:
+      Platform.OS === "ios"
+        ? 8
+        : 12,
 
-    paddingTop: 8,
+    height:
+      Platform.OS === "ios"
+        ? 82
+        : 70,
+
+    paddingTop: 7,
+
     paddingBottom:
-      Platform.OS === "ios" ? 20 : 8,
+      Platform.OS === "ios"
+        ? 19
+        : 7,
 
     borderTopWidth:
       StyleSheet.hairlineWidth,
 
     borderTopColor:
-      "rgba(255, 255, 255, 0.15)",
+      KhedmatPalette.border,
+
+    borderWidth: 1,
+
+    borderColor:
+      KhedmatPalette.border,
 
     borderRadius: Radius.xl,
 
     backgroundColor:
-      "rgba(12, 18, 27, 0.94)",
+      KhedmatPalette.surface,
 
     overflow: "hidden",
 
@@ -219,48 +329,58 @@ const styles = StyleSheet.create({
 
   tabBarBackground: {
     flex: 1,
+
     backgroundColor:
-      "rgba(12, 18, 27, 0.94)",
+      KhedmatPalette.surface,
   },
 
   tabItem: {
     borderRadius: Radius.lg,
+
+    paddingHorizontal: 1,
   },
 
   label: {
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: "600",
-    writingDirection: "rtl",
+    fontFamily: Fonts.medium,
+
+    fontSize: 10,
+
+    lineHeight: 14,
+
+    fontWeight: "500",
   },
 
   iconWrapper: {
-    width: 40,
+    width: 42,
     height: 32,
+
     alignItems: "center",
     justifyContent: "center",
   },
 
   iconContainer: {
-    width: 36,
+    width: 38,
     height: 30,
+
     borderRadius: Radius.pill,
+
     alignItems: "center",
     justifyContent: "center",
   },
 
   activeIconContainer: {
     backgroundColor:
-      "rgba(76, 141, 255, 0.14)",
+      KhedmatPalette.surfaceSoft,
   },
 
   badge: {
     position: "absolute",
-    top: 0,
-    right: 1,
 
-    width: 11,
-    height: 11,
+    top: 0,
+    right: 0,
+
+    width: 12,
+    height: 12,
 
     borderRadius: Radius.pill,
 
@@ -268,13 +388,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
 
     backgroundColor:
-      "rgba(12, 18, 27, 0.98)",
+      KhedmatPalette.surface,
   },
 
   badgeInner: {
     width: 7,
     height: 7,
+
     borderRadius: Radius.pill,
-    backgroundColor: Colors.error,
+
+    backgroundColor:
+      KhedmatPalette.error,
   },
 });
