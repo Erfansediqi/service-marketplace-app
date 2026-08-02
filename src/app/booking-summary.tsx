@@ -1,536 +1,1182 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ComponentProps, useMemo, useState } from "react";
 import {
-    Alert,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ComponentProps,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
-import { GlassButton } from "../components/glass/glass-button";
-import { GlassIconButton } from "../components/glass/glass-icon-button";
-import { GlassSurface } from "../components/glass/glass-surface";
 import {
-    Colors,
-    Layout,
-    Radius,
-    Spacing,
-    Typography,
+  Fonts,
+  KhedmatPalette,
+  Layout,
+  Radius,
+  Shadows,
+  Spacing,
+  Typography,
 } from "../constants/theme";
 import { useBooking } from "../context/booking-context";
+import { useLanguage } from "../context/languagecontext";
 
-type IconName = ComponentProps<typeof Ionicons>["name"];
+type IconName =
+  ComponentProps<typeof Ionicons>["name"];
 
+type LanguageName =
+  | "English"
+  | "Dari"
+  | "Pashto";
+
+type SummaryCopy = ReturnType<
+  typeof getSummaryCopy
+>;
+
+const CURRENT_STEP = 4;
+const TOTAL_STEPS = 4;
 const PLATFORM_FEE = 50;
+
+const SUCCESS = "#268A57";
+const SUCCESS_SOFT = "#E8F6EE";
+const WARNING = "#8A5A00";
+const WARNING_SOFT = "#FFF4D6";
+const ERROR = "#B3261E";
 
 export default function BookingSummaryScreen() {
   const router = useRouter();
 
   const {
-  bookingDraft,
-  bookingReadyForSummary,
-  addBooking,
-} = useBooking();
+    bookingDraft,
+    bookingReadyForSummary,
+    addBooking,
+  } = useBooking();
 
-  const [acceptedTerms, setAcceptedTerms] =
-    useState(false);
+  const { language } =
+    useLanguage();
 
-  const [isSubmitting, setIsSubmitting] =
-    useState(false);
+  const activeLanguage =
+    normalizeLanguage(language);
+
+  const isRtl =
+    activeLanguage === "Dari" ||
+    activeLanguage === "Pashto";
+
+  const localizedDigits =
+    activeLanguage !== "English";
+
+  const copy =
+    getSummaryCopy(
+      activeLanguage,
+    );
+
+  const [
+    acceptedTerms,
+    setAcceptedTerms,
+  ] = useState(false);
+
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
+
+  const submissionLock =
+    useRef(false);
 
   const servicePrice =
-    bookingDraft.estimatedPrice ?? 0;
+    bookingDraft.estimatedPrice ??
+    0;
 
   const estimatedTotal =
-    servicePrice + PLATFORM_FEE;
+    servicePrice +
+    PLATFORM_FEE;
 
-  const formattedDate = useMemo(
-    () => formatBookingDate(bookingDraft.date),
-    [bookingDraft.date],
-  );
+  const formattedDate =
+    useMemo(
+      () =>
+        formatBookingDate(
+          bookingDraft.date,
+          activeLanguage,
+        ),
+      [
+        activeLanguage,
+        bookingDraft.date,
+      ],
+    );
 
-  const formattedTime = useMemo(
-    () => formatTimeForDari(bookingDraft.time),
-    [bookingDraft.time],
-  );
+  const formattedTime =
+    useMemo(
+      () =>
+        formatTime(
+          bookingDraft.time,
+          activeLanguage,
+        ),
+      [
+        activeLanguage,
+        bookingDraft.time,
+      ],
+    );
+
+  const formattedAddress =
+    bookingDraft.address
+      ?.fullAddress ??
+    copy.addressFallback;
+
+  const notes =
+    bookingDraft.notes.trim();
 
   const canSubmit =
     bookingReadyForSummary &&
     acceptedTerms &&
     !isSubmitting;
 
-  const handleEditService = () => {
-    router.push({
-      pathname: "/booking-create",
-      params: {
-        providerId: bookingDraft.providerId,
-      },
-    });
-  };
-
-  const handleEditSchedule = () => {
-    router.push("/booking-schedule");
-  };
-
-  const handleEditDetails = () => {
-    router.push("/booking-details");
-  };
-
-  const handleSubmit = async () => {
-  if (!bookingReadyForSummary) {
-    Alert.alert(
-      "اطلاعات ناقص است",
-      "بعضی از اطلاعات رزرو تکمیل نشده‌اند. لطفاً مراحل قبلی را بررسی کنید.",
-    );
-    return;
-  }
-
-  if (!bookingDraft.address) {
-    Alert.alert(
-      "آدرس ناقص است",
-      "لطفاً آدرس انجام خدمت را دوباره انتخاب کنید.",
-    );
-    return;
-  }
-
-  if (!acceptedTerms) {
-    Alert.alert(
-      "تأیید لازم است",
-      "برای ارسال درخواست، شرایط رزرو را تأیید کنید.",
-    );
-    return;
-  }
-
-  setIsSubmitting(true);
-
-  try {
-    const booking = {
-      id: `booking-${Date.now()}`,
-      customerId: "current-user",
-      providerId: bookingDraft.providerId,
-      providerName: bookingDraft.providerName,
-      providerProfession: bookingDraft.providerProfession,
-      serviceId: bookingDraft.serviceId,
-      serviceName: bookingDraft.serviceName,
-      date: bookingDraft.date,
-      time: bookingDraft.time,
-      address: bookingDraft.address,
-      notes: bookingDraft.notes,
-      servicePrice,
-      platformFee: PLATFORM_FEE,
-      total: estimatedTotal,
-      currency: bookingDraft.currency,
-      status: "pending" as const,
-      paymentStatus: "unpaid" as const,
-      createdAt: new Date().toISOString(),
+  const handleEditService =
+    () => {
+      router.push({
+        pathname:
+          "/booking-create",
+        params: {
+          providerId:
+            bookingDraft.providerId,
+        },
+      });
     };
 
-    addBooking(booking);
+  const handleEditSchedule =
+    () => {
+      router.push(
+        "/booking-schedule",
+      );
+    };
 
-    router.replace({
-      pathname: "/booking-success",
-      params: {
-        bookingId: booking.id,
-      },
-    });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  const handleEditDetails =
+    () => {
+      router.push(
+        "/booking-details",
+      );
+    };
+
+  const handleSubmit =
+    async () => {
+      if (
+        submissionLock.current ||
+        isSubmitting
+      ) {
+        return;
+      }
+
+      if (
+        !bookingReadyForSummary
+      ) {
+        Alert.alert(
+          copy.incompleteTitle,
+          copy.incompleteMessage,
+        );
+        return;
+      }
+
+      if (
+        !bookingDraft.address
+      ) {
+        Alert.alert(
+          copy.addressMissingTitle,
+          copy.addressMissingMessage,
+        );
+        return;
+      }
+
+      if (!acceptedTerms) {
+        Alert.alert(
+          copy.consentRequiredTitle,
+          copy.consentRequiredMessage,
+        );
+        return;
+      }
+
+      submissionLock.current =
+        true;
+      setIsSubmitting(true);
+
+      try {
+        const bookingId =
+          createBookingId();
+
+        const booking = {
+          id: bookingId,
+          customerId:
+            "current-user",
+          providerId:
+            bookingDraft.providerId,
+          providerName:
+            bookingDraft.providerName,
+          providerProfession:
+            bookingDraft.providerProfession,
+          serviceId:
+            bookingDraft.serviceId,
+          serviceName:
+            bookingDraft.serviceName,
+          date:
+            bookingDraft.date,
+          time:
+            bookingDraft.time,
+          address:
+            bookingDraft.address,
+          notes:
+            bookingDraft.notes,
+          servicePrice,
+          platformFee:
+            PLATFORM_FEE,
+          total:
+            estimatedTotal,
+          currency:
+            bookingDraft.currency,
+          status:
+            "pending" as const,
+          paymentStatus:
+            "unpaid" as const,
+          createdAt:
+            new Date().toISOString(),
+        };
+
+        addBooking(booking);
+
+        router.replace({
+          pathname:
+            "/booking-success",
+          params: {
+            bookingId:
+              booking.id,
+          },
+        });
+      } catch (error) {
+        console.error(
+          "Booking submission failed:",
+          error,
+        );
+
+        Alert.alert(
+          copy.submitFailedTitle,
+          copy.submitFailedMessage,
+        );
+      } finally {
+        setIsSubmitting(false);
+        submissionLock.current =
+          false;
+      }
+    };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <View style={styles.topBar}>
-          <GlassIconButton
-            icon="chevron-back"
-            accessibilityLabel="بازگشت"
-            onPress={() => router.back()}
-          />
-
-          <Text style={styles.stepText}>
-            مرحله ۴ از ۴
-          </Text>
-        </View>
-
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>
-            بررسی نهایی
-          </Text>
-
-          <Text style={styles.title}>
-            جزئیات رزرو را بررسی کنید
-          </Text>
-
-          <Text style={styles.subtitle}>
-            پیش از ارسال درخواست، خدمت، زمان، آدرس و هزینهٔ تخمینی را بررسی نمایید.
-          </Text>
-        </View>
-
-        <GlassSurface
-          variant="prominent"
-          radius={Radius.xl}
-          style={styles.providerCard}
-          contentStyle={styles.providerContent}
+    <SafeAreaView
+      style={styles.safeArea}
+    >
+      <View style={styles.root}>
+        <ScrollView
+          showsVerticalScrollIndicator={
+            false
+          }
+          contentContainerStyle={
+            styles.scrollContent
+          }
         >
-          <View style={styles.providerAvatar}>
-            <Ionicons
-              name="person-outline"
-              size={25}
-              color={Colors.primary}
-            />
+          <View
+            style={[
+              styles.topBar,
+              {
+                flexDirection: isRtl
+                  ? "row-reverse"
+                  : "row",
+              },
+            ]}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                copy.back
+              }
+              hitSlop={8}
+              onPress={() =>
+                router.back()
+              }
+              style={({ pressed }) => [
+                styles.backButton,
+                pressed &&
+                  styles.pressed,
+              ]}
+            >
+              <Ionicons
+                name={
+                  isRtl
+                    ? "chevron-forward"
+                    : "chevron-back"
+                }
+                size={24}
+                color={
+                  KhedmatPalette
+                    .navy900
+                }
+              />
+            </Pressable>
+
+            <View
+              style={
+                styles.stepBadge
+              }
+            >
+              <Text
+                style={[
+                  styles.stepText,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.step(
+                  formatDigits(
+                    CURRENT_STEP.toString(),
+                    localizedDigits,
+                  ),
+                  formatDigits(
+                    TOTAL_STEPS.toString(),
+                    localizedDigits,
+                  ),
+                )}
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.providerCopy}>
-            <Text style={styles.providerEyebrow}>
-              ارائه‌دهنده
-            </Text>
+          <View
+            style={styles.header}
+          >
+            <View
+              style={
+                styles.headerIcon
+              }
+            >
+              <Ionicons
+                name="receipt-outline"
+                size={30}
+                color={
+                  KhedmatPalette
+                    .white
+                }
+              />
+            </View>
 
-            <Text style={styles.providerName}>
-              {bookingDraft.providerName ||
-                "ارائه‌دهنده"}
-            </Text>
+            <View
+              style={[
+                styles.headerCopy,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.eyebrow,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.eyebrow}
+              </Text>
 
-            <Text style={styles.providerProfession}>
-              {bookingDraft.providerProfession ||
-                "متخصص خدمات"}
-            </Text>
+              <Text
+                style={[
+                  styles.title,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.title}
+              </Text>
+
+              <Text
+                style={[
+                  styles.subtitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.subtitle}
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.verifiedBadge}>
-            <Ionicons
-              name="shield-checkmark"
-              size={20}
-              color={Colors.primary}
-            />
+          <View
+            style={[
+              styles.providerCard,
+              {
+                flexDirection: isRtl
+                  ? "row-reverse"
+                  : "row",
+              },
+            ]}
+          >
+            <View
+              style={
+                styles.providerAvatar
+              }
+            >
+              <Ionicons
+                name="person-outline"
+                size={25}
+                color={
+                  KhedmatPalette
+                    .white
+                }
+              />
+            </View>
+
+            <View
+              style={[
+                styles.providerCopy,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.providerEyebrow,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.provider}
+              </Text>
+
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.providerName,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {bookingDraft.providerName ||
+                  copy.providerFallback}
+              </Text>
+
+              <Text
+                numberOfLines={2}
+                style={[
+                  styles.providerProfession,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {bookingDraft.providerProfession ||
+                  copy.professionFallback}
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.verifiedBadge
+              }
+            >
+              <Ionicons
+                name="shield-checkmark"
+                size={21}
+                color={
+                  KhedmatPalette
+                    .blue500
+                }
+              />
+            </View>
           </View>
-        </GlassSurface>
 
-        <View style={styles.section}>
-          <SectionHeader
-            title="خدمت"
-            onEdit={handleEditService}
-          />
-
-          <SummaryCard
-            icon="briefcase-outline"
-            title={
-              bookingDraft.serviceName ||
-              "خدمت انتخاب‌نشده"
+          <SummarySection
+            title={copy.serviceTitle}
+            editLabel={copy.edit}
+            onEdit={
+              handleEditService
             }
-            subtitle={`هزینهٔ تخمینی: ${formatCurrency(
-              servicePrice,
-            )}`}
-          />
-        </View>
-
-        <View style={styles.section}>
-          <SectionHeader
-            title="تاریخ و زمان"
-            onEdit={handleEditSchedule}
-          />
-
-          <GlassSurface
-            variant="regular"
-            radius={Radius.xl}
-            style={styles.detailsCard}
-            contentStyle={styles.detailsContent}
+            isRtl={isRtl}
           >
-            <SummaryDetail
-              icon="calendar-outline"
-              label="تاریخ"
-              value={formattedDate}
-            />
-
-            <View style={styles.divider} />
-
-            <SummaryDetail
-              icon="time-outline"
-              label="زمان"
-              value={formattedTime}
-            />
-          </GlassSurface>
-        </View>
-
-        <View style={styles.section}>
-          <SectionHeader
-            title="آدرس و توضیحات"
-            onEdit={handleEditDetails}
-          />
-
-          <GlassSurface
-            variant="regular"
-            radius={Radius.xl}
-            style={styles.detailsCard}
-            contentStyle={styles.detailsContent}
-          >
-            <SummaryDetail
-              icon="location-outline"
+            <SummaryItem
+              icon="briefcase-outline"
               label={
-                bookingDraft.address?.label ||
-                "آدرس"
+                copy.selectedService
               }
               value={
-                bookingDraft.address
-                  ?.fullAddress ||
-                "آدرس انتخاب نشده است"
+                bookingDraft.serviceName ||
+                copy.serviceFallback
               }
+              supportingText={copy.estimatedServicePrice(
+                formatCurrency(
+                  servicePrice,
+                  activeLanguage,
+                ),
+              )}
+              isRtl={isRtl}
             />
+          </SummarySection>
 
-            <View style={styles.divider} />
-
-            <View style={styles.notesBlock}>
-              <View style={styles.notesHeader}>
-                <Text style={styles.notesLabel}>
-                  توضیحات درخواست
-                </Text>
-
-                <Ionicons
-                  name="document-text-outline"
-                  size={18}
-                  color={Colors.textTertiary}
-                />
-              </View>
-
-              <Text style={styles.notesText}>
-                {bookingDraft.notes ||
-                  "توضیحی وارد نشده است."}
-              </Text>
-            </View>
-          </GlassSurface>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            خلاصهٔ هزینه
-          </Text>
-
-          <GlassSurface
-            variant="regular"
-            radius={Radius.xl}
-            style={styles.priceCard}
-            contentStyle={styles.priceContent}
-          >
-            <PriceRow
-              label="هزینهٔ تخمینی خدمت"
-              value={formatCurrency(servicePrice)}
-            />
-
-            <PriceRow
-              label="هزینهٔ استفاده از پلتفرم"
-              value={formatCurrency(PLATFORM_FEE)}
-            />
-
-            <View style={styles.priceDivider} />
-
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>
-                مجموع تخمینی
-              </Text>
-
-              <Text style={styles.totalValue}>
-                {formatCurrency(estimatedTotal)}
-              </Text>
-            </View>
-
-            <Text style={styles.priceNotice}>
-              مبلغ نهایی ممکن است پس از بررسی وضعیت کار توسط ارائه‌دهنده تغییر کند.
-            </Text>
-          </GlassSurface>
-        </View>
-
-        <GlassSurface
-          variant="regular"
-          radius={Radius.xl}
-          style={styles.paymentNoticeCard}
-          contentStyle={styles.paymentNoticeContent}
-        >
-          <View style={styles.paymentNoticeIcon}>
-            <Ionicons
-              name="cash-outline"
-              size={23}
-              color={Colors.warning}
-            />
-          </View>
-
-          <View style={styles.paymentNoticeCopy}>
-            <Text style={styles.paymentNoticeTitle}>
-              پرداخت در محل
-            </Text>
-
-            <Text style={styles.paymentNoticeText}>
-              در نسخهٔ فعلی، پرداخت پس از انجام خدمت و مستقیماً به ارائه‌دهنده انجام می‌شود.
-            </Text>
-          </View>
-        </GlassSurface>
-
-        <Pressable
-          accessibilityRole="checkbox"
-          accessibilityState={{
-            checked: acceptedTerms,
-          }}
-          onPress={() =>
-            setAcceptedTerms(
-              (current) => !current,
-            )
-          }
-          style={({ pressed }) => [
-            styles.termsPressable,
-            pressed && styles.pressed,
-          ]}
-        >
-          <GlassSurface
-            variant={
-              acceptedTerms
-                ? "prominent"
-                : "regular"
+          <SummarySection
+            title={copy.scheduleTitle}
+            editLabel={copy.edit}
+            onEdit={
+              handleEditSchedule
             }
-            radius={Radius.xl}
-            style={[
-              styles.termsCard,
-              acceptedTerms &&
-                styles.acceptedTermsCard,
-            ]}
-            contentStyle={styles.termsContent}
+            isRtl={isRtl}
+          >
+            <View
+              style={
+                styles.groupCard
+              }
+            >
+              <SummaryDetail
+                icon="calendar-outline"
+                label={copy.date}
+                value={formattedDate}
+                isRtl={isRtl}
+              />
+
+              <View
+                style={
+                  styles.divider
+                }
+              />
+
+              <SummaryDetail
+                icon="time-outline"
+                label={copy.time}
+                value={formattedTime}
+                isRtl={isRtl}
+              />
+            </View>
+          </SummarySection>
+
+          <SummarySection
+            title={copy.detailsTitle}
+            editLabel={copy.edit}
+            onEdit={
+              handleEditDetails
+            }
+            isRtl={isRtl}
+          >
+            <View
+              style={
+                styles.groupCard
+              }
+            >
+              <SummaryDetail
+                icon="location-outline"
+                label={copy.address}
+                value={
+                  formattedAddress
+                }
+                isRtl={isRtl}
+              />
+
+              <View
+                style={
+                  styles.divider
+                }
+              />
+
+              <SummaryDetail
+                icon="document-text-outline"
+                label={
+                  copy.requestDetails
+                }
+                value={
+                  notes ||
+                  copy.notesFallback
+                }
+                isRtl={isRtl}
+                multiline
+              />
+            </View>
+          </SummarySection>
+
+          <View
+            style={styles.section}
           >
             <View
               style={[
-                styles.checkbox,
-                acceptedTerms &&
-                  styles.checkboxSelected,
+                styles.sectionHeader,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
               ]}
             >
-              {acceptedTerms ? (
-                <Ionicons
-                  name="checkmark"
-                  size={17}
-                  color={Colors.white}
-                />
-              ) : null}
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.priceTitle}
+              </Text>
+
+              <Text
+                style={[
+                  styles.sectionSubtitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.priceSubtitle}
+              </Text>
             </View>
 
-            <Text style={styles.termsText}>
-              تأیید می‌کنم که جزئیات رزرو درست است و شرایط لغو، تغییر زمان و پرداخت را می‌پذیرم.
-            </Text>
-          </GlassSurface>
-        </Pressable>
+            <View
+              style={
+                styles.priceCard
+              }
+            >
+              <PriceLine
+                label={
+                  copy.servicePrice
+                }
+                value={formatCurrency(
+                  servicePrice,
+                  activeLanguage,
+                )}
+                isRtl={isRtl}
+              />
 
-        <GlassSurface
-          variant="regular"
-          radius={Radius.xl}
-          style={styles.securityCard}
-          contentStyle={styles.securityContent}
-        >
-          <View style={styles.securityIcon}>
-            <Ionicons
-              name="shield-checkmark-outline"
-              size={23}
-              color={Colors.success}
-            />
+              <PriceLine
+                label={
+                  copy.platformFee
+                }
+                value={formatCurrency(
+                  PLATFORM_FEE,
+                  activeLanguage,
+                )}
+                supportingText={
+                  copy.platformFeeHint
+                }
+                isRtl={isRtl}
+              />
+
+              <View
+                style={
+                  styles.priceDivider
+                }
+              />
+
+              <PriceLine
+                label={
+                  copy.estimatedTotal
+                }
+                value={formatCurrency(
+                  estimatedTotal,
+                  activeLanguage,
+                )}
+                isRtl={isRtl}
+                emphasized
+              />
+            </View>
           </View>
 
-          <Text style={styles.securityText}>
-            آدرس دقیق و شماره تماس شما فقط پس از پذیرش درخواست برای ارائه‌دهنده نمایش داده می‌شود.
-          </Text>
-        </GlassSurface>
-      </ScrollView>
+          <View
+            style={[
+              styles.priceNotice,
+              {
+                flexDirection: isRtl
+                  ? "row-reverse"
+                  : "row",
+              },
+            ]}
+          >
+            <View
+              style={
+                styles.priceNoticeIcon
+              }
+            >
+              <Ionicons
+                name="information-circle-outline"
+                size={22}
+                color={WARNING}
+              />
+            </View>
 
-      <View style={styles.footer}>
-        <GlassButton
-          label="ارسال درخواست رزرو"
-          icon="checkmark-circle-outline"
-          iconPosition="left"
-          loading={isSubmitting}
-          disabled={!canSubmit}
-          onPress={handleSubmit}
-        />
+            <View
+              style={[
+                styles.priceNoticeCopy,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.priceNoticeTitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.priceNoticeTitle}
+              </Text>
 
-        <Text style={styles.footerSummary}>
-          مجموع تخمینی:{" "}
-          {formatCurrency(estimatedTotal)}
-        </Text>
+              <Text
+                style={[
+                  styles.priceNoticeText,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.priceNoticeText}
+              </Text>
+            </View>
+          </View>
+
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityLabel={
+              copy.consentText
+            }
+            accessibilityState={{
+              checked:
+                acceptedTerms,
+            }}
+            onPress={() =>
+              setAcceptedTerms(
+                (current) =>
+                  !current,
+              )
+            }
+            style={({ pressed }) => [
+              styles.consentCard,
+              acceptedTerms &&
+                styles.consentCardSelected,
+              pressed &&
+                styles.cardPressed,
+            ]}
+          >
+            <View
+              style={[
+                styles.consentContent,
+                {
+                  flexDirection: isRtl
+                    ? "row-reverse"
+                    : "row",
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  acceptedTerms &&
+                    styles.checkboxSelected,
+                ]}
+              >
+                {acceptedTerms ? (
+                  <Ionicons
+                    name="checkmark"
+                    size={17}
+                    color={
+                      KhedmatPalette
+                        .white
+                    }
+                  />
+                ) : null}
+              </View>
+
+              <View
+                style={[
+                  styles.consentCopy,
+                  {
+                    alignItems: isRtl
+                      ? "flex-end"
+                      : "flex-start",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.consentTitle,
+                    directionStyle(
+                      isRtl,
+                    ),
+                  ]}
+                >
+                  {copy.consentTitle}
+                </Text>
+
+                <Text
+                  style={[
+                    styles.consentText,
+                    directionStyle(
+                      isRtl,
+                    ),
+                  ]}
+                >
+                  {copy.consentText}
+                </Text>
+              </View>
+            </View>
+          </Pressable>
+
+          <View
+            style={[
+              styles.statusNotice,
+              {
+                flexDirection: isRtl
+                  ? "row-reverse"
+                  : "row",
+              },
+            ]}
+          >
+            <View
+              style={
+                styles.statusNoticeIcon
+              }
+            >
+              <Ionicons
+                name="time-outline"
+                size={22}
+                color={
+                  KhedmatPalette
+                    .blue500
+                }
+              />
+            </View>
+
+            <View
+              style={[
+                styles.statusNoticeCopy,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusNoticeTitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.pendingTitle}
+              </Text>
+
+              <Text
+                style={[
+                  styles.statusNoticeText,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.pendingText}
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+
+        <View
+          style={styles.footer}
+        >
+          <View
+            style={
+              styles.footerContent
+            }
+          >
+            <View
+              style={[
+                styles.footerTotalRow,
+                {
+                  flexDirection: isRtl
+                    ? "row-reverse"
+                    : "row",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.footerTotalLabel,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.estimatedTotal}
+              </Text>
+
+              <Text
+                style={[
+                  styles.footerTotalValue,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {formatCurrency(
+                  estimatedTotal,
+                  activeLanguage,
+                )}
+              </Text>
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                copy.submit
+              }
+              accessibilityState={{
+                disabled:
+                  !canSubmit,
+                busy: isSubmitting,
+              }}
+              disabled={
+                !canSubmit
+              }
+              onPress={handleSubmit}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                !canSubmit &&
+                  styles.primaryButtonDisabled,
+                pressed &&
+                  canSubmit &&
+                  styles.primaryButtonPressed,
+              ]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator
+                  size="small"
+                  color={
+                    KhedmatPalette
+                      .white
+                  }
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.primaryButtonContent,
+                    {
+                      flexDirection: isRtl
+                        ? "row-reverse"
+                        : "row",
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="paper-plane-outline"
+                    size={20}
+                    color={
+                      KhedmatPalette
+                        .white
+                    }
+                  />
+
+                  <Text
+                    style={[
+                      styles.primaryButtonText,
+                      directionStyle(
+                        isRtl,
+                      ),
+                    ]}
+                  >
+                    {copy.submit}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+
+            <Text
+              style={[
+                styles.footerHint,
+                directionStyle(isRtl),
+              ]}
+            >
+              {acceptedTerms
+                ? copy.ready
+                : copy.acceptTermsHint}
+            </Text>
+          </View>
+        </View>
       </View>
     </SafeAreaView>
   );
 }
 
-function SectionHeader({
+function SummarySection({
   title,
+  editLabel,
   onEdit,
+  isRtl,
+  children,
 }: {
   title: string;
+  editLabel: string;
   onEdit: () => void;
+  isRtl: boolean;
+  children: React.ReactNode;
 }) {
   return (
-    <View style={styles.sectionHeader}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`ویرایش ${title}`}
-        onPress={onEdit}
-        style={({ pressed }) => [
-          styles.editButton,
-          pressed && styles.pressed,
+    <View style={styles.section}>
+      <View
+        style={[
+          styles.sectionHeaderRow,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
         ]}
       >
-        <Ionicons
-          name="create-outline"
-          size={15}
-          color={Colors.primary}
-        />
-
-        <Text style={styles.editText}>
-          ویرایش
+        <Text
+          style={[
+            styles.sectionTitle,
+            directionStyle(isRtl),
+          ]}
+        >
+          {title}
         </Text>
-      </Pressable>
 
-      <Text style={styles.sectionTitle}>
-        {title}
-      </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            editLabel
+          }
+          onPress={onEdit}
+          style={({ pressed }) => [
+            styles.editButton,
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
+            pressed &&
+              styles.pressed,
+          ]}
+        >
+          <Ionicons
+            name="create-outline"
+            size={15}
+            color={
+              KhedmatPalette
+                .blue500
+            }
+          />
+
+          <Text
+            style={[
+              styles.editButtonText,
+              directionStyle(isRtl),
+            ]}
+          >
+            {editLabel}
+          </Text>
+        </Pressable>
+      </View>
+
+      {children}
     </View>
   );
 }
 
-function SummaryCard({
+function SummaryItem({
   icon,
-  title,
-  subtitle,
+  label,
+  value,
+  supportingText,
+  isRtl,
 }: {
   icon: IconName;
-  title: string;
-  subtitle: string;
+  label: string;
+  value: string;
+  supportingText: string;
+  isRtl: boolean;
 }) {
   return (
-    <GlassSurface
-      variant="regular"
-      radius={Radius.xl}
-      style={styles.summaryCard}
-      contentStyle={styles.summaryContent}
+    <View
+      style={[
+        styles.summaryItem,
+        {
+          flexDirection: isRtl
+            ? "row-reverse"
+            : "row",
+        },
+      ]}
     >
-      <View style={styles.summaryIcon}>
+      <View
+        style={
+          styles.summaryItemIcon
+        }
+      >
         <Ionicons
           name={icon}
-          size={23}
-          color={Colors.primary}
+          size={22}
+          color={
+            KhedmatPalette
+              .blue500
+          }
         />
       </View>
 
-      <View style={styles.summaryCopy}>
-        <Text style={styles.summaryTitle}>
-          {title}
+      <View
+        style={[
+          styles.summaryItemCopy,
+          {
+            alignItems: isRtl
+              ? "flex-end"
+              : "flex-start",
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.summaryItemLabel,
+            directionStyle(isRtl),
+          ]}
+        >
+          {label}
         </Text>
 
-        <Text style={styles.summarySubtitle}>
-          {subtitle}
+        <Text
+          style={[
+            styles.summaryItemValue,
+            directionStyle(isRtl),
+          ]}
+        >
+          {value}
+        </Text>
+
+        <Text
+          style={[
+            styles.summaryItemSupporting,
+            directionStyle(isRtl),
+          ]}
+        >
+          {supportingText}
         </Text>
       </View>
-    </GlassSurface>
+    </View>
   );
 }
 
@@ -538,27 +1184,71 @@ function SummaryDetail({
   icon,
   label,
   value,
+  isRtl,
+  multiline = false,
 }: {
   icon: IconName;
   label: string;
   value: string;
+  isRtl: boolean;
+  multiline?: boolean;
 }) {
   return (
-    <View style={styles.detailRow}>
-      <View style={styles.detailIcon}>
+    <View
+      style={[
+        styles.detailRow,
+        {
+          flexDirection: isRtl
+            ? "row-reverse"
+            : "row",
+          alignItems: multiline
+            ? "flex-start"
+            : "center",
+        },
+      ]}
+    >
+      <View
+        style={
+          styles.detailIcon
+        }
+      >
         <Ionicons
           name={icon}
-          size={19}
-          color={Colors.primary}
+          size={20}
+          color={
+            KhedmatPalette
+              .blue500
+          }
         />
       </View>
 
-      <View style={styles.detailCopy}>
-        <Text style={styles.detailLabel}>
+      <View
+        style={[
+          styles.detailCopy,
+          {
+            alignItems: isRtl
+              ? "flex-end"
+              : "flex-start",
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.detailLabel,
+            directionStyle(isRtl),
+          ]}
+        >
           {label}
         </Text>
 
-        <Text style={styles.detailValue}>
+        <Text
+          style={[
+            styles.detailValue,
+            multiline &&
+              styles.detailValueMultiline,
+            directionStyle(isRtl),
+          ]}
+        >
           {value}
         </Text>
       </View>
@@ -566,111 +1256,370 @@ function SummaryDetail({
   );
 }
 
-function PriceRow({
+function PriceLine({
   label,
   value,
+  supportingText,
+  isRtl,
+  emphasized = false,
 }: {
   label: string;
   value: string;
+  supportingText?: string;
+  isRtl: boolean;
+  emphasized?: boolean;
 }) {
   return (
-    <View style={styles.priceRow}>
-      <Text style={styles.priceValue}>
-        {value}
-      </Text>
+    <View
+      style={[
+        styles.priceLine,
+        {
+          flexDirection: isRtl
+            ? "row-reverse"
+            : "row",
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.priceLineCopy,
+          {
+            alignItems: isRtl
+              ? "flex-end"
+              : "flex-start",
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.priceLineLabel,
+            emphasized &&
+              styles.priceLineLabelEmphasized,
+            directionStyle(isRtl),
+          ]}
+        >
+          {label}
+        </Text>
 
-      <Text style={styles.priceLabel}>
-        {label}
+        {supportingText ? (
+          <Text
+            style={[
+              styles.priceLineSupporting,
+              directionStyle(isRtl),
+            ]}
+          >
+            {supportingText}
+          </Text>
+        ) : null}
+      </View>
+
+      <Text
+        style={[
+          styles.priceLineValue,
+          emphasized &&
+            styles.priceLineValueEmphasized,
+          directionStyle(isRtl),
+        ]}
+      >
+        {value}
       </Text>
     </View>
   );
 }
 
+function createBookingId(): string {
+  const timestamp =
+    Date.now().toString(36);
+
+  const randomPart =
+    Math.random()
+      .toString(36)
+      .slice(2, 8);
+
+  return `booking-${timestamp}-${randomPart}`;
+}
+
 function formatCurrency(
   amount: number,
+  language: LanguageName,
 ): string {
-  const formatted = new Intl.NumberFormat(
-    "fa-AF",
-  ).format(amount);
+  const formatted =
+    new Intl.NumberFormat(
+      "en-US",
+    ).format(amount);
 
-  return `${formatted} افغانی`;
+  if (
+    language === "English"
+  ) {
+    return `${formatted} AFN`;
+  }
+
+  const localized =
+    formatDigits(
+      formatted,
+      true,
+    );
+
+  return language === "Dari"
+    ? `${localized} افغانی`
+    : `${localized} افغانۍ`;
 }
 
 function formatBookingDate(
   value: string,
+  language: LanguageName,
 ): string {
   if (!value) {
-    return "تاریخ انتخاب نشده";
+    return language === "English"
+      ? "Date not selected"
+      : language === "Dari"
+        ? "تاریخ انتخاب نشده"
+        : "نېټه نه ده ټاکل شوې";
   }
 
-  const [year, month, day] = value
-    .split("-")
-    .map(Number);
+  const date =
+    parseLocalDate(value);
 
-  if (!year || !month || !day) {
+  if (!date) {
     return value;
   }
 
-  const date = new Date(
-    year,
-    month - 1,
-    day,
-  );
+  const weekdays = {
+    English: [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ],
+    Dari: [
+      "یک‌شنبه",
+      "دوشنبه",
+      "سه‌شنبه",
+      "چهارشنبه",
+      "پنج‌شنبه",
+      "جمعه",
+      "شنبه",
+    ],
+    Pashto: [
+      "یکشنبه",
+      "دوشنبه",
+      "سه‌شنبه",
+      "چهارشنبه",
+      "پنجشنبه",
+      "جمعه",
+      "شنبه",
+    ],
+  } as const;
 
-  const weekdays = [
-    "یک‌شنبه",
-    "دوشنبه",
-    "سه‌شنبه",
-    "چهارشنبه",
-    "پنج‌شنبه",
-    "جمعه",
-    "شنبه",
-  ];
+  const months = {
+    English: [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ],
+    Dari: [
+      "جنوری",
+      "فبروری",
+      "مارچ",
+      "اپریل",
+      "می",
+      "جون",
+      "جولای",
+      "اگست",
+      "سپتمبر",
+      "اکتوبر",
+      "نوامبر",
+      "دسمبر",
+    ],
+    Pashto: [
+      "جنوري",
+      "فبروري",
+      "مارچ",
+      "اپرېل",
+      "می",
+      "جون",
+      "جولای",
+      "اګست",
+      "سپتمبر",
+      "اکتوبر",
+      "نومبر",
+      "دسمبر",
+    ],
+  } as const;
 
-  const months = [
-    "جنوری",
-    "فبروری",
-    "مارچ",
-    "اپریل",
-    "می",
-    "جون",
-    "جولای",
-    "اگست",
-    "سپتمبر",
-    "اکتوبر",
-    "نوامبر",
-    "دسمبر",
-  ];
+  const day =
+    formatDigits(
+      date.getDate().toString(),
+      language !== "English",
+    );
 
-  return `${weekdays[date.getDay()] ?? ""}، ${toDariDigits(
-    day.toString(),
-  )} ${months[date.getMonth()] ?? ""}`;
+  const year =
+    formatDigits(
+      date.getFullYear().toString(),
+      language !== "English",
+    );
+
+  if (
+    language === "English"
+  ) {
+    return `${weekdays.English[date.getDay()]}, ${months.English[date.getMonth()]} ${day}, ${year}`;
+  }
+
+  return `${weekdays[language][date.getDay()]}، ${day} ${months[language][date.getMonth()]} ${year}`;
 }
 
-function formatTimeForDari(
+function parseLocalDate(
   value: string,
+): Date | null {
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})$/.exec(
+      value,
+    );
+
+  if (!match) {
+    const parsed =
+      new Date(value);
+
+    return Number.isNaN(
+      parsed.getTime(),
+    )
+      ? null
+      : parsed;
+  }
+
+  const date =
+    new Date(
+      Number(match[1]),
+      Number(match[2]) - 1,
+      Number(match[3]),
+    );
+
+  return Number.isNaN(
+    date.getTime(),
+  )
+    ? null
+    : date;
+}
+
+function formatTime(
+  value: string,
+  language: LanguageName,
 ): string {
-  const labels: Record<string, string> = {
-    "08:00": "۸:۰۰ صبح",
-    "09:00": "۹:۰۰ صبح",
-    "10:00": "۱۰:۰۰ صبح",
-    "11:00": "۱۱:۰۰ صبح",
-    "12:00": "۱۲:۰۰ ظهر",
-    "13:00": "۱:۰۰ بعد از ظهر",
-    "14:00": "۲:۰۰ بعد از ظهر",
-    "15:00": "۳:۰۰ بعد از ظهر",
-    "16:00": "۴:۰۰ بعد از ظهر",
-    "17:00": "۵:۰۰ بعد از ظهر",
-    "18:00": "۶:۰۰ عصر",
+  if (!value) {
+    return language === "English"
+      ? "Time not selected"
+      : language === "Dari"
+        ? "زمان انتخاب نشده"
+        : "وخت نه دی ټاکل شوی";
+  }
+
+  const [
+    hourText,
+    minute = "00",
+  ] = value.split(":");
+
+  const hour =
+    Number(hourText);
+
+  if (
+    !Number.isFinite(hour)
+  ) {
+    return value;
+  }
+
+  if (
+    language === "English"
+  ) {
+    const period =
+      hour >= 12 ? "PM" : "AM";
+
+    const displayHour =
+      hour % 12 || 12;
+
+    return `${displayHour}:${minute} ${period}`;
+  }
+
+  const displayHour =
+    hour % 12 || 12;
+
+  const period =
+    hour < 12
+      ? language === "Dari"
+        ? "صبح"
+        : "سهار"
+      : hour === 12
+        ? language === "Dari"
+          ? "ظهر"
+          : "غرمه"
+        : hour < 18
+          ? language === "Dari"
+            ? "بعد از ظهر"
+            : "ماسپښین"
+          : language === "Dari"
+            ? "عصر"
+            : "ماښام";
+
+  return `${formatDigits(
+    `${displayHour}:${minute}`,
+    true,
+  )} ${period}`;
+}
+
+function normalizeLanguage(
+  language: string,
+): LanguageName {
+  if (
+    language === "Dari"
+  ) {
+    return "Dari";
+  }
+
+  if (
+    language === "Pashto"
+  ) {
+    return "Pashto";
+  }
+
+  return "English";
+}
+
+function directionStyle(
+  isRtl: boolean,
+) {
+  return {
+    textAlign: isRtl
+      ? ("right" as const)
+      : ("left" as const),
+    writingDirection: isRtl
+      ? ("rtl" as const)
+      : ("ltr" as const),
   };
-
-  return labels[value] ?? value;
 }
 
-function toDariDigits(
+function formatDigits(
   value: string,
+  localized: boolean,
 ): string {
-  const digits: Record<string, string> = {
+  if (!localized) {
+    return value;
+  }
+
+  const digits: Record<
+    string,
+    string
+  > = {
     "0": "۰",
     "1": "۱",
     "2": "۲",
@@ -685,526 +1634,927 @@ function toDariDigits(
 
   return value.replace(
     /\d/g,
-    (digit) => digits[digit] ?? digit,
+    (digit) =>
+      digits[digit] ??
+      digit,
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-
-  scrollContent: {
-    width: "100%",
-    maxWidth: Layout.contentMaxWidth,
-    alignSelf: "center",
-    paddingHorizontal: Layout.screenPadding,
-    paddingTop: Spacing.md,
-    paddingBottom: 160,
-  },
-
-  topBar: {
-    minHeight: Layout.minimumTouchTarget,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  stepText: {
-    ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  header: {
-    width: "100%",
-    marginTop: Spacing.xl,
-    alignItems: "flex-end",
-    gap: Spacing.xs,
-  },
-
-  eyebrow: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  title: {
-    ...Typography.screenTitle,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 28,
-    lineHeight: 35,
-  },
-
-  subtitle: {
-    ...Typography.bodyStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  providerCard: {
-    width: "100%",
-    marginTop: Spacing.xxl,
-  },
-
-  providerContent: {
-    minHeight: 106,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  providerAvatar: {
-    width: 54,
-    height: 54,
-    flexShrink: 0,
-    borderRadius: Radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-  },
-
-  providerCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: 2,
-  },
-
-  providerEyebrow: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  providerName: {
-    ...Typography.sectionTitle,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 19,
-    lineHeight: 25,
-  },
-
-  providerProfession: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  verifiedBadge: {
-    width: 40,
-    height: 40,
-    flexShrink: 0,
-    borderRadius: Radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-  },
-
-  section: {
-    width: "100%",
-    marginTop: Spacing.section,
-    gap: Spacing.md,
-  },
-
-  sectionHeader: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  sectionTitle: {
-    ...Typography.sectionTitle,
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 21,
-    lineHeight: 28,
-  },
-
-  editButton: {
-    minHeight: 36,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 5,
-  },
-
-  editText: {
-    ...Typography.captionStyle,
-    color: Colors.primary,
-    writingDirection: "rtl",
-  },
-
-  summaryCard: {
-    width: "100%",
-  },
-
-  summaryContent: {
-    minHeight: 96,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  summaryIcon: {
-    width: 48,
-    height: 48,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-  },
-
-  summaryCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: 3,
-  },
-
-  summaryTitle: {
-    ...Typography.label,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 17,
-    lineHeight: 23,
-  },
-
-  summarySubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  detailsCard: {
-    width: "100%",
-  },
-
-  detailsContent: {
-    padding: Spacing.lg,
-  },
-
-  detailRow: {
-    width: "100%",
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-  },
-
-  detailIcon: {
-    width: 42,
-    height: 42,
-    flexShrink: 0,
-    borderRadius: Radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-  },
-
-  detailCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: 2,
-  },
-
-  detailLabel: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  detailValue: {
-    ...Typography.label,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  divider: {
-    width: "100%",
-    height: StyleSheet.hairlineWidth,
-    marginVertical: Spacing.md,
-    backgroundColor: Colors.separator,
-  },
-
-  notesBlock: {
-    width: "100%",
-    alignItems: "flex-end",
-    gap: Spacing.sm,
-  },
-
-  notesHeader: {
-    width: "100%",
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.sm,
-  },
-
-  notesLabel: {
-    ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  notesText: {
-    ...Typography.bodyStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    lineHeight: 24,
-  },
-
-  priceCard: {
-    width: "100%",
-  },
-
-  priceContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-  },
-
-  priceRow: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing.md,
-  },
-
-  priceLabel: {
-    ...Typography.bodyStyle,
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  priceValue: {
-    ...Typography.label,
-    color: Colors.textPrimary,
-    textAlign: "left",
-    writingDirection: "rtl",
-  },
-
-  priceDivider: {
-    width: "100%",
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.separator,
-  },
-
-  totalRow: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing.md,
-  },
-
-  totalLabel: {
-    ...Typography.sectionTitle,
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 18,
-  },
-
-  totalValue: {
-    ...Typography.sectionTitle,
-    color: Colors.primary,
-    textAlign: "left",
-    writingDirection: "rtl",
-    fontSize: 19,
-  },
-
-  priceNotice: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    lineHeight: 19,
-  },
-
-  paymentNoticeCard: {
-    width: "100%",
-    marginTop: Spacing.section,
-    borderColor: "rgba(217, 154, 43, 0.28)",
-    backgroundColor: "rgba(217, 154, 43, 0.06)",
-  },
-
-  paymentNoticeContent: {
-    minHeight: 96,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  paymentNoticeIcon: {
-    width: 46,
-    height: 46,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(217, 154, 43, 0.12)",
-  },
-
-  paymentNoticeCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: Spacing.xs,
-  },
-
-  paymentNoticeTitle: {
-    ...Typography.label,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  paymentNoticeText: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    lineHeight: 19,
-  },
-
-  termsPressable: {
-    width: "100%",
-    marginTop: Spacing.section,
-    borderRadius: Radius.xl,
-  },
-
-  termsCard: {
-    width: "100%",
-  },
-
-  acceptedTermsCard: {
-    borderColor: "rgba(76, 141, 255, 0.52)",
-    backgroundColor: "rgba(76, 141, 255, 0.08)",
-  },
-
-  termsContent: {
-    minHeight: 100,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  checkbox: {
-    width: 28,
-    height: 28,
-    flexShrink: 0,
-    borderRadius: Radius.sm,
-    borderWidth: 1.5,
-    borderColor: Colors.borderStrong,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.glass,
-  },
-
-  checkboxSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary,
-  },
-
-  termsText: {
-    ...Typography.bodyStyle,
-    flex: 1,
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    lineHeight: 23,
-  },
-
-  securityCard: {
-    width: "100%",
-    marginTop: Spacing.lg,
-    borderColor: "rgba(48, 183, 106, 0.26)",
-    backgroundColor: "rgba(48, 183, 106, 0.05)",
-  },
-
-  securityContent: {
-    minHeight: 88,
-    flexDirection: "row-reverse",
-    alignItems: "flex-start",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  securityIcon: {
-    width: 42,
-    height: 42,
-    flexShrink: 0,
-    borderRadius: Radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(48, 183, 106, 0.12)",
-  },
-
-  securityText: {
-    ...Typography.captionStyle,
-    flex: 1,
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    lineHeight: 20,
-  },
-
-  footer: {
-    position: "absolute",
-    right: 0,
-    bottom: 0,
-    left: 0,
-    minHeight: 108,
-    paddingHorizontal: Layout.screenPadding,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.lg,
-    gap: Spacing.sm,
-    backgroundColor: "rgba(7, 10, 15, 0.96)",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
-  },
-
-  footerSummary: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textTertiary,
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-
-  pressed: {
-    opacity: 0.82,
-  },
-});
+function getSummaryCopy(
+  language: LanguageName,
+) {
+  if (
+    language === "Dari"
+  ) {
+    return {
+      back: "بازگشت",
+      step:
+        (
+          current: string,
+          total: string,
+        ) =>
+          `مرحله ${current} از ${total}`,
+      eyebrow:
+        "بررسی نهایی",
+      title:
+        "جزئیات رزرو را بررسی کنید",
+      subtitle:
+        "پیش از ارسال درخواست، خدمت، زمان، آدرس و هزینهٔ تخمینی را بررسی نمایید.",
+      provider:
+        "ارائه‌دهنده",
+      providerFallback:
+        "ارائه‌دهنده",
+      professionFallback:
+        "متخصص خدمات",
+      serviceTitle:
+        "خدمت",
+      selectedService:
+        "خدمت انتخاب‌شده",
+      serviceFallback:
+        "خدمت انتخاب نشده",
+      estimatedServicePrice:
+        (value: string) =>
+          `هزینهٔ ابتدایی: ${value}`,
+      scheduleTitle:
+        "تاریخ و زمان",
+      date: "تاریخ",
+      time: "زمان",
+      detailsTitle:
+        "آدرس و جزئیات",
+      address: "آدرس",
+      addressFallback:
+        "آدرس انتخاب نشده",
+      requestDetails:
+        "شرح درخواست",
+      notesFallback:
+        "توضیحی ثبت نشده است.",
+      edit: "ویرایش",
+      priceTitle:
+        "خلاصهٔ هزینه",
+      priceSubtitle:
+        "مبلغ‌ها تخمینی‌اند و پیش از آغاز کار می‌توانند براساس بررسی ارائه‌دهنده تغییر کنند.",
+      servicePrice:
+        "هزینهٔ ابتدایی خدمت",
+      platformFee:
+        "هزینهٔ خدمات پلتفرم",
+      platformFeeHint:
+        "برای مدیریت رزرو و پشتیبانی",
+      estimatedTotal:
+        "مجموع تخمینی",
+      priceNoticeTitle:
+        "مبلغ نهایی هنوز قطعی نیست",
+      priceNoticeText:
+        "هزینهٔ قطعات، مواد، رفت‌وآمد یا کار اضافی پس از بررسی محل مشخص می‌شود. هر تغییر مهم باید پیش از آغاز کار با شما تأیید گردد.",
+      consentTitle:
+        "تأیید و ارسال",
+      consentText:
+        "تأیید می‌کنم که جزئیات رزرو را بررسی کرده‌ام و می‌دانم مبلغ نمایش‌داده‌شده تخمینی است.",
+      pendingTitle:
+        "درخواست ابتدا در انتظار پاسخ خواهد بود",
+      pendingText:
+        "پس از ارسال، ارائه‌دهنده جزئیات و زمان را بررسی می‌کند. رزرو تنها پس از تأیید ارائه‌دهنده نهایی می‌شود.",
+      submit:
+        "ارسال درخواست رزرو",
+      ready:
+        "درخواست آمادهٔ ارسال است.",
+      acceptTermsHint:
+        "برای ارسال، تأیید بالا را انتخاب کنید.",
+      incompleteTitle:
+        "اطلاعات ناقص است",
+      incompleteMessage:
+        "بعضی از اطلاعات رزرو تکمیل نشده‌اند. لطفاً مراحل قبلی را بررسی کنید.",
+      addressMissingTitle:
+        "آدرس ناقص است",
+      addressMissingMessage:
+        "لطفاً آدرس انجام خدمت را دوباره انتخاب کنید.",
+      consentRequiredTitle:
+        "تأیید لازم است",
+      consentRequiredMessage:
+        "برای ارسال درخواست، تأیید نهایی را انتخاب کنید.",
+      submitFailedTitle:
+        "ارسال ناموفق بود",
+      submitFailedMessage:
+        "درخواست رزرو در حال حاضر ارسال نشد. لطفاً دوباره تلاش کنید.",
+    };
+  }
+
+  if (
+    language === "Pashto"
+  ) {
+    return {
+      back: "بېرته",
+      step:
+        (
+          current: string,
+          total: string,
+        ) =>
+          `مرحله ${current} له ${total}`,
+      eyebrow:
+        "وروستۍ ارزونه",
+      title:
+        "د رزرف جزئیات وګورئ",
+      subtitle:
+        "د غوښتنې له لېږلو مخکې خدمت، وخت، پته او اټکلی لګښت وګورئ.",
+      provider:
+        "خدمت وړاندې کوونکی",
+      providerFallback:
+        "خدمت وړاندې کوونکی",
+      professionFallback:
+        "د خدمت متخصص",
+      serviceTitle:
+        "خدمت",
+      selectedService:
+        "ټاکل شوی خدمت",
+      serviceFallback:
+        "خدمت نه دی ټاکل شوی",
+      estimatedServicePrice:
+        (value: string) =>
+          `لومړنی لګښت: ${value}`,
+      scheduleTitle:
+        "نېټه او وخت",
+      date: "نېټه",
+      time: "وخت",
+      detailsTitle:
+        "پته او جزئیات",
+      address: "پته",
+      addressFallback:
+        "پته نه ده ټاکل شوې",
+      requestDetails:
+        "د غوښتنې تشریح",
+      notesFallback:
+        "تشریح نه ده ثبت شوې.",
+      edit: "سمول",
+      priceTitle:
+        "د لګښت لنډیز",
+      priceSubtitle:
+        "مبلغونه اټکلي دي او د خدمت وړاندې کوونکي له ارزونې وروسته د کار تر پیل مخکې بدلېدای شي.",
+      servicePrice:
+        "د خدمت لومړنی لګښت",
+      platformFee:
+        "د پلېټفارم خدمت فیس",
+      platformFeeHint:
+        "د رزرف د مدیریت او ملاتړ لپاره",
+      estimatedTotal:
+        "اټکلی ټول",
+      priceNoticeTitle:
+        "وروستی مبلغ لا قطعي نه دی",
+      priceNoticeText:
+        "د پرزو، موادو، سفر یا اضافي کار لګښت د ځای له ارزونې وروسته معلومېږي. هر مهم بدلون باید د کار تر پیل مخکې له تاسو سره تایید شي.",
+      consentTitle:
+        "تایید او لېږل",
+      consentText:
+        "تاییدوم چې د رزرف جزئیات مې کتلي او پوهېږم چې ښودل شوی مبلغ اټکلی دی.",
+      pendingTitle:
+        "غوښتنه به لومړی د ځواب په تمه وي",
+      pendingText:
+        "له لېږلو وروسته خدمت وړاندې کوونکی جزئیات او وخت ګوري. رزرف یوازې د هغه له تایید وروسته وروستی کېږي.",
+      submit:
+        "د رزرف غوښتنه ولېږئ",
+      ready:
+        "غوښتنه لېږلو ته چمتو ده.",
+      acceptTermsHint:
+        "د لېږلو لپاره پورته تایید وټاکئ.",
+      incompleteTitle:
+        "معلومات بشپړ نه دي",
+      incompleteMessage:
+        "د رزرف ځینې معلومات نیمګړي دي. مهرباني وکړئ مخکینۍ مرحلې وګورئ.",
+      addressMissingTitle:
+        "پته نیمګړې ده",
+      addressMissingMessage:
+        "مهرباني وکړئ د خدمت پته بیا وټاکئ.",
+      consentRequiredTitle:
+        "تایید اړین دی",
+      consentRequiredMessage:
+        "د غوښتنې د لېږلو لپاره وروستی تایید وټاکئ.",
+      submitFailedTitle:
+        "لېږل بریالي نه شول",
+      submitFailedMessage:
+        "اوس مهال د رزرف غوښتنه ونه لېږل شوه. مهرباني وکړئ بیا هڅه وکړئ.",
+    };
+  }
+
+  return {
+    back: "Back",
+    step:
+      (
+        current: string,
+        total: string,
+      ) =>
+        `Step ${current} of ${total}`,
+    eyebrow:
+      "Final review",
+    title:
+      "Review your booking details",
+    subtitle:
+      "Check the service, schedule, address and estimated cost before submitting the request.",
+    provider:
+      "Provider",
+    providerFallback:
+      "Provider",
+    professionFallback:
+      "Service professional",
+    serviceTitle:
+      "Service",
+    selectedService:
+      "Selected service",
+    serviceFallback:
+      "No service selected",
+    estimatedServicePrice:
+      (value: string) =>
+        `Starting cost: ${value}`,
+    scheduleTitle:
+      "Date and time",
+    date: "Date",
+    time: "Time",
+    detailsTitle:
+      "Address and details",
+    address: "Address",
+    addressFallback:
+      "No address selected",
+    requestDetails:
+      "Request details",
+    notesFallback:
+      "No description was provided.",
+    edit: "Edit",
+    priceTitle:
+      "Price summary",
+    priceSubtitle:
+      "Amounts are estimates and may change before work begins after the provider assesses the request.",
+    servicePrice:
+      "Starting service price",
+    platformFee:
+      "Platform service fee",
+    platformFeeHint:
+      "For booking management and support",
+    estimatedTotal:
+      "Estimated total",
+    priceNoticeTitle:
+      "The final amount is not confirmed yet",
+    priceNoticeText:
+      "Parts, materials, travel or additional work may be added after assessment. Any material change should be confirmed with you before work begins.",
+    consentTitle:
+      "Confirm and submit",
+    consentText:
+      "I have reviewed the booking details and understand that the displayed amount is an estimate.",
+    pendingTitle:
+      "The request will initially be pending",
+    pendingText:
+      "After submission, the provider will review the details and schedule. The booking is final only after provider confirmation.",
+    submit:
+      "Submit booking request",
+    ready:
+      "The request is ready to submit.",
+    acceptTermsHint:
+      "Select the confirmation above to submit.",
+    incompleteTitle:
+      "Information is incomplete",
+    incompleteMessage:
+      "Some booking information is missing. Review the previous steps before submitting.",
+    addressMissingTitle:
+      "Address is missing",
+    addressMissingMessage:
+      "Select the service address again.",
+    consentRequiredTitle:
+      "Confirmation required",
+    consentRequiredMessage:
+      "Select the final confirmation before submitting the request.",
+    submitFailedTitle:
+      "Submission failed",
+    submitFailedMessage:
+      "The booking request could not be submitted right now. Please try again.",
+  };
+}
+
+const styles =
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor:
+        KhedmatPalette.blue050,
+    },
+    root: {
+      flex: 1,
+    },
+    scrollContent: {
+      width: "100%",
+      maxWidth:
+        Layout.contentMaxWidth,
+      alignSelf: "center",
+      paddingHorizontal:
+        Layout.screenPadding,
+      paddingTop: Spacing.md,
+      paddingBottom: 230,
+    },
+    topBar: {
+      width: "100%",
+      minHeight:
+        Layout.minimumTouchTarget,
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+    },
+    backButton: {
+      width: 44,
+      height: 44,
+      borderRadius: Radius.pill,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor:
+        KhedmatPalette.border,
+      backgroundColor:
+        KhedmatPalette.surface,
+    },
+    stepBadge: {
+      minHeight: 34,
+      paddingHorizontal:
+        Spacing.md,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: Radius.pill,
+      backgroundColor:
+        KhedmatPalette.surfaceSoft,
+    },
+    stepText: {
+      ...Typography.captionStyle,
+      color:
+        KhedmatPalette.blue500,
+      fontFamily: Fonts.medium,
+    },
+    header: {
+      width: "100%",
+      marginTop: Spacing.xl,
+      gap: Spacing.lg,
+    },
+    headerIcon: {
+      width: 64,
+      height: 64,
+      borderRadius: Radius.xl,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.navy900,
+      ...Shadows.small,
+    },
+    headerCopy: {
+      width: "100%",
+      gap: Spacing.sm,
+    },
+    eyebrow: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.blue500,
+      fontFamily: Fonts.medium,
+    },
+    title: {
+      ...Typography.screenTitle,
+      width: "100%",
+      maxWidth: 470,
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 27,
+      lineHeight: 35,
+    },
+    subtitle: {
+      ...Typography.bodyLarge,
+      width: "100%",
+      maxWidth: 470,
+      color:
+        KhedmatPalette.textSecondary,
+      lineHeight: 25,
+    },
+    providerCard: {
+      width: "100%",
+      minHeight: 112,
+      marginTop: Spacing.xxl,
+      padding: Spacing.lg,
+      alignItems: "center",
+      gap: Spacing.md,
+      borderWidth: 1,
+      borderColor:
+        KhedmatPalette.border,
+      borderRadius: Radius.xl,
+      backgroundColor:
+        KhedmatPalette.surface,
+      ...Shadows.small,
+    },
+    providerAvatar: {
+      width: 52,
+      height: 52,
+      flexShrink: 0,
+      borderRadius: Radius.pill,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.navy900,
+    },
+    providerCopy: {
+      flex: 1,
+      gap: 2,
+    },
+    providerEyebrow: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.blue500,
+      fontFamily: Fonts.medium,
+    },
+    providerName: {
+      ...Typography.label,
+      width: "100%",
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 17,
+      lineHeight: 23,
+    },
+    providerProfession: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textSecondary,
+      lineHeight: 18,
+    },
+    verifiedBadge: {
+      width: 42,
+      height: 42,
+      flexShrink: 0,
+      borderRadius: Radius.pill,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.surfaceSoft,
+    },
+    section: {
+      width: "100%",
+      marginTop:
+        Spacing.section,
+      gap: Spacing.md,
+    },
+    sectionHeader: {
+      width: "100%",
+      gap: Spacing.xs,
+    },
+    sectionHeaderRow: {
+      width: "100%",
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+      gap: Spacing.md,
+    },
+    sectionTitle: {
+      ...Typography.sectionTitle,
+      flex: 1,
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 21,
+      lineHeight: 28,
+    },
+    sectionSubtitle: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textMuted,
+      lineHeight: 19,
+    },
+    editButton: {
+      minHeight: 34,
+      paddingHorizontal:
+        Spacing.sm,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 4,
+      borderRadius: Radius.pill,
+      backgroundColor:
+        KhedmatPalette.surfaceSoft,
+    },
+    editButtonText: {
+      ...Typography.captionStyle,
+      color:
+        KhedmatPalette.blue500,
+      fontFamily: Fonts.medium,
+    },
+    summaryItem: {
+      width: "100%",
+      minHeight: 112,
+      padding: Spacing.lg,
+      alignItems: "center",
+      gap: Spacing.md,
+      borderWidth: 1,
+      borderColor:
+        KhedmatPalette.border,
+      borderRadius: Radius.xl,
+      backgroundColor:
+        KhedmatPalette.surface,
+      ...Shadows.small,
+    },
+    summaryItemIcon: {
+      width: 50,
+      height: 50,
+      flexShrink: 0,
+      borderRadius: Radius.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.surfaceSoft,
+    },
+    summaryItemCopy: {
+      flex: 1,
+      gap: 3,
+    },
+    summaryItemLabel: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textMuted,
+    },
+    summaryItemValue: {
+      ...Typography.label,
+      width: "100%",
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 17,
+      lineHeight: 23,
+    },
+    summaryItemSupporting: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.blue500,
+      fontFamily: Fonts.medium,
+    },
+    groupCard: {
+      width: "100%",
+      padding: Spacing.lg,
+      borderWidth: 1,
+      borderColor:
+        KhedmatPalette.border,
+      borderRadius: Radius.xl,
+      backgroundColor:
+        KhedmatPalette.surface,
+      ...Shadows.small,
+    },
+    detailRow: {
+      width: "100%",
+      gap: Spacing.md,
+    },
+    detailIcon: {
+      width: 42,
+      height: 42,
+      flexShrink: 0,
+      borderRadius: Radius.md,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.surfaceSoft,
+    },
+    detailCopy: {
+      flex: 1,
+      gap: 2,
+    },
+    detailLabel: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textMuted,
+    },
+    detailValue: {
+      ...Typography.label,
+      width: "100%",
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 15,
+      lineHeight: 21,
+    },
+    detailValueMultiline: {
+      fontFamily: Fonts.regular,
+      color:
+        KhedmatPalette.textSecondary,
+      fontSize: 14,
+      lineHeight: 22,
+    },
+    divider: {
+      width: "100%",
+      height:
+        StyleSheet.hairlineWidth,
+      marginVertical: Spacing.md,
+      backgroundColor:
+        KhedmatPalette.border,
+    },
+    priceCard: {
+      width: "100%",
+      padding: Spacing.lg,
+      borderWidth: 1,
+      borderColor:
+        KhedmatPalette.border,
+      borderRadius: Radius.xl,
+      backgroundColor:
+        KhedmatPalette.surface,
+      ...Shadows.small,
+    },
+    priceLine: {
+      width: "100%",
+      alignItems: "flex-start",
+      justifyContent:
+        "space-between",
+      gap: Spacing.md,
+      paddingVertical:
+        Spacing.sm,
+    },
+    priceLineCopy: {
+      flex: 1,
+      gap: 2,
+    },
+    priceLineLabel: {
+      ...Typography.bodyStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textSecondary,
+      fontSize: 14,
+    },
+    priceLineLabelEmphasized: {
+      color:
+        KhedmatPalette.textPrimary,
+      fontFamily: Fonts.bold,
+      fontSize: 16,
+    },
+    priceLineSupporting: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textMuted,
+      lineHeight: 17,
+    },
+    priceLineValue: {
+      ...Typography.label,
+      flexShrink: 0,
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 14,
+    },
+    priceLineValueEmphasized: {
+      color:
+        KhedmatPalette.navy900,
+      fontFamily: Fonts.bold,
+      fontSize: 18,
+    },
+    priceDivider: {
+      width: "100%",
+      height: 1,
+      marginVertical: Spacing.sm,
+      backgroundColor:
+        KhedmatPalette.border,
+    },
+    priceNotice: {
+      width: "100%",
+      minHeight: 112,
+      marginTop: Spacing.md,
+      padding: Spacing.lg,
+      alignItems: "flex-start",
+      gap: Spacing.md,
+      borderWidth: 1,
+      borderColor: "#E5C875",
+      borderRadius: Radius.xl,
+      backgroundColor:
+        "#FFFDF6",
+    },
+    priceNoticeIcon: {
+      width: 44,
+      height: 44,
+      flexShrink: 0,
+      borderRadius: Radius.md,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        WARNING_SOFT,
+    },
+    priceNoticeCopy: {
+      flex: 1,
+      gap: 3,
+    },
+    priceNoticeTitle: {
+      ...Typography.label,
+      width: "100%",
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 15,
+    },
+    priceNoticeText: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textSecondary,
+      lineHeight: 19,
+    },
+    consentCard: {
+      width: "100%",
+      minHeight: 124,
+      marginTop:
+        Spacing.section,
+      borderWidth: 1,
+      borderColor:
+        KhedmatPalette.border,
+      borderRadius: Radius.xl,
+      backgroundColor:
+        KhedmatPalette.surface,
+      ...Shadows.small,
+    },
+    consentCardSelected: {
+      borderColor:
+        KhedmatPalette.blue500,
+      backgroundColor:
+        "#F4FBFC",
+    },
+    consentContent: {
+      width: "100%",
+      minHeight: 124,
+      padding: Spacing.lg,
+      alignItems: "flex-start",
+      gap: Spacing.md,
+    },
+    checkbox: {
+      width: 28,
+      height: 28,
+      flexShrink: 0,
+      borderRadius: Radius.sm,
+      borderWidth: 1.5,
+      borderColor:
+        KhedmatPalette.border,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.surface,
+    },
+    checkboxSelected: {
+      borderColor:
+        KhedmatPalette.blue500,
+      backgroundColor:
+        KhedmatPalette.blue500,
+    },
+    consentCopy: {
+      flex: 1,
+      gap: 4,
+    },
+    consentTitle: {
+      ...Typography.label,
+      width: "100%",
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 15,
+    },
+    consentText: {
+      ...Typography.bodyStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textSecondary,
+      fontSize: 14,
+      lineHeight: 21,
+    },
+    statusNotice: {
+      width: "100%",
+      minHeight: 108,
+      marginTop: Spacing.md,
+      padding: Spacing.lg,
+      alignItems: "flex-start",
+      gap: Spacing.md,
+      borderWidth: 1,
+      borderColor:
+        KhedmatPalette.blue200,
+      borderRadius: Radius.xl,
+      backgroundColor:
+        "#F4FBFC",
+    },
+    statusNoticeIcon: {
+      width: 44,
+      height: 44,
+      flexShrink: 0,
+      borderRadius: Radius.md,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.surface,
+    },
+    statusNoticeCopy: {
+      flex: 1,
+      gap: 3,
+    },
+    statusNoticeTitle: {
+      ...Typography.label,
+      width: "100%",
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 15,
+    },
+    statusNoticeText: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textSecondary,
+      lineHeight: 19,
+    },
+    footer: {
+      position: "absolute",
+      right: 0,
+      bottom: 0,
+      left: 0,
+      borderTopWidth:
+        StyleSheet.hairlineWidth,
+      borderTopColor:
+        KhedmatPalette.border,
+      backgroundColor:
+        KhedmatPalette.surface,
+    },
+    footerContent: {
+      width: "100%",
+      maxWidth:
+        Layout.contentMaxWidth,
+      alignSelf: "center",
+      paddingHorizontal:
+        Layout.screenPadding,
+      paddingTop: Spacing.md,
+      paddingBottom: Spacing.lg,
+      gap: Spacing.sm,
+    },
+    footerTotalRow: {
+      width: "100%",
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+      gap: Spacing.md,
+    },
+    footerTotalLabel: {
+      ...Typography.captionStyle,
+      color:
+        KhedmatPalette.textMuted,
+    },
+    footerTotalValue: {
+      ...Typography.label,
+      color:
+        KhedmatPalette.navy900,
+      fontFamily: Fonts.bold,
+      fontSize: 17,
+    },
+    primaryButton: {
+      width: "100%",
+      minHeight:
+        Layout.controlHeight,
+      paddingHorizontal:
+        Spacing.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: Radius.lg,
+      backgroundColor:
+        KhedmatPalette.navy900,
+      ...Shadows.small,
+    },
+    primaryButtonDisabled: {
+      backgroundColor:
+        KhedmatPalette.disabled,
+      shadowOpacity: 0,
+      elevation: 0,
+    },
+    primaryButtonPressed: {
+      opacity: 0.84,
+      transform: [
+        {
+          scale: 0.99,
+        },
+      ],
+    },
+    primaryButtonContent: {
+      alignItems: "center",
+      justifyContent: "center",
+      gap: Spacing.sm,
+    },
+    primaryButtonText: {
+      ...Typography.label,
+      color:
+        KhedmatPalette.white,
+      fontFamily: Fonts.medium,
+      fontSize: 16,
+      textAlign: "center",
+    },
+    footerHint: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textMuted,
+      textAlign: "center",
+    },
+    pressed: {
+      opacity: 0.76,
+      transform: [
+        {
+          scale: 0.97,
+        },
+      ],
+    },
+    cardPressed: {
+      opacity: 0.88,
+      transform: [
+        {
+          scale: 0.993,
+        },
+      ],
+    },
+  });
