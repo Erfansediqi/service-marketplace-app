@@ -1,14 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-
-import { GlassButton } from "../components/glass/glass-button";
-import { GlassIconButton } from "../components/glass/glass-icon-button";
-import { GlassSurface } from "../components/glass/glass-surface";
-import { AppScreen } from "../components/layout/app-screen";
 import {
-  Colors,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+
+import { KhedmatButton } from "../components/khedmat/khedmat-button";
+import { KhedmatCard } from "../components/khedmat/khedmat-card";
+import { KhedmatScreen } from "../components/khedmat/khedmat-screen";
+import {
+  KhedmatPalette,
+  Layout,
   Radius,
   Shadows,
   Spacing,
@@ -17,7 +22,9 @@ import {
 import { useLanguage } from "../context/languagecontext";
 import { useSession } from "../context/session-context";
 
-type UserRole = "customer" | "provider";
+type UserRole =
+  | "customer"
+  | "provider";
 
 type RoleOption = {
   id: UserRole;
@@ -28,23 +35,42 @@ type RoleOption = {
 
 export default function RoleSelectionScreen() {
   const router = useRouter();
-  const { enterCustomerWorkspace } = useSession();
-  const { t, language } = useLanguage();
 
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-  const isRtl = language === "Dari" || language === "Pashto";
+  const {
+    enterCustomerWorkspace,
+  } = useSession();
+
+  const {
+    t,
+    language,
+  } = useLanguage();
+
+  const [
+    selectedRole,
+    setSelectedRole,
+  ] = useState<UserRole | null>(
+    null,
+  );
+
+  const isRtl =
+    language === "Dari" ||
+    language === "Pashto";
 
   const roleOptions: RoleOption[] = [
     {
       id: "customer",
       title: t("customerTitle"),
-      subtitle: t("customerSubtitle"),
+      subtitle: t(
+        "customerSubtitle",
+      ),
       icon: "person-outline",
     },
     {
       id: "provider",
       title: t("providerTitle"),
-      subtitle: t("providerSubtitle"),
+      subtitle: t(
+        "providerSubtitle",
+      ),
       icon: "briefcase-outline",
     },
   ];
@@ -54,25 +80,31 @@ export default function RoleSelectionScreen() {
       return;
     }
 
-    if (selectedRole === "provider") {
-      router.replace("/provider-welcome");
+    if (
+      selectedRole === "provider"
+    ) {
+      router.replace(
+        "/provider-welcome",
+      );
+
       return;
     }
 
     enterCustomerWorkspace();
+
     router.replace("/(tabs)");
   };
 
   return (
-    <AppScreen
+    <KhedmatScreen
       scrollable
-      contentStyle={styles.screenContent}
+      contentStyle={
+        styles.screenContent
+      }
       footer={
         <View style={styles.footer}>
-          <GlassButton
+          <KhedmatButton
             label={t("continue")}
-            icon={isRtl ? "arrow-back" : "arrow-forward"}
-            iconPosition={isRtl ? "left" : "right"}
             disabled={!selectedRole}
             onPress={handleContinue}
           />
@@ -81,8 +113,10 @@ export default function RoleSelectionScreen() {
             style={[
               styles.helperText,
               {
-                textAlign: isRtl ? "right" : "left",
-                writingDirection: isRtl ? "rtl" : "ltr",
+                writingDirection:
+                  isRtl
+                    ? "rtl"
+                    : "ltr",
               },
             ]}
           >
@@ -91,49 +125,59 @@ export default function RoleSelectionScreen() {
         </View>
       }
     >
-      <View
-        style={[
-          styles.topBar,
-          { alignItems: isRtl ? "flex-start" : "flex-end" },
-        ]}
-      >
-        <GlassIconButton
-          icon={isRtl ? "chevron-back" : "chevron-forward"}
-          accessibilityLabel={t("back")}
-          onPress={() => router.back()}
-        />
+      <View style={styles.topBar}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t(
+            "back",
+          )}
+          onPress={() =>
+            router.back()
+          }
+          style={({ pressed }) => [
+            styles.backButton,
+            pressed &&
+              styles.backButtonPressed,
+          ]}
+        >
+          <Ionicons
+            name={
+              isRtl
+                ? "chevron-forward"
+                : "chevron-back"
+            }
+            size={24}
+            color={
+              KhedmatPalette.navy900
+            }
+          />
+        </Pressable>
       </View>
 
-      <View
-        style={[
-          styles.header,
-          { alignItems: isRtl ? "flex-end" : "flex-start" },
-        ]}
-      >
-        <GlassSurface
-          variant="prominent"
-          radius={Radius.xxl}
-          style={[
-            styles.headerIcon,
-            { alignSelf: isRtl ? "flex-end" : "flex-start" },
-          ]}
-          contentStyle={styles.headerIconContent}
+      <View style={styles.header}>
+        <View
+          style={styles.headerIcon}
         >
-          <Ionicons name="people-outline" size={34} color={Colors.primary} />
-        </GlassSurface>
+          <Ionicons
+            name="people-outline"
+            size={44}
+            color={
+              KhedmatPalette.white
+            }
+          />
+        </View>
 
         <View
-          style={[
-            styles.headerCopy,
-            { alignItems: isRtl ? "flex-end" : "flex-start" },
-          ]}
+          style={styles.headerCopy}
         >
           <Text
             style={[
               styles.eyebrow,
               {
-                textAlign: isRtl ? "right" : "left",
-                writingDirection: isRtl ? "rtl" : "ltr",
+                writingDirection:
+                  isRtl
+                    ? "rtl"
+                    : "ltr",
               },
             ]}
           >
@@ -144,8 +188,10 @@ export default function RoleSelectionScreen() {
             style={[
               styles.title,
               {
-                textAlign: isRtl ? "right" : "left",
-                writingDirection: isRtl ? "rtl" : "ltr",
+                writingDirection:
+                  isRtl
+                    ? "rtl"
+                    : "ltr",
               },
             ]}
           >
@@ -156,8 +202,10 @@ export default function RoleSelectionScreen() {
             style={[
               styles.subtitle,
               {
-                textAlign: isRtl ? "right" : "left",
-                writingDirection: isRtl ? "rtl" : "ltr",
+                writingDirection:
+                  isRtl
+                    ? "rtl"
+                    : "ltr",
               },
             ]}
           >
@@ -167,157 +215,245 @@ export default function RoleSelectionScreen() {
       </View>
 
       <View style={styles.options}>
-        {roleOptions.map((option) => {
-          const selected = selectedRole === option.id;
+        {roleOptions.map(
+          (option) => {
+            const selected =
+              selectedRole ===
+              option.id;
 
-          return (
-            <Pressable
-              key={option.id}
-              accessibilityRole="radio"
-              accessibilityState={{
-                selected,
-              }}
-              accessibilityLabel={option.title}
-              onPress={() => setSelectedRole(option.id)}
-              style={({ pressed }) => [
-                styles.optionPressable,
-                pressed && styles.optionPressed,
-              ]}
-            >
-              <GlassSurface
-                variant={selected ? "prominent" : "regular"}
-                radius={Radius.xl}
-                style={[
-                  styles.optionSurface,
-                  selected && styles.selectedOptionSurface,
-                  selected && Shadows.small,
+            return (
+              <Pressable
+                key={option.id}
+                accessibilityRole="radio"
+                accessibilityLabel={
+                  option.title
+                }
+                accessibilityState={{
+                  selected,
+                }}
+                onPress={() =>
+                  setSelectedRole(
+                    option.id,
+                  )
+                }
+                style={({
+                  pressed,
+                }) => [
+                  styles.optionPressable,
+                  pressed &&
+                    styles.optionPressed,
                 ]}
-                contentStyle={styles.optionContent}
               >
-                <View
+                <KhedmatCard
                   style={[
-                    styles.optionTopRow,
-                    { flexDirection: isRtl ? "row-reverse" : "row" },
+                    styles.optionCard,
+                    selected &&
+                      styles.optionCardSelected,
                   ]}
+                  contentStyle={
+                    styles.optionCardContent
+                  }
                 >
                   <View
                     style={[
-                      styles.iconContainer,
-                      selected && styles.selectedIconContainer,
+                      styles.optionTopRow,
+                      {
+                        flexDirection:
+                          isRtl
+                            ? "row-reverse"
+                            : "row",
+                      },
                     ]}
                   >
-                    <Ionicons
-                      name={option.icon}
-                      size={26}
-                      color={selected ? Colors.white : Colors.textSecondary}
-                    />
+                    <View
+                      style={[
+                        styles.optionIcon,
+                        selected &&
+                          styles.optionIconSelected,
+                      ]}
+                    >
+                      <Ionicons
+                        name={option.icon}
+                        size={28}
+                        color={
+                          selected
+                            ? KhedmatPalette
+                                .white
+                            : KhedmatPalette
+                                .navy700
+                        }
+                      />
+                    </View>
+
+                    <View
+                      style={[
+                        styles.radioOuter,
+                        selected &&
+                          styles.radioOuterSelected,
+                      ]}
+                    >
+                      {selected ? (
+                        <View
+                          style={
+                            styles.radioInner
+                          }
+                        />
+                      ) : null}
+                    </View>
                   </View>
 
                   <View
                     style={[
-                      styles.radioOuter,
-                      selected && styles.radioOuterSelected,
+                      styles.optionCopy,
+                      {
+                        alignItems:
+                          isRtl
+                            ? "flex-end"
+                            : "flex-start",
+                      },
                     ]}
                   >
-                    {selected ? <View style={styles.radioInner} /> : null}
+                    <Text
+                      style={[
+                        styles.optionTitle,
+                        selected &&
+                          styles.optionTitleSelected,
+                        {
+                          textAlign:
+                            isRtl
+                              ? "right"
+                              : "left",
+
+                          writingDirection:
+                            isRtl
+                              ? "rtl"
+                              : "ltr",
+                        },
+                      ]}
+                    >
+                      {option.title}
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.optionSubtitle,
+                        {
+                          textAlign:
+                            isRtl
+                              ? "right"
+                              : "left",
+
+                          writingDirection:
+                            isRtl
+                              ? "rtl"
+                              : "ltr",
+                        },
+                      ]}
+                    >
+                      {
+                        option.subtitle
+                      }
+                    </Text>
                   </View>
-                </View>
-
-                <View
-                  style={[
-                    styles.optionCopy,
-                    { alignItems: isRtl ? "flex-end" : "flex-start" },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.optionTitle,
-                      selected && styles.selectedOptionTitle,
-                      {
-                        textAlign: isRtl ? "right" : "left",
-                        writingDirection: isRtl ? "rtl" : "ltr",
-                      },
-                    ]}
-                  >
-                    {option.title}
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.optionSubtitle,
-                      {
-                        textAlign: isRtl ? "right" : "left",
-                        writingDirection: isRtl ? "rtl" : "ltr",
-                      },
-                    ]}
-                  >
-                    {option.subtitle}
-                  </Text>
-                </View>
-              </GlassSurface>
-            </Pressable>
-          );
-        })}
+                </KhedmatCard>
+              </Pressable>
+            );
+          },
+        )}
       </View>
-    </AppScreen>
+    </KhedmatScreen>
   );
 }
 
 const styles = StyleSheet.create({
   screenContent: {
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.screen,
+    paddingTop: Spacing.sm,
+    paddingBottom:
+      Spacing.xxl,
   },
 
   topBar: {
-    minHeight: 44,
     width: "100%",
+    minHeight:
+      Layout.minimumTouchTarget,
+    alignItems: "flex-start",
+  },
+
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.surface,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+  },
+
+  backButtonPressed: {
+    opacity: 0.78,
+    transform: [
+      {
+        scale: 0.96,
+      },
+    ],
   },
 
   header: {
-    marginTop: Spacing.md,
     width: "100%",
-    gap: Spacing.lg,
+    marginTop: Spacing.lg,
+    alignItems: "center",
   },
 
   headerIcon: {
-    width: 68,
-    height: 68,
-    backgroundColor: "rgba(76, 141, 255, 0.10)",
-    borderColor: "rgba(100, 158, 255, 0.28)",
-  },
-
-  headerIconContent: {
-    flex: 1,
+    width: 92,
+    height: 92,
+    marginBottom: Spacing.xl,
+    borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.navy900,
+    ...Shadows.darkAccent,
   },
 
   headerCopy: {
     width: "100%",
-    gap: Spacing.sm,
+    maxWidth:
+      Layout.readableTextMaxWidth,
+    alignItems: "center",
+    gap: Spacing.xs,
   },
 
   eyebrow: {
     ...Typography.captionStyle,
     width: "100%",
-    color: Colors.primary,
+    color:
+      KhedmatPalette.blue500,
+    textAlign: "center",
+    fontWeight: "500",
   },
 
   title: {
     ...Typography.screenTitle,
     width: "100%",
-    color: Colors.textPrimary,
-    fontSize: 28,
-    lineHeight: 35,
+    color:
+      KhedmatPalette.textPrimary,
+    textAlign: "center",
+    fontSize: 25,
+    lineHeight: 32,
   },
 
   subtitle: {
-    ...Typography.bodyLarge,
+    ...Typography.bodyStyle,
     width: "100%",
-    maxWidth: 430,
-    color: Colors.textSecondary,
-    lineHeight: 24,
+    marginTop: Spacing.xs,
+    color:
+      KhedmatPalette.textSecondary,
+    textAlign: "center",
+    lineHeight: 23,
   },
 
   options: {
@@ -332,88 +468,117 @@ const styles = StyleSheet.create({
   },
 
   optionPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.992 }],
+    opacity: 0.88,
+    transform: [
+      {
+        scale: 0.993,
+      },
+    ],
   },
 
-  optionSurface: {
+  optionCard: {
     width: "100%",
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    backgroundColor:
+      KhedmatPalette.surface,
   },
 
-  selectedOptionSurface: {
-    borderColor: "rgba(76, 141, 255, 0.58)",
-    backgroundColor: "rgba(76, 141, 255, 0.11)",
+  optionCardSelected: {
+    borderWidth: 2,
+    borderColor:
+      KhedmatPalette.blue500,
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
+    ...Shadows.small,
   },
 
-  optionContent: {
+  optionCardContent: {
     padding: Spacing.lg,
     gap: Spacing.md,
   },
 
   optionTopRow: {
-    alignItems: "center",
-    justifyContent: "space-between",
     width: "100%",
+    alignItems: "center",
+    justifyContent:
+      "space-between",
   },
 
-  iconContainer: {
-    width: 50,
-    height: 50,
+  optionIcon: {
+    width: 54,
+    height: 54,
     borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.glass,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
   },
 
-  selectedIconContainer: {
-    backgroundColor: Colors.primary,
-    borderColor: "rgba(255, 255, 255, 0.24)",
+  optionIconSelected: {
+    backgroundColor:
+      KhedmatPalette.navy900,
+    borderColor:
+      KhedmatPalette.navy900,
   },
 
   radioOuter: {
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
+    flexShrink: 0,
     borderRadius: Radius.pill,
-    borderWidth: 1.5,
-    borderColor: Colors.borderStrong,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor:
+      KhedmatPalette.border,
+    backgroundColor:
+      KhedmatPalette.surface,
   },
 
   radioOuterSelected: {
-    borderColor: Colors.primary,
+    borderColor:
+      KhedmatPalette.blue500,
+    backgroundColor:
+      KhedmatPalette.surface,
   },
 
   radioInner: {
-    width: 12,
-    height: 12,
+    width: 14,
+    height: 14,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.primary,
+    backgroundColor:
+      KhedmatPalette.blue500,
   },
 
   optionCopy: {
     width: "100%",
-    gap: Spacing.sm,
+    gap: Spacing.xs,
   },
 
   optionTitle: {
     ...Typography.sectionTitle,
     width: "100%",
-    color: Colors.textPrimary,
-    fontSize: 21,
-    lineHeight: 28,
+    color:
+      KhedmatPalette.textPrimary,
+    fontSize: 19,
+    lineHeight: 25,
   },
 
-  selectedOptionTitle: {
-    color: "#DCE9FF",
+  optionTitleSelected: {
+    color:
+      KhedmatPalette.navy900,
   },
 
   optionSubtitle: {
     ...Typography.bodyStyle,
     width: "100%",
-    color: Colors.textSecondary,
+    color:
+      KhedmatPalette.textSecondary,
     lineHeight: 22,
   },
 
@@ -421,13 +586,16 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     gap: Spacing.sm,
-    paddingTop: Spacing.sm,
   },
 
   helperText: {
     ...Typography.captionStyle,
-    maxWidth: 330,
-    color: Colors.textTertiary,
-    lineHeight: 19,
+    width: "100%",
+    maxWidth:
+      Layout.readableTextMaxWidth,
+    color:
+      KhedmatPalette.textMuted,
+    textAlign: "center",
+    lineHeight: 18,
   },
 });

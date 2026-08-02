@@ -14,24 +14,38 @@ import {
   SafeAreaView,
   StatusBar,
   StyleSheet,
-  View
+  View,
 } from "react-native";
 
 import {
   Fonts,
   Spacing,
-  Typography,
 } from "../constants/theme";
 
-const SPLASH_BACKGROUND = "#24A8AF";
+const SPLASH_BACKGROUND = "#D6E8EE";
+
+const BRAND_PRIMARY = "#001B48";
+const BRAND_SECONDARY = "#02457A";
+const BRAND_ACCENT = "#018ABE";
+const BRAND_SOFT = "#97CADB";
 
 const SCREEN_HEIGHT =
   Dimensions.get("window").height;
 
 const BRAND_LETTERS =
-  "Khedmat".split("");
+  "KHEDMAT".split("");
 
 const LANGUAGE_ROUTE_DELAY = 80;
+
+/*
+ * The uploaded Lottie composition is positioned
+ * approximately 21 px right of the center of its
+ * 480 px canvas.
+ *
+ * At a displayed width of 240 px, the proportional
+ * correction is approximately -10.5 px.
+ */
+const LOTTIE_X_CORRECTION = -10.5;
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -53,26 +67,27 @@ export default function SplashScreen() {
   const [reduceMotion, setReduceMotion] =
     useState(false);
 
-  const [motionPreferenceLoaded, setMotionPreferenceLoaded] =
-    useState(false);
+  const [
+    motionPreferenceLoaded,
+    setMotionPreferenceLoaded,
+  ] = useState(false);
 
   /*
-   * The entire teal splash panel moves upward
-   * before Expo Router opens the language page.
+   * Full-screen panel transition.
    */
   const panelTranslateY = useRef(
     new Animated.Value(0),
   ).current;
 
   /*
-   * Lottie entrance animation.
+   * Wrench illustration entrance.
    */
   const illustrationOpacity = useRef(
     new Animated.Value(0),
   ).current;
 
   const illustrationScale = useRef(
-    new Animated.Value(0.82),
+    new Animated.Value(0.84),
   ).current;
 
   const illustrationTranslateY = useRef(
@@ -80,19 +95,18 @@ export default function SplashScreen() {
   ).current;
 
   /*
-   * Small confirmation pulse after the wrench
-   * finishes tightening the nut.
+   * Completion pulse.
    */
   const pulseOpacity = useRef(
     new Animated.Value(0),
   ).current;
 
   const pulseScale = useRef(
-    new Animated.Value(0.7),
+    new Animated.Value(0.72),
   ).current;
 
   /*
-   * Each title letter reveals independently.
+   * Animated wordmark letters.
    */
   const letterAnimations = useRef(
     BRAND_LETTERS.map(
@@ -101,7 +115,18 @@ export default function SplashScreen() {
   ).current;
 
   /*
-   * Subtitle follows the title.
+   * Decorative line under the wordmark.
+   */
+  const dividerScale = useRef(
+    new Animated.Value(0),
+  ).current;
+
+  const dividerOpacity = useRef(
+    new Animated.Value(0),
+  ).current;
+
+  /*
+   * Subtitle animation.
    */
   const subtitleOpacity = useRef(
     new Animated.Value(0),
@@ -111,10 +136,6 @@ export default function SplashScreen() {
     new Animated.Value(12),
   ).current;
 
-  /*
-   * Navigates only once, even if callbacks fire
-   * more than once during fast refresh.
-   */
   const navigateToLanguage =
     useCallback(() => {
       if (hasNavigatedRef.current) {
@@ -126,9 +147,6 @@ export default function SplashScreen() {
       router.replace("/language");
     }, [router]);
 
-  /*
-   * Final upward transition.
-   */
   const liftSplashPanel =
     useCallback(() => {
       if (transitionStartedRef.current) {
@@ -154,16 +172,10 @@ export default function SplashScreen() {
           return;
         }
 
-        const navigationTimer =
-          setTimeout(
-            navigateToLanguage,
-            LANGUAGE_ROUTE_DELAY,
-          );
-
-        return () =>
-          clearTimeout(
-            navigationTimer,
-          );
+        setTimeout(
+          navigateToLanguage,
+          LANGUAGE_ROUTE_DELAY,
+        );
       });
     }, [
       navigateToLanguage,
@@ -171,10 +183,6 @@ export default function SplashScreen() {
       reduceMotion,
     ]);
 
-  /*
-   * Reveal the brand after the wrench animation
-   * completes.
-   */
   const revealBrand =
     useCallback(() => {
       if (
@@ -186,7 +194,7 @@ export default function SplashScreen() {
 
       const revealLetters =
         Animated.stagger(
-          65,
+          58,
           letterAnimations.map(
             (animation) =>
               Animated.spring(
@@ -195,7 +203,7 @@ export default function SplashScreen() {
                   toValue: 1,
                   damping: 13,
                   stiffness: 145,
-                  mass: 0.65,
+                  mass: 0.62,
                   useNativeDriver: true,
                 },
               ),
@@ -205,15 +213,14 @@ export default function SplashScreen() {
       const brandSequence =
         Animated.sequence([
           /*
-           * Brief completion pulse behind
-           * the animation.
+           * Pulse after the wrench finishes.
            */
           Animated.parallel([
             Animated.timing(
               pulseOpacity,
               {
-                toValue: 0.24,
-                duration: 160,
+                toValue: 0.28,
+                duration: 150,
                 easing: Easing.out(
                   Easing.cubic,
                 ),
@@ -224,10 +231,10 @@ export default function SplashScreen() {
             Animated.spring(
               pulseScale,
               {
-                toValue: 1.25,
+                toValue: 1.2,
                 damping: 8,
-                stiffness: 150,
-                mass: 0.6,
+                stiffness: 155,
+                mass: 0.58,
                 useNativeDriver: true,
               },
             ),
@@ -238,7 +245,7 @@ export default function SplashScreen() {
               pulseOpacity,
               {
                 toValue: 0,
-                duration: 260,
+                duration: 250,
                 easing: Easing.out(
                   Easing.quad,
                 ),
@@ -250,7 +257,7 @@ export default function SplashScreen() {
               pulseScale,
               {
                 toValue: 1.55,
-                duration: 260,
+                duration: 250,
                 easing: Easing.out(
                   Easing.quad,
                 ),
@@ -260,19 +267,47 @@ export default function SplashScreen() {
           ]),
 
           /*
-           * Khedmat reveals one letter at a time.
+           * Uppercase KHEDMAT reveal.
            */
           revealLetters,
 
           /*
-           * Subtitle rises gently into place.
+           * Decorative divider.
+           */
+          Animated.parallel([
+            Animated.timing(
+              dividerOpacity,
+              {
+                toValue: 1,
+                duration: 260,
+                easing: Easing.out(
+                  Easing.cubic,
+                ),
+                useNativeDriver: true,
+              },
+            ),
+
+            Animated.spring(
+              dividerScale,
+              {
+                toValue: 1,
+                damping: 12,
+                stiffness: 135,
+                mass: 0.65,
+                useNativeDriver: true,
+              },
+            ),
+          ]),
+
+          /*
+           * Subtitle reveal.
            */
           Animated.parallel([
             Animated.timing(
               subtitleOpacity,
               {
                 toValue: 1,
-                duration: 360,
+                duration: 340,
                 easing: Easing.out(
                   Easing.cubic,
                 ),
@@ -284,7 +319,7 @@ export default function SplashScreen() {
               subtitleTranslateY,
               {
                 toValue: 0,
-                duration: 360,
+                duration: 340,
                 easing: Easing.out(
                   Easing.cubic,
                 ),
@@ -296,8 +331,7 @@ export default function SplashScreen() {
           Animated.delay(650),
 
           /*
-           * Lift the teal page and reveal the
-           * language screen color underneath.
+           * Lift the splash page upward.
            */
           Animated.timing(
             panelTranslateY,
@@ -321,19 +355,15 @@ export default function SplashScreen() {
             return;
           }
 
-          const navigationTimer =
-            setTimeout(
-              navigateToLanguage,
-              LANGUAGE_ROUTE_DELAY,
-            );
-
-          return () =>
-            clearTimeout(
-              navigationTimer,
-            );
+          setTimeout(
+            navigateToLanguage,
+            LANGUAGE_ROUTE_DELAY,
+          );
         },
       );
     }, [
+      dividerOpacity,
+      dividerScale,
       letterAnimations,
       navigateToLanguage,
       panelTranslateY,
@@ -344,7 +374,7 @@ export default function SplashScreen() {
     ]);
 
   /*
-   * Read the user's reduced-motion preference.
+   * Read reduced-motion accessibility settings.
    */
   useEffect(() => {
     let mounted = true;
@@ -380,8 +410,7 @@ export default function SplashScreen() {
   }, []);
 
   /*
-   * Start either the complete motion experience
-   * or the accessibility-friendly alternative.
+   * Start the illustration and Lottie animation.
    */
   useEffect(() => {
     if (!motionPreferenceLoaded) {
@@ -398,6 +427,9 @@ export default function SplashScreen() {
           animation.setValue(1);
         },
       );
+
+      dividerOpacity.setValue(1);
+      dividerScale.setValue(1);
 
       subtitleOpacity.setValue(1);
       subtitleTranslateY.setValue(0);
@@ -418,7 +450,7 @@ export default function SplashScreen() {
           illustrationOpacity,
           {
             toValue: 1,
-            duration: 320,
+            duration: 300,
             easing: Easing.out(
               Easing.cubic,
             ),
@@ -432,7 +464,7 @@ export default function SplashScreen() {
             toValue: 1,
             damping: 11,
             stiffness: 125,
-            mass: 0.75,
+            mass: 0.72,
             useNativeDriver: true,
           },
         ),
@@ -441,7 +473,7 @@ export default function SplashScreen() {
           illustrationTranslateY,
           {
             toValue: 0,
-            duration: 380,
+            duration: 360,
             easing: Easing.out(
               Easing.cubic,
             ),
@@ -460,8 +492,8 @@ export default function SplashScreen() {
         }
 
         /*
-         * Play frames 0–23 from the uploaded
-         * wrench-and-nut Lottie once.
+         * The uploaded animation uses frames
+         * 0 through 23.
          */
         lottieRef.current?.play(
           0,
@@ -475,6 +507,8 @@ export default function SplashScreen() {
       lottieRef.current?.reset();
     };
   }, [
+    dividerOpacity,
+    dividerScale,
     illustrationOpacity,
     illustrationScale,
     illustrationTranslateY,
@@ -489,17 +523,12 @@ export default function SplashScreen() {
   return (
     <View style={styles.root}>
       <StatusBar
-        barStyle="light-content"
+        barStyle="dark-content"
         backgroundColor={
           SPLASH_BACKGROUND
         }
       />
 
-      {/*
-       * This matches the redesigned language
-       * screen background and is exposed when
-       * the teal panel lifts.
-       */}
       <View
         style={
           styles.languageRevealBackground
@@ -604,9 +633,6 @@ export default function SplashScreen() {
                           index
                         ];
 
-                      const opacity =
-                        progress;
-
                       const translateY =
                         progress.interpolate(
                           {
@@ -616,7 +642,7 @@ export default function SplashScreen() {
                             ],
 
                             outputRange: [
-                              20,
+                              18,
                               0,
                             ],
                           },
@@ -631,23 +657,8 @@ export default function SplashScreen() {
                             ],
 
                             outputRange: [
-                              0.84,
+                              0.86,
                               1,
-                            ],
-                          },
-                        );
-
-                      const rotation =
-                        progress.interpolate(
-                          {
-                            inputRange: [
-                              0,
-                              1,
-                            ],
-
-                            outputRange: [
-                              "5deg",
-                              "0deg",
                             ],
                           },
                         );
@@ -658,7 +669,8 @@ export default function SplashScreen() {
                           style={[
                             styles.brandLetter,
                             {
-                              opacity,
+                              opacity:
+                                progress,
 
                               transform: [
                                 {
@@ -666,10 +678,6 @@ export default function SplashScreen() {
                                 },
                                 {
                                   scale,
-                                },
-                                {
-                                  rotate:
-                                    rotation,
                                 },
                               ],
                             },
@@ -681,6 +689,41 @@ export default function SplashScreen() {
                     },
                   )}
                 </View>
+
+                <Animated.View
+                  style={[
+                    styles.brandDivider,
+                    {
+                      opacity:
+                        dividerOpacity,
+
+                      transform: [
+                        {
+                          scaleX:
+                            dividerScale,
+                        },
+                      ],
+                    },
+                  ]}
+                >
+                  <View
+                    style={
+                      styles.dividerLine
+                    }
+                  />
+
+                  <View
+                    style={
+                      styles.dividerDiamond
+                    }
+                  />
+
+                  <View
+                    style={
+                      styles.dividerLine
+                    }
+                  />
+                </Animated.View>
 
                 <Animated.Text
                   style={[
@@ -698,7 +741,7 @@ export default function SplashScreen() {
                     },
                   ]}
                 >
-                  Find trusted help, near you
+                  FIND TRUSTED HELP, NEAR YOU
                 </Animated.Text>
               </View>
             </View>
@@ -712,12 +755,14 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#D6E8EE",
+    backgroundColor:
+      SPLASH_BACKGROUND,
   },
 
   languageRevealBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#D6E8EE",
+    backgroundColor:
+      SPLASH_BACKGROUND,
   },
 
   splashPanel: {
@@ -742,40 +787,53 @@ const styles = StyleSheet.create({
 
   centerContent: {
     flex: 1,
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    paddingBottom: 12,
+    paddingBottom: 8,
   },
 
   animationArea: {
-    width: 220,
-    height: 220,
+    width: 240,
+    height: 240,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
   },
 
   completionPulse: {
     position: "absolute",
-    width: 150,
-    height: 150,
+    width: 160,
+    height: 160,
     borderRadius: 999,
     backgroundColor:
-      "rgba(255, 255, 255, 0.36)",
+      "rgba(1, 138, 190, 0.18)",
   },
 
+  /*
+   * The negative horizontal translation corrects
+   * the off-center artwork inside the source
+   * Lottie canvas.
+   */
   lottieAnimation: {
-    width: 220,
-    height: 220,
+    width: 240,
+    height: 240,
+    transform: [
+      {
+        translateX:
+          LOTTIE_X_CORRECTION,
+      },
+    ],
   },
 
   brandCopy: {
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
   },
 
   brandLetters: {
-    minHeight: 56,
+    minHeight: 52,
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "center",
@@ -783,19 +841,51 @@ const styles = StyleSheet.create({
 
   brandLetter: {
     fontFamily: Fonts.bold,
-    fontSize: 42,
-    lineHeight: 50,
+    fontSize: 39,
+    lineHeight: 47,
     fontWeight: "700",
-    color: "#FFFFFF",
-    letterSpacing: -0.45,
+    color: BRAND_PRIMARY,
+    letterSpacing: 2.2,
+  },
+
+  brandDivider: {
+    marginTop: Spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  dividerLine: {
+    width: 54,
+    height: 2,
+    borderRadius: 999,
+    backgroundColor:
+      BRAND_SOFT,
+  },
+
+  dividerDiamond: {
+    width: 12,
+    height: 12,
+    marginHorizontal: 10,
+    borderWidth: 2,
+    borderColor: BRAND_ACCENT,
+    backgroundColor:
+      SPLASH_BACKGROUND,
+    transform: [
+      {
+        rotate: "45deg",
+      },
+    ],
   },
 
   brandSubtitle: {
-    ...Typography.bodyLarge,
-    marginTop: Spacing.xs,
-    color: "#FFFFFF",
-    textAlign: "center",
+    marginTop: Spacing.md,
     fontFamily: Fonts.medium,
+    fontSize: 13,
+    lineHeight: 19,
     fontWeight: "500",
+    color: BRAND_SECONDARY,
+    letterSpacing: 1.35,
+    textAlign: "center",
   },
 });

@@ -1,32 +1,44 @@
 import { Ionicons } from "@expo/vector-icons";
-import { ComponentProps, useMemo, useState } from "react";
 import {
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ComponentProps,
+  useMemo,
+  useState,
+} from "react";
+import {
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
 } from "react-native";
-import { useSession } from "../../context/session-context";
 
-import { GlassSurface } from "../../components/glass/glass-surface";
 import {
-    Colors,
-    Layout,
-    Radius,
-    Shadows,
-    Spacing,
-    Typography,
+  Fonts,
+  KhedmatPalette,
+  Layout,
+  Radius,
+  Shadows,
+  Spacing,
+  Typography,
 } from "../../constants/theme";
 import {
-    BookingRecord,
-    useBooking,
+  BookingRecord,
+  BookingStatus,
+  useBooking,
 } from "../../context/booking-context";
+import { useLanguage } from "../../context/languagecontext";
+import { useSession } from "../../context/session-context";
 import { getProviderById } from "../../data/providers";
 
 type IconName =
   ComponentProps<typeof Ionicons>["name"];
+
+type LanguageName =
+  | "English"
+  | "Dari"
+  | "Pashto";
 
 type CalendarDateOption = {
   id: string;
@@ -39,289 +51,572 @@ type CalendarDateOption = {
 
 type ScheduleSlot = {
   id: string;
+  startTime: string;
+  endTime: string;
   label: string;
   booking: BookingRecord | null;
   unavailable: boolean;
 };
 
+type CalendarCopy = ReturnType<
+  typeof getCalendarCopy
+>;
+
+type ScheduleStatusConfig = {
+  label: string;
+  color: string;
+  backgroundColor: string;
+  borderColor: string;
+};
 
 const CALENDAR_DAYS = 14;
+const SLOT_DURATION_MINUTES = 60;
+
+const SUCCESS = "#268A57";
+const SUCCESS_SOFT = "#E8F6EE";
+
+const WARNING = "#8A5A00";
+const WARNING_SOFT = "#FFF4D6";
+
+const ERROR = "#B3261E";
+const ERROR_SOFT = "#FCE8E6";
+
+const INFO_SOFT = "#E5F4F8";
 
 export default function ProviderCalendarScreen() {
-  const { bookings } = useBooking();
-  const { activeProviderId } = useSession();
+  const { width } =
+    useWindowDimensions();
+
+  const { bookings } =
+    useBooking();
+
+  const { activeProviderId } =
+    useSession();
+
+  const { language } =
+    useLanguage();
+
+  const activeLanguage =
+    normalizeLanguage(language);
+
+  const isRtl =
+    activeLanguage === "Dari" ||
+    activeLanguage === "Pashto";
+
+  const localizedDigits =
+    activeLanguage !== "English";
+
+  const copy =
+    getCalendarCopy(
+      activeLanguage,
+    );
 
   const providerId =
-    activeProviderId ?? "provider-1";
+    activeProviderId ??
+    "provider-1";
 
   const provider = useMemo(
     () =>
       getProviderById(providerId) ??
-      getProviderById("provider-1")!,
+      getProviderById(
+        "provider-1",
+      )!,
     [providerId],
   );
 
   const dateOptions = useMemo(
-    () => createDateOptions(CALENDAR_DAYS),
-    [],
+    () =>
+      createDateOptions(
+        CALENDAR_DAYS,
+        activeLanguage,
+      ),
+    [activeLanguage],
   );
 
-  const [selectedDateId, setSelectedDateId] =
-    useState(
-      dateOptions[0]?.id ?? formatDateId(new Date()),
+  const [
+    selectedDateId,
+    setSelectedDateId,
+  ] = useState(
+    dateOptions[0]?.id ??
+      formatDateId(new Date()),
+  );
+
+  const providerBookings =
+    useMemo(
+      () =>
+        bookings.filter(
+          (booking) =>
+            booking.providerId ===
+              provider.id &&
+            booking.status !==
+              "cancelled" &&
+            booking.status !==
+              "completed",
+        ),
+      [bookings, provider.id],
     );
 
-  const providerBookings = useMemo(
-    () =>
-      bookings.filter(
-        (booking) =>
-          booking.providerId === provider.id &&
-          booking.status !== "cancelled" &&
-          booking.status !== "completed",
-      ),
-    [bookings, provider.id],
-  );
+  const selectedDate =
+    useMemo(
+      () =>
+        dateOptions.find(
+          (date) =>
+            date.id ===
+            selectedDateId,
+        ) ?? dateOptions[0],
+      [
+        dateOptions,
+        selectedDateId,
+      ],
+    );
 
-  const selectedDate = useMemo(
-    () =>
-      dateOptions.find(
-        (date) => date.id === selectedDateId,
-      ) ?? dateOptions[0],
-    [dateOptions, selectedDateId],
-  );
+  const selectedDayBookings =
+    useMemo(
+      () =>
+        providerBookings
+          .filter(
+            (booking) =>
+              booking.date ===
+              selectedDateId,
+          )
+          .sort((first, second) =>
+            first.time.localeCompare(
+              second.time,
+            ),
+          ),
+      [
+        providerBookings,
+        selectedDateId,
+      ],
+    );
 
-  const selectedDayBookings = useMemo(
-    () =>
-      providerBookings
-        .filter(
-          (booking) =>
-            booking.date === selectedDateId,
-        )
-        .sort((first, second) =>
-          first.time.localeCompare(second.time),
+  const scheduleSlots =
+    useMemo(
+      () =>
+        buildScheduleSlots(
+          provider.startTime,
+          provider.endTime,
+          selectedDayBookings,
         ),
-    [providerBookings, selectedDateId],
-  );
-
-  const scheduleSlots = useMemo(
-    () =>
-      buildScheduleSlots(
-        provider.startTime,
+      [
         provider.endTime,
+        provider.startTime,
         selectedDayBookings,
-      ),
-    [
-      provider.endTime,
-      provider.startTime,
-      selectedDayBookings,
-    ],
-  );
+      ],
+    );
+
+  const bookingCountsByDate =
+    useMemo(() => {
+      const counts =
+        new Map<string, number>();
+
+      providerBookings.forEach(
+        (booking) => {
+          counts.set(
+            booking.date,
+            (counts.get(
+              booking.date,
+            ) ?? 0) + 1,
+          );
+        },
+      );
+
+      return counts;
+    }, [providerBookings]);
 
   const confirmedCount =
     selectedDayBookings.filter(
       (booking) =>
-        booking.status === "confirmed" ||
-        booking.status === "in-progress",
+        booking.status ===
+          "confirmed" ||
+        booking.status ===
+          "in-progress",
     ).length;
 
   const pendingCount =
     selectedDayBookings.filter(
       (booking) =>
-        booking.status === "pending",
+        booking.status ===
+        "pending",
     ).length;
 
   const expectedRevenue =
     selectedDayBookings
       .filter(
         (booking) =>
-          booking.status === "confirmed" ||
-          booking.status === "in-progress",
+          booking.status ===
+            "confirmed" ||
+          booking.status ===
+            "in-progress",
       )
       .reduce(
         (total, booking) =>
-          total + booking.servicePrice,
+          total +
+          booking.servicePrice,
         0,
       );
 
-  const freeSlots = scheduleSlots.filter(
-    (slot) =>
-      !slot.booking && !slot.unavailable,
-  ).length;
+  const freeSlots =
+    scheduleSlots.filter(
+      (slot) =>
+        !slot.booking &&
+        !slot.unavailable,
+    ).length;
+
+  const occupiedSlots =
+    scheduleSlots.filter(
+      (slot) =>
+        slot.booking !== null,
+    ).length;
+
+  const compactLayout =
+    width < 370;
+
+  const workingDaysText =
+    formatWorkingDays(
+      provider.workingDays,
+      activeLanguage,
+    );
+
+  const workingHoursText =
+    copy.timeRange(
+      formatTime(
+        provider.startTime,
+        activeLanguage,
+      ),
+      formatTime(
+        provider.endTime,
+        activeLanguage,
+      ),
+    );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={styles.safeArea}
+    >
       <ScrollView
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={
+          false
+        }
         contentContainerStyle={
           styles.scrollContent
         }
       >
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>
-            برنامهٔ کاری
+          <Text
+            style={[
+              styles.eyebrow,
+              directionStyle(isRtl),
+            ]}
+          >
+            {copy.eyebrow}
           </Text>
 
-          <Text style={styles.title}>
-            تقویم
+          <Text
+            style={[
+              styles.title,
+              directionStyle(isRtl),
+            ]}
+          >
+            {copy.title}
           </Text>
 
-          <Text style={styles.subtitle}>
-            رزروها، درخواست‌های موقت و ساعت‌های
-            آزاد خود را برای هر روز بررسی کنید.
+          <Text
+            style={[
+              styles.subtitle,
+              directionStyle(isRtl),
+            ]}
+          >
+            {copy.subtitle}
           </Text>
         </View>
 
-        <GlassSurface
-          variant="prominent"
-          radius={Radius.xl}
+        <View
           style={[
             styles.selectedDateCard,
-            Shadows.small,
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
           ]}
-          contentStyle={
-            styles.selectedDateContent
-          }
         >
-          <View style={styles.selectedDateIcon}>
+          <View
+            style={
+              styles.selectedDateIcon
+            }
+          >
             <Ionicons
               name="calendar-outline"
               size={26}
-              color={Colors.primary}
+              color={
+                KhedmatPalette.blue500
+              }
             />
           </View>
 
-          <View style={styles.selectedDateCopy}>
+          <View
+            style={[
+              styles.selectedDateCopy,
+              {
+                alignItems: isRtl
+                  ? "flex-end"
+                  : "flex-start",
+              },
+            ]}
+          >
             <Text
-              style={styles.selectedDateLabel}
+              style={[
+                styles.selectedDateLabel,
+                directionStyle(isRtl),
+              ]}
             >
-              روز انتخاب‌شده
+              {copy.selectedDay}
             </Text>
 
             <Text
-              style={styles.selectedDateTitle}
+              numberOfLines={2}
+              style={[
+                styles.selectedDateTitle,
+                directionStyle(isRtl),
+              ]}
             >
               {selectedDate
-                ? `${selectedDate.weekday}، ${selectedDate.day} ${selectedDate.month}`
-                : "نامشخص"}
+                ? copy.fullDate(
+                    selectedDate.weekday,
+                    selectedDate.day,
+                    selectedDate.month,
+                  )
+                : copy.unknown}
             </Text>
 
-            <Text
-              style={
-                styles.selectedDateSubtitle
-              }
+            <View
+              style={[
+                styles.workingTimeRow,
+                {
+                  flexDirection: isRtl
+                    ? "row-reverse"
+                    : "row",
+                },
+              ]}
             >
-              ساعت کاری:{" "}
-              {formatTimeForDari(
-                provider.startTime,
-              )}{" "}
-              تا{" "}
-              {formatTimeForDari(
-                provider.endTime,
-              )}
-            </Text>
+              <Ionicons
+                name="time-outline"
+                size={15}
+                color={
+                  KhedmatPalette
+                    .textMuted
+                }
+              />
+
+              <Text
+                style={[
+                  styles.selectedDateSubtitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {workingHoursText}
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.selectedDateCount}>
+          <View
+            style={
+              styles.selectedDateCount
+            }
+          >
             <Text
               style={
                 styles.selectedDateCountValue
               }
             >
-              {toDariDigits(
+              {formatDigits(
                 selectedDayBookings.length.toString(),
+                localizedDigits,
               )}
             </Text>
 
             <Text
-              style={
-                styles.selectedDateCountLabel
-              }
+              style={[
+                styles.selectedDateCountLabel,
+                directionStyle(isRtl),
+              ]}
             >
-              رزرو
+              {copy.bookings}
             </Text>
           </View>
-        </GlassSurface>
+        </View>
 
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              انتخاب روز
-            </Text>
-
-            <Text
-              style={styles.sectionSubtitle}
+          <View
+            style={[
+              styles.sectionHeader,
+              {
+                flexDirection: isRtl
+                  ? "row-reverse"
+                  : "row",
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.sectionHeaderCopy,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
+              ]}
             >
-              چهارده روز آینده
-            </Text>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.chooseDay}
+              </Text>
+
+              <Text
+                style={[
+                  styles.sectionSubtitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.nextFourteenDays}
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.calendarRangeBadge
+              }
+            >
+              <Ionicons
+                name="calendar-number-outline"
+                size={16}
+                color={
+                  KhedmatPalette.blue500
+                }
+              />
+
+              <Text
+                style={
+                  styles.calendarRangeText
+                }
+              >
+                {formatDigits(
+                  CALENDAR_DAYS.toString(),
+                  localizedDigits,
+                )}
+              </Text>
+            </View>
           </View>
 
           <ScrollView
             horizontal
-            showsHorizontalScrollIndicator={false}
+            showsHorizontalScrollIndicator={
+              false
+            }
             contentContainerStyle={
               styles.datesRow
             }
+            style={{
+              direction: isRtl
+                ? "rtl"
+                : "ltr",
+            }}
           >
-            {dateOptions.map((option) => {
-              const selected =
-                selectedDateId === option.id;
+            {dateOptions.map(
+              (option) => {
+                const selected =
+                  selectedDateId ===
+                  option.id;
 
-              const bookingCount =
-                providerBookings.filter(
-                  (booking) =>
-                    booking.date === option.id,
-                ).length;
+                const bookingCount =
+                  bookingCountsByDate.get(
+                    option.id,
+                  ) ?? 0;
 
-              return (
-                <Pressable
-                  key={option.id}
-                  accessibilityRole="radio"
-                  accessibilityState={{
-                    selected,
-                  }}
-                  accessibilityLabel={`${option.weekday} ${option.day} ${option.month}`}
-                  onPress={() =>
-                    setSelectedDateId(option.id)
-                  }
-                  style={({ pressed }) => [
-                    styles.datePressable,
-                    pressed &&
-                      styles.cardPressed,
-                  ]}
-                >
-                  <GlassSurface
-                    variant={
-                      selected
-                        ? "prominent"
-                        : "regular"
+                return (
+                  <Pressable
+                    key={option.id}
+                    accessibilityRole="radio"
+                    accessibilityState={{
+                      selected,
+                    }}
+                    accessibilityLabel={copy.fullDate(
+                      option.weekday,
+                      option.day,
+                      option.month,
+                    )}
+                    onPress={() =>
+                      setSelectedDateId(
+                        option.id,
+                      )
                     }
-                    radius={Radius.xl}
-                    style={[
+                    style={({
+                      pressed,
+                    }) => [
                       styles.dateCard,
+
                       selected &&
-                        styles.selectedDateOption,
+                        styles.dateCardSelected,
+
+                      pressed &&
+                        styles.cardPressed,
                     ]}
-                    contentStyle={
-                      styles.dateContent
-                    }
                   >
                     {option.relativeLabel ? (
-                      <Text
+                      <View
                         style={[
-                          styles.relativeLabel,
+                          styles.relativeBadge,
+
                           selected &&
-                            styles.selectedDateText,
+                            styles.relativeBadgeSelected,
                         ]}
                       >
-                        {option.relativeLabel}
-                      </Text>
-                    ) : null}
+                        <Text
+                          style={[
+                            styles.relativeLabel,
+
+                            selected &&
+                              styles.relativeLabelSelected,
+
+                            directionStyle(
+                              isRtl,
+                            ),
+                          ]}
+                        >
+                          {
+                            option.relativeLabel
+                          }
+                        </Text>
+                      </View>
+                    ) : (
+                      <View
+                        style={
+                          styles.relativeBadgePlaceholder
+                        }
+                      />
+                    )}
 
                     <Text
                       style={[
                         styles.weekday,
+
                         selected &&
-                          styles.selectedDateText,
+                          styles.dateTextSelected,
+
+                        directionStyle(
+                          isRtl,
+                        ),
                       ]}
                     >
                       {option.weekday}
@@ -330,8 +625,9 @@ export default function ProviderCalendarScreen() {
                     <Text
                       style={[
                         styles.dayNumber,
+
                         selected &&
-                          styles.selectedDayNumber,
+                          styles.dayNumberSelected,
                       ]}
                     >
                       {option.day}
@@ -340,8 +636,13 @@ export default function ProviderCalendarScreen() {
                     <Text
                       style={[
                         styles.month,
+
                         selected &&
-                          styles.selectedDateText,
+                          styles.dateTextSelected,
+
+                        directionStyle(
+                          isRtl,
+                        ),
                       ]}
                     >
                       {option.month}
@@ -350,209 +651,457 @@ export default function ProviderCalendarScreen() {
                     <View
                       style={[
                         styles.bookingCountBadge,
-                        bookingCount > 0 &&
+
+                        bookingCount >
+                          0 &&
                           styles.bookingCountBadgeActive,
+
+                        selected &&
+                          styles.bookingCountBadgeSelected,
                       ]}
                     >
                       <Text
                         style={[
                           styles.bookingCountText,
-                          bookingCount > 0 &&
+
+                          bookingCount >
+                            0 &&
                             styles.bookingCountTextActive,
+
+                          selected &&
+                            styles.bookingCountTextSelected,
                         ]}
                       >
-                        {toDariDigits(
+                        {formatDigits(
                           bookingCount.toString(),
+                          localizedDigits,
                         )}
                       </Text>
                     </View>
-                  </GlassSurface>
-                </Pressable>
-              );
-            })}
+                  </Pressable>
+                );
+              },
+            )}
           </ScrollView>
         </View>
 
-        <View style={styles.metricsGrid}>
+        <View
+          style={
+            styles.metricsGrid
+          }
+        >
           <MetricCard
             icon="checkmark-circle-outline"
-            label="تأییدشده"
-            value={confirmedCount}
-            color={Colors.success}
+            label={copy.confirmed}
+            value={formatDigits(
+              confirmedCount.toString(),
+              localizedDigits,
+            )}
+            color={SUCCESS}
+            backgroundColor={
+              SUCCESS_SOFT
+            }
+            isRtl={isRtl}
+            compact={
+              compactLayout
+            }
           />
 
           <MetricCard
             icon="time-outline"
-            label="در انتظار"
-            value={pendingCount}
-            color={Colors.warning}
+            label={copy.pending}
+            value={formatDigits(
+              pendingCount.toString(),
+              localizedDigits,
+            )}
+            color={WARNING}
+            backgroundColor={
+              WARNING_SOFT
+            }
+            isRtl={isRtl}
+            compact={
+              compactLayout
+            }
           />
 
           <MetricCard
             icon="calendar-clear-outline"
-            label="ساعت آزاد"
-            value={freeSlots}
-            color={Colors.primary}
+            label={copy.freeSlots}
+            value={formatDigits(
+              freeSlots.toString(),
+              localizedDigits,
+            )}
+            color={
+              KhedmatPalette.blue500
+            }
+            backgroundColor={
+              INFO_SOFT
+            }
+            isRtl={isRtl}
+            compact={
+              compactLayout
+            }
           />
 
           <MetricCard
             icon="cash-outline"
-            label="درآمد مورد انتظار"
-            textValue={formatCurrency(
+            label={
+              copy.expectedRevenue
+            }
+            value={formatCurrency(
               expectedRevenue,
+              activeLanguage,
             )}
-            color={Colors.secondary}
+            color={
+              KhedmatPalette.navy700
+            }
+            backgroundColor={
+              KhedmatPalette.blue050
+            }
+            isRtl={isRtl}
+            compact={
+              compactLayout
+            }
           />
         </View>
 
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              برنامهٔ روز
-            </Text>
+          <View
+            style={[
+              styles.scheduleSectionHeader,
+              {
+                flexDirection: isRtl
+                  ? "row-reverse"
+                  : "row",
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.sectionHeaderCopy,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.dailySchedule}
+              </Text>
 
-            <View style={styles.legend}>
+              <Text
+                style={[
+                  styles.sectionSubtitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.scheduleSummary(
+                  formatDigits(
+                    occupiedSlots.toString(),
+                    localizedDigits,
+                  ),
+                  formatDigits(
+                    freeSlots.toString(),
+                    localizedDigits,
+                  ),
+                )}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.legend,
+                {
+                  flexDirection: isRtl
+                    ? "row-reverse"
+                    : "row",
+                },
+              ]}
+            >
               <LegendItem
-                color={Colors.success}
-                label="تأیید"
+                color={SUCCESS}
+                label={copy.booked}
+                isRtl={isRtl}
               />
 
               <LegendItem
-                color={Colors.warning}
-                label="موقت"
+                color={WARNING}
+                label={copy.temporary}
+                isRtl={isRtl}
               />
 
               <LegendItem
-                color={Colors.primary}
-                label="آزاد"
+                color={
+                  KhedmatPalette.blue500
+                }
+                label={copy.available}
+                isRtl={isRtl}
               />
             </View>
           </View>
 
-          <View style={styles.scheduleList}>
-            {scheduleSlots.map((slot) => (
-              <ScheduleRow
-                key={slot.id}
-                slot={slot}
+          {/* SECTION 2 CONTINUES FROM HERE */}
+                    <View style={styles.scheduleList}>
+            {scheduleSlots.length > 0 ? (
+              scheduleSlots.map(
+                (slot, index) => (
+                  <ScheduleSlotCard
+                    key={slot.id}
+                    slot={slot}
+                    index={index}
+                    language={
+                      activeLanguage
+                    }
+                    isRtl={isRtl}
+                    copy={copy}
+                    isLast={
+                      index ===
+                      scheduleSlots.length -
+                        1
+                    }
+                  />
+                ),
+              )
+            ) : (
+              <EmptySchedule
+                copy={copy}
+                isRtl={isRtl}
               />
-            ))}
+            )}
           </View>
         </View>
 
-        <GlassSurface
-          variant="regular"
-          radius={Radius.xl}
-          style={styles.workingHoursCard}
-          contentStyle={
-            styles.workingHoursContent
-          }
-        >
-          <View style={styles.workingHoursIcon}>
-            <Ionicons
-              name="time-outline"
-              size={24}
-              color={Colors.primary}
-            />
-          </View>
-
-          <View style={styles.workingHoursCopy}>
-            <Text
-              style={styles.workingHoursTitle}
+        <View style={styles.section}>
+          <View
+            style={[
+              styles.sectionHeader,
+              {
+                flexDirection: isRtl
+                  ? "row-reverse"
+                  : "row",
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.sectionHeaderCopy,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
+              ]}
             >
-              برنامهٔ کاری فعلی
-            </Text>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.workingHours}
+              </Text>
 
-            <Text
+              <Text
+                style={[
+                  styles.sectionSubtitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {
+                  copy.workingHoursSubtitle
+                }
+              </Text>
+            </View>
+
+            <View
               style={
-                styles.workingHoursSubtitle
+                styles.workingHoursIcon
               }
             >
-              {formatWorkingDays(
-                provider.workingDays,
-              )}
-            </Text>
-
-            <Text
-              style={styles.workingHoursTime}
-            >
-              {formatTimeForDari(
-                provider.startTime,
-              )}{" "}
-              تا{" "}
-              {formatTimeForDari(
-                provider.endTime,
-              )}
-            </Text>
+              <Ionicons
+                name="time-outline"
+                size={21}
+                color={
+                  KhedmatPalette
+                    .blue500
+                }
+              />
+            </View>
           </View>
 
           <View
-            style={styles.scheduleStatusBadge}
+            style={
+              styles.workingHoursCard
+            }
           >
-            <View
-              style={styles.scheduleStatusDot}
+            <WorkingHoursRow
+              icon="calendar-outline"
+              label={copy.workingDays}
+              value={workingDaysText}
+              isRtl={isRtl}
             />
 
-            <Text
+            <View
               style={
-                styles.scheduleStatusText
+                styles.workingHoursDivider
               }
-            >
-              فعال
-            </Text>
-          </View>
-        </GlassSurface>
+            />
 
-        <GlassSurface
-          variant="regular"
-          radius={Radius.xl}
-          style={styles.noticeCard}
-          contentStyle={styles.noticeContent}
+            <WorkingHoursRow
+              icon="time-outline"
+              label={copy.dailyHours}
+              value={workingHoursText}
+              isRtl={isRtl}
+            />
+
+            <View
+              style={
+                styles.workingHoursDivider
+              }
+            />
+
+            <WorkingHoursRow
+              icon="hourglass-outline"
+              label={copy.slotDuration}
+              value={copy.minutes(
+                formatDigits(
+                  SLOT_DURATION_MINUTES.toString(),
+                  localizedDigits,
+                ),
+              )}
+              isRtl={isRtl}
+            />
+
+            <View
+              style={
+                styles.workingHoursDivider
+              }
+            />
+
+            <WorkingHoursRow
+              icon="flash-outline"
+              label={
+                copy.sameDayRequests
+              }
+              value={
+                provider.availableToday
+                  ? copy.enabled
+                  : copy.disabled
+              }
+              isRtl={isRtl}
+              valueColor={
+                provider.availableToday
+                  ? SUCCESS
+                  : KhedmatPalette
+                      .textMuted
+              }
+            />
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.noticeCard,
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
+          ]}
         >
-          <View style={styles.noticeIcon}>
+          <View
+            style={styles.noticeIcon}
+          >
             <Ionicons
               name="information-circle-outline"
               size={23}
-              color={Colors.primary}
+              color={
+                KhedmatPalette
+                  .blue500
+              }
             />
           </View>
 
-          <Text style={styles.noticeText}>
-            درخواست‌های در انتظار تا زمان پذیرش
-            به‌عنوان زمان موقت نمایش داده می‌شوند.
-            پس از پذیرش، ساعت مربوطه به‌طور کامل
-            رزرو خواهد شد.
-          </Text>
-        </GlassSurface>
+          <View
+            style={[
+              styles.noticeCopy,
+              {
+                alignItems: isRtl
+                  ? "flex-end"
+                  : "flex-start",
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.noticeTitle,
+                directionStyle(isRtl),
+              ]}
+            >
+              {copy.noticeTitle}
+            </Text>
+
+            <Text
+              style={[
+                styles.noticeText,
+                directionStyle(isRtl),
+              ]}
+            >
+              {copy.noticeText}
+            </Text>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+type MetricCardProps = {
+  icon: IconName;
+  label: string;
+  value: string;
+  color: string;
+  backgroundColor: string;
+  isRtl: boolean;
+  compact: boolean;
+};
+
 function MetricCard({
   icon,
   label,
   value,
-  textValue,
   color,
-}: {
-  icon: IconName;
-  label: string;
-  value?: number;
-  textValue?: string;
-  color: string;
-}) {
+  backgroundColor,
+  isRtl,
+  compact,
+}: MetricCardProps) {
   return (
-    <GlassSurface
-      variant="regular"
-      radius={Radius.xl}
-      style={styles.metricCard}
-      contentStyle={styles.metricContent}
+    <View
+      style={[
+        styles.metricCard,
+        compact &&
+          styles.metricCardCompact,
+      ]}
     >
       <View
         style={[
           styles.metricIcon,
           {
-            backgroundColor: `${color}18`,
+            backgroundColor,
           },
         ]}
       >
@@ -566,209 +1115,772 @@ function MetricCard({
       <Text
         numberOfLines={1}
         adjustsFontSizeToFit
-        style={styles.metricValue}
-      >
-        {textValue ??
-          toDariDigits(
-            (value ?? 0).toString(),
-          )}
-      </Text>
-
-      <Text style={styles.metricLabel}>
-        {label}
-      </Text>
-    </GlassSurface>
-  );
-}
-
-function LegendItem({
-  color,
-  label,
-}: {
-  color: string;
-  label: string;
-}) {
-  return (
-    <View style={styles.legendItem}>
-      <View
+        minimumFontScale={0.72}
         style={[
-          styles.legendDot,
-          { backgroundColor: color },
+          styles.metricValue,
+          directionStyle(isRtl),
         ]}
-      />
+      >
+        {value}
+      </Text>
 
-      <Text style={styles.legendText}>
+      <Text
+        numberOfLines={2}
+        style={[
+          styles.metricLabel,
+          directionStyle(isRtl),
+        ]}
+      >
         {label}
       </Text>
     </View>
   );
 }
 
-function ScheduleRow({
-  slot,
-}: {
+type LegendItemProps = {
+  color: string;
+  label: string;
+  isRtl: boolean;
+};
+
+function LegendItem({
+  color,
+  label,
+  isRtl,
+}: LegendItemProps) {
+  return (
+    <View
+      style={[
+        styles.legendItem,
+        {
+          flexDirection: isRtl
+            ? "row-reverse"
+            : "row",
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.legendDot,
+          {
+            backgroundColor: color,
+          },
+        ]}
+      />
+
+      <Text
+        style={[
+          styles.legendText,
+          directionStyle(isRtl),
+        ]}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+type ScheduleSlotCardProps = {
   slot: ScheduleSlot;
-}) {
+  index: number;
+  language: LanguageName;
+  isRtl: boolean;
+  copy: CalendarCopy;
+  isLast: boolean;
+};
+
+function ScheduleSlotCard({
+  slot,
+  index,
+  language,
+  isRtl,
+  copy,
+  isLast,
+}: ScheduleSlotCardProps) {
   const booking = slot.booking;
 
-  const status = booking
-    ? getScheduleStatus(booking)
+  const statusConfig = booking
+    ? getScheduleStatusConfig(
+        booking.status,
+        language,
+      )
     : null;
 
+  const slotState =
+    getSlotState(
+      slot,
+      language,
+    );
+
+  const timelineColor =
+    booking?.status ===
+    "in-progress"
+      ? KhedmatPalette.navy700
+      : booking
+        ? statusConfig?.color ??
+          KhedmatPalette.blue500
+        : slot.unavailable
+          ? WARNING
+          : KhedmatPalette.blue500;
+
   return (
-    <View style={styles.scheduleRow}>
-      <View style={styles.timeColumn}>
-        <Text style={styles.timeLabel}>
-          {slot.label}
+    <View
+      style={[
+        styles.scheduleRow,
+        {
+          flexDirection: isRtl
+            ? "row-reverse"
+            : "row",
+        },
+      ]}
+    >
+      <View
+        style={
+          styles.scheduleTimeColumn
+        }
+      >
+        <Text
+          style={[
+            styles.scheduleTime,
+            directionStyle(isRtl),
+          ]}
+        >
+          {formatTime(
+            slot.startTime,
+            language,
+          )}
         </Text>
 
+        <Text
+          style={[
+            styles.scheduleEndTime,
+            directionStyle(isRtl),
+          ]}
+        >
+          {formatTime(
+            slot.endTime,
+            language,
+          )}
+        </Text>
+      </View>
+
+      <View
+        style={
+          styles.timelineColumn
+        }
+      >
         <View
           style={[
             styles.timelineDot,
-            booking
-              ? {
-                  backgroundColor:
-                    status?.color,
-                }
-              : slot.unavailable
-                ? styles.timelineDotUnavailable
-                : styles.timelineDotFree,
-          ]}
-        />
-
-        <View style={styles.timelineLine} />
-      </View>
-
-      {booking ? (
-        <GlassSurface
-          variant={
-            booking.status === "pending"
-              ? "prominent"
-              : "regular"
-          }
-          radius={Radius.xl}
-          style={[
-            styles.bookingCard,
             {
               borderColor:
-                status?.borderColor,
+                timelineColor,
               backgroundColor:
-                status?.backgroundColor,
+                booking
+                  ? timelineColor
+                  : KhedmatPalette
+                      .surface,
             },
           ]}
-          contentStyle={
-            styles.bookingContent
-          }
         >
-          <View style={styles.bookingIcon}>
-            <Ionicons
-              name={getServiceIcon(
-                booking.serviceId,
-              )}
-              size={22}
-              color={status?.color}
-            />
-          </View>
-
-          <View style={styles.bookingCopy}>
-            <Text
-              style={styles.bookingTitle}
-            >
-              {booking.serviceName}
-            </Text>
-
-            <Text
-              numberOfLines={1}
+          {booking ? (
+            <View
               style={
-                styles.bookingLocation
+                styles.timelineDotInner
               }
-            >
-              {booking.address.fullAddress}
-            </Text>
+            />
+          ) : null}
+        </View>
 
-            <View style={styles.bookingMeta}>
-              <Text
-                style={styles.bookingPrice}
+        {!isLast ? (
+          <View
+            style={[
+              styles.timelineLine,
+              {
+                backgroundColor:
+                  booking
+                    ? timelineColor
+                    : KhedmatPalette
+                        .border,
+              },
+            ]}
+          />
+        ) : null}
+      </View>
+
+      <View
+        style={
+          styles.scheduleContent
+        }
+      >
+        {booking ? (
+          <BookingScheduleCard
+            booking={booking}
+            language={language}
+            isRtl={isRtl}
+            copy={copy}
+            statusConfig={
+              statusConfig ??
+              getScheduleStatusConfig(
+                "pending",
+                language,
+              )
+            }
+          />
+        ) : (
+          <View
+            style={[
+              styles.emptySlotCard,
+
+              slot.unavailable
+                ? styles.unavailableSlotCard
+                : styles.availableSlotCard,
+            ]}
+          >
+            <View
+              style={[
+                styles.emptySlotTopRow,
+                {
+                  flexDirection: isRtl
+                    ? "row-reverse"
+                    : "row",
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.emptySlotIcon,
+                  {
+                    backgroundColor:
+                      slot.unavailable
+                        ? WARNING_SOFT
+                        : INFO_SOFT,
+                  },
+                ]}
               >
-                {formatCurrency(
-                  booking.servicePrice,
-                )}
-              </Text>
+                <Ionicons
+                  name={
+                    slot.unavailable
+                      ? "pause-outline"
+                      : "add-circle-outline"
+                  }
+                  size={20}
+                  color={
+                    slot.unavailable
+                      ? WARNING
+                      : KhedmatPalette
+                          .blue500
+                  }
+                />
+              </View>
 
               <View
                 style={[
-                  styles.bookingStatus,
+                  styles.emptySlotCopy,
                   {
-                    backgroundColor:
-                      status?.badgeBackground,
+                    alignItems:
+                      isRtl
+                        ? "flex-end"
+                        : "flex-start",
                   },
                 ]}
               >
                 <Text
                   style={[
-                    styles.bookingStatusText,
+                    styles.emptySlotTitle,
                     {
-                      color: status?.color,
+                      color:
+                        slot.unavailable
+                          ? WARNING
+                          : KhedmatPalette
+                              .navy700,
                     },
+                    directionStyle(
+                      isRtl,
+                    ),
                   ]}
                 >
-                  {status?.label}
+                  {slotState.title}
+                </Text>
+
+                <Text
+                  style={[
+                    styles.emptySlotSubtitle,
+                    directionStyle(
+                      isRtl,
+                    ),
+                  ]}
+                >
+                  {slotState.subtitle}
                 </Text>
               </View>
             </View>
+
+            {!slot.unavailable ? (
+              <View
+                style={[
+                  styles.availableSlotBadge,
+                  {
+                    flexDirection: isRtl
+                      ? "row-reverse"
+                      : "row",
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={14}
+                  color={SUCCESS}
+                />
+
+                <Text
+                  style={[
+                    styles.availableSlotBadgeText,
+                    directionStyle(
+                      isRtl,
+                    ),
+                  ]}
+                >
+                  {
+                    copy.availableForBooking
+                  }
+                </Text>
+              </View>
+            ) : null}
           </View>
-        </GlassSurface>
-      ) : (
-        <GlassSurface
-          variant="regular"
-          radius={Radius.xl}
+        )}
+      </View>
+    </View>
+  );
+}
+
+type BookingScheduleCardProps = {
+  booking: BookingRecord;
+  language: LanguageName;
+  isRtl: boolean;
+  copy: CalendarCopy;
+  statusConfig: ScheduleStatusConfig;
+};
+
+function BookingScheduleCard({
+  booking,
+  language,
+  isRtl,
+  copy,
+  statusConfig,
+}: BookingScheduleCardProps) {
+  return (
+    <View
+      style={[
+        styles.bookingCard,
+        {
+          borderColor:
+            statusConfig.borderColor,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.bookingCardHeader,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
+      >
+        <View
           style={[
-            styles.freeSlotCard,
-            slot.unavailable &&
-              styles.unavailableSlotCard,
+            styles.serviceIcon,
+            {
+              backgroundColor:
+                statusConfig.backgroundColor,
+            },
           ]}
-          contentStyle={
-            styles.freeSlotContent
-          }
         >
           <Ionicons
-            name={
-              slot.unavailable
-                ? "remove-circle-outline"
-                : "add-circle-outline"
-            }
-            size={21}
+            name={getServiceIcon(
+              booking.serviceId,
+            )}
+            size={22}
             color={
-              slot.unavailable
-                ? Colors.textMuted
-                : Colors.primary
+              statusConfig.color
+            }
+          />
+        </View>
+
+        <View
+          style={[
+            styles.bookingCardCopy,
+            {
+              alignItems: isRtl
+                ? "flex-end"
+                : "flex-start",
+            },
+          ]}
+        >
+          <Text
+            numberOfLines={2}
+            style={[
+              styles.bookingServiceName,
+              directionStyle(isRtl),
+            ]}
+          >
+            {booking.serviceName}
+          </Text>
+
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.bookingReference,
+              directionStyle(isRtl),
+            ]}
+          >
+            {copy.bookingReference(
+              getShortBookingId(
+                booking.id,
+                language,
+              ),
+            )}
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.bookingStatusBadge,
+            {
+              backgroundColor:
+                statusConfig.backgroundColor,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.bookingStatusText,
+              {
+                color:
+                  statusConfig.color,
+              },
+              directionStyle(isRtl),
+            ]}
+          >
+            {statusConfig.label}
+          </Text>
+        </View>
+      </View>
+
+      <View
+        style={[
+          styles.bookingMetaRow,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
+      >
+        <BookingMeta
+          icon="location-outline"
+          value={
+            booking.address.label
+          }
+          isRtl={isRtl}
+        />
+
+        <BookingMeta
+          icon="cash-outline"
+          value={formatCurrency(
+            booking.servicePrice,
+            language,
+          )}
+          isRtl={isRtl}
+        />
+      </View>
+
+      <View
+        style={[
+          styles.bookingAddressRow,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
+      >
+        <Ionicons
+          name="navigate-outline"
+          size={15}
+          color={
+            KhedmatPalette.textMuted
+          }
+        />
+
+        <Text
+          numberOfLines={2}
+          style={[
+            styles.bookingAddress,
+            directionStyle(isRtl),
+          ]}
+        >
+          {
+            booking.address
+              .fullAddress
+          }
+        </Text>
+      </View>
+
+      {booking.notes?.trim() ? (
+        <View
+          style={[
+            styles.bookingNotes,
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
+          ]}
+        >
+          <Ionicons
+            name="document-text-outline"
+            size={15}
+            color={
+              KhedmatPalette.blue500
             }
           />
 
-          <View style={styles.freeSlotCopy}>
-            <Text
-              style={[
-                styles.freeSlotTitle,
-                slot.unavailable &&
-                  styles.unavailableSlotText,
-              ]}
-            >
-              {slot.unavailable
-                ? "خارج از ساعت کاری"
-                : "ساعت آزاد"}
-            </Text>
-
-            <Text
-              style={styles.freeSlotSubtitle}
-            >
-              {slot.unavailable
-                ? "رزرو در این زمان ممکن نیست."
-                : "برای دریافت درخواست جدید آماده است."}
-            </Text>
-          </View>
-        </GlassSurface>
-      )}
+          <Text
+            numberOfLines={3}
+            style={[
+              styles.bookingNotesText,
+              directionStyle(isRtl),
+            ]}
+          >
+            {booking.notes}
+          </Text>
+        </View>
+      ) : null}
     </View>
+  );
+}
+
+type BookingMetaProps = {
+  icon: IconName;
+  value: string;
+  isRtl: boolean;
+};
+
+function BookingMeta({
+  icon,
+  value,
+  isRtl,
+}: BookingMetaProps) {
+  return (
+    <View
+      style={[
+        styles.bookingMeta,
+        {
+          flexDirection: isRtl
+            ? "row-reverse"
+            : "row",
+        },
+      ]}
+    >
+      <Ionicons
+        name={icon}
+        size={14}
+        color={
+          KhedmatPalette.textMuted
+        }
+      />
+
+      <Text
+        numberOfLines={1}
+        style={[
+          styles.bookingMetaText,
+          directionStyle(isRtl),
+        ]}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+type WorkingHoursRowProps = {
+  icon: IconName;
+  label: string;
+  value: string;
+  isRtl: boolean;
+  valueColor?: string;
+};
+
+function WorkingHoursRow({
+  icon,
+  label,
+  value,
+  isRtl,
+  valueColor,
+}: WorkingHoursRowProps) {
+  return (
+    <View
+      style={[
+        styles.workingHoursRow,
+        {
+          flexDirection: isRtl
+            ? "row-reverse"
+            : "row",
+        },
+      ]}
+    >
+      <View
+        style={
+          styles.workingHoursRowIcon
+        }
+      >
+        <Ionicons
+          name={icon}
+          size={18}
+          color={
+            KhedmatPalette.blue500
+          }
+        />
+      </View>
+
+      <View
+        style={[
+          styles.workingHoursRowCopy,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.workingHoursLabel,
+            directionStyle(isRtl),
+          ]}
+        >
+          {label}
+        </Text>
+
+        <Text
+          numberOfLines={2}
+          style={[
+            styles.workingHoursValue,
+            valueColor
+              ? {
+                  color: valueColor,
+                }
+              : null,
+            directionStyle(isRtl),
+          ]}
+        >
+          {value}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+type EmptyScheduleProps = {
+  copy: CalendarCopy;
+  isRtl: boolean;
+};
+
+function EmptySchedule({
+  copy,
+  isRtl,
+}: EmptyScheduleProps) {
+  return (
+    <View
+      style={styles.emptySchedule}
+    >
+      <View
+        style={
+          styles.emptyScheduleIcon
+        }
+      >
+        <Ionicons
+          name="calendar-clear-outline"
+          size={32}
+          color={
+            KhedmatPalette.blue500
+          }
+        />
+      </View>
+
+      <Text
+        style={[
+          styles.emptyScheduleTitle,
+          directionStyle(isRtl),
+        ]}
+      >
+        {copy.noScheduleTitle}
+      </Text>
+
+      <Text
+        style={[
+          styles.emptyScheduleSubtitle,
+          directionStyle(isRtl),
+        ]}
+      >
+        {copy.noScheduleSubtitle}
+      </Text>
+    </View>
+  );
+}
+
+function createDateOptions(
+  count: number,
+  language: LanguageName,
+): CalendarDateOption[] {
+  const today = startOfDay(
+    new Date(),
+  );
+
+  return Array.from(
+    {
+      length: count,
+    },
+    (_, index) => {
+      const date = new Date(
+        today,
+      );
+
+      date.setDate(
+        today.getDate() +
+          index,
+      );
+
+      return {
+        id: formatDateId(date),
+        date,
+        weekday:
+          formatWeekday(
+            date,
+            language,
+          ),
+        day: formatDigits(
+          date
+            .getDate()
+            .toString(),
+          language !==
+            "English",
+        ),
+        month:
+          formatMonth(
+            date,
+            language,
+          ),
+        relativeLabel:
+          getRelativeDateLabel(
+            index,
+            language,
+          ),
+      };
+    },
   );
 }
 
@@ -777,133 +1889,364 @@ function buildScheduleSlots(
   endTime: string,
   bookings: BookingRecord[],
 ): ScheduleSlot[] {
-  const startHour =
-    Number(startTime.split(":")[0]) || 8;
+  const startMinutes =
+    timeToMinutes(startTime);
 
-  const endHour =
-    Number(endTime.split(":")[0]) || 17;
+  const endMinutes =
+    timeToMinutes(endTime);
 
-  const firstDisplayedHour = Math.max(
-    7,
-    startHour - 1,
-  );
+  if (
+    startMinutes === null ||
+    endMinutes === null ||
+    endMinutes <= startMinutes
+  ) {
+    return [];
+  }
 
-  const finalDisplayedHour = Math.min(
-    19,
-    endHour + 1,
-  );
-
-  const slots: ScheduleSlot[] = [];
+  const slots: ScheduleSlot[] =
+    [];
 
   for (
-    let hour = firstDisplayedHour;
-    hour <= finalDisplayedHour;
-    hour += 1
+    let current =
+      startMinutes;
+    current < endMinutes;
+    current +=
+      SLOT_DURATION_MINUTES
   ) {
-    const id = `${String(hour).padStart(
-      2,
-      "0",
-    )}:00`;
+    const slotEnd = Math.min(
+      current +
+        SLOT_DURATION_MINUTES,
+      endMinutes,
+    );
+
+    const slotStartTime =
+      minutesToTime(current);
+
+    const slotEndTime =
+      minutesToTime(slotEnd);
 
     const booking =
-      bookings.find(
-        (item) => item.time === id,
-      ) ?? null;
+      findBookingForSlot(
+        bookings,
+        current,
+        slotEnd,
+      );
 
     slots.push({
-      id,
-      label: formatTimeForDari(id),
+      id: `${slotStartTime}-${slotEndTime}`,
+      startTime:
+        slotStartTime,
+      endTime: slotEndTime,
+      label: `${slotStartTime}-${slotEndTime}`,
       booking,
-      unavailable:
-        hour < startHour || hour >= endHour,
+      unavailable: false,
     });
   }
 
   return slots;
 }
 
-function getScheduleStatus(
-  booking: BookingRecord,
+function findBookingForSlot(
+  bookings: BookingRecord[],
+  slotStartMinutes: number,
+  slotEndMinutes: number,
+): BookingRecord | null {
+  return (
+    bookings.find(
+      (booking) => {
+        const bookingMinutes =
+          timeToMinutes(
+            booking.time,
+          );
+
+        if (
+          bookingMinutes === null
+        ) {
+          return false;
+        }
+
+        return (
+          bookingMinutes >=
+            slotStartMinutes &&
+          bookingMinutes <
+            slotEndMinutes
+        );
+      },
+    ) ?? null
+  );
+}
+
+function getSlotState(
+  slot: ScheduleSlot,
+  language: LanguageName,
 ) {
-  if (booking.status === "confirmed") {
+  if (language === "Dari") {
+    return slot.unavailable
+      ? {
+          title:
+            "زمان غیرقابل رزرو",
+          subtitle:
+            "این بازه برای دریافت درخواست بسته است.",
+        }
+      : {
+          title:
+            "زمان آزاد",
+          subtitle:
+            "این بازه برای دریافت درخواست جدید باز است.",
+        };
+  }
+
+  if (
+    language === "Pashto"
+  ) {
+    return slot.unavailable
+      ? {
+          title:
+            "د رزرف لپاره تړلی",
+          subtitle:
+            "دا وخت د نوې غوښتنې لپاره شتون نه لري.",
+        }
+      : {
+          title: "خالي وخت",
+          subtitle:
+            "دا وخت د نوې غوښتنې لپاره خلاص دی.",
+        };
+  }
+
+  return slot.unavailable
+    ? {
+        title:
+          "Unavailable slot",
+        subtitle:
+          "This period is closed to new requests.",
+      }
+    : {
+        title: "Available slot",
+        subtitle:
+          "This period is open for a new request.",
+      };
+}
+
+function getScheduleStatusConfig(
+  status: BookingStatus,
+  language: LanguageName,
+): ScheduleStatusConfig {
+  const labels =
+    getStatusLabels(language);
+
+  if (
+    status === "confirmed"
+  ) {
     return {
-      label: "تأییدشده",
-      color: Colors.success,
+      label: labels.confirmed,
+      color:
+        KhedmatPalette.blue500,
       backgroundColor:
-        "rgba(48, 183, 106, 0.05)",
+        INFO_SOFT,
       borderColor:
-        "rgba(48, 183, 106, 0.28)",
-      badgeBackground:
-        "rgba(48, 183, 106, 0.12)",
+        KhedmatPalette.blue200,
     };
   }
 
-  if (booking.status === "in-progress") {
+  if (
+    status === "in-progress"
+  ) {
     return {
-      label: "در حال انجام",
-      color: Colors.secondary,
+      label:
+        labels.inProgress,
+      color:
+        KhedmatPalette.navy700,
       backgroundColor:
-        "rgba(86, 183, 201, 0.05)",
+        KhedmatPalette.blue050,
       borderColor:
-        "rgba(86, 183, 201, 0.28)",
-      badgeBackground:
-        "rgba(86, 183, 201, 0.12)",
+        KhedmatPalette.blue200,
+    };
+  }
+
+  if (
+    status === "completed"
+  ) {
+    return {
+      label: labels.completed,
+      color: SUCCESS,
+      backgroundColor:
+        SUCCESS_SOFT,
+      borderColor: "#A9D9BD",
+    };
+  }
+
+  if (
+    status === "cancelled"
+  ) {
+    return {
+      label: labels.cancelled,
+      color: ERROR,
+      backgroundColor:
+        ERROR_SOFT,
+      borderColor: "#E7B1AD",
     };
   }
 
   return {
-    label: "در انتظار",
-    color: Colors.warning,
+    label: labels.pending,
+    color: WARNING,
     backgroundColor:
-      "rgba(217, 154, 43, 0.05)",
-    borderColor:
-      "rgba(217, 154, 43, 0.28)",
-    badgeBackground:
-      "rgba(217, 154, 43, 0.12)",
+      WARNING_SOFT,
+    borderColor: "#E5C875",
   };
 }
 
-function createDateOptions(
-  count: number,
-): CalendarDateOption[] {
-  const today = startOfDay(new Date());
+function getStatusLabels(
+  language: LanguageName,
+) {
+  if (
+    language === "English"
+  ) {
+    return {
+      pending: "Pending",
+      confirmed: "Confirmed",
+      inProgress:
+        "In progress",
+      completed: "Completed",
+      cancelled: "Cancelled",
+    };
+  }
 
-  return Array.from(
-    { length: count },
-    (_, index) => {
-      const date = new Date(today);
-      date.setDate(
-        today.getDate() + index,
-      );
+  if (
+    language === "Pashto"
+  ) {
+    return {
+      pending: "په تمه",
+      confirmed:
+        "تایید شوی",
+      inProgress: "روان",
+      completed:
+        "بشپړ شوی",
+      cancelled:
+        "لغوه شوی",
+    };
+  }
 
-      return {
-        id: formatDateId(date),
-        date,
-        weekday:
-          formatWeekdayDari(date),
-        day: toDariDigits(
-          date.getDate().toString(),
-        ),
-        month: formatMonthDari(date),
-        relativeLabel:
-          index === 0
-            ? "امروز"
-            : index === 1
-              ? "فردا"
-              : undefined,
-      };
-    },
-  );
+  return {
+    pending: "در انتظار",
+    confirmed:
+      "تأییدشده",
+    inProgress:
+      "در حال انجام",
+    completed:
+      "تکمیل‌شده",
+    cancelled: "لغوشده",
+  };
 }
 
-function startOfDay(date: Date): Date {
+function getServiceIcon(
+  serviceId: string,
+): IconName {
+  const normalized =
+    serviceId.toLowerCase();
+
+  if (
+    normalized.includes(
+      "electric",
+    ) ||
+    normalized.includes(
+      "wiring",
+    ) ||
+    normalized.includes(
+      "lighting",
+    ) ||
+    normalized.includes(
+      "socket",
+    ) ||
+    normalized.includes(
+      "breaker",
+    )
+  ) {
+    return "flash-outline";
+  }
+
+  if (
+    normalized.includes(
+      "plumb",
+    ) ||
+    normalized.includes(
+      "water",
+    ) ||
+    normalized.includes(
+      "pipe",
+    ) ||
+    normalized.includes(
+      "drain",
+    )
+  ) {
+    return "water-outline";
+  }
+
+  if (
+    normalized.includes(
+      "clean",
+    )
+  ) {
+    return "sparkles-outline";
+  }
+
+  if (
+    normalized.includes(
+      "computer",
+    ) ||
+    normalized.includes(
+      "phone",
+    ) ||
+    normalized.includes(
+      "software",
+    ) ||
+    normalized.includes(
+      "hardware",
+    )
+  ) {
+    return "laptop-outline";
+  }
+
+  if (
+    normalized.includes(
+      "wood",
+    ) ||
+    normalized.includes(
+      "door",
+    ) ||
+    normalized.includes(
+      "cabinet",
+    ) ||
+    normalized.includes(
+      "furniture",
+    )
+  ) {
+    return "hammer-outline";
+  }
+
+  return "construct-outline";
+}
+
+/*
+ * SECTION 3 CONTINUES FROM HERE:
+ * remaining formatters, localization copy,
+ * and the complete StyleSheet.
+ */
+function startOfDay(
+  date: Date,
+): Date {
   const result = new Date(date);
+
   result.setHours(0, 0, 0, 0);
+
   return result;
 }
 
-function formatDateId(date: Date): string {
-  const year = date.getFullYear();
+function formatDateId(
+  date: Date,
+): string {
+  const year =
+    date.getFullYear();
 
   const month = String(
     date.getMonth() + 1,
@@ -916,150 +2259,446 @@ function formatDateId(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function formatWeekdayDari(
+function formatWeekday(
   date: Date,
+  language: LanguageName,
 ): string {
-  const weekdays = [
-    "یک‌شنبه",
-    "دوشنبه",
-    "سه‌شنبه",
-    "چهارشنبه",
-    "پنج‌شنبه",
-    "جمعه",
-    "شنبه",
-  ];
+  const weekdays = {
+    English: [
+      "Sun",
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+    ],
 
-  return weekdays[date.getDay()] ?? "";
+    Dari: [
+      "یکشنبه",
+      "دوشنبه",
+      "سه‌شنبه",
+      "چهارشنبه",
+      "پنجشنبه",
+      "جمعه",
+      "شنبه",
+    ],
+
+    Pashto: [
+      "یکشنبه",
+      "دوشنبه",
+      "سه‌شنبه",
+      "چهارشنبه",
+      "پنجشنبه",
+      "جمعه",
+      "شنبه",
+    ],
+  } as const;
+
+  return weekdays[language][
+    date.getDay()
+  ];
 }
 
-function formatMonthDari(
+function formatMonth(
   date: Date,
+  language: LanguageName,
 ): string {
-  const months = [
-    "جنوری",
-    "فبروری",
-    "مارچ",
-    "اپریل",
-    "می",
-    "جون",
-    "جولای",
-    "اگست",
-    "سپتمبر",
-    "اکتوبر",
-    "نوامبر",
-    "دسمبر",
-  ];
+  try {
+    return new Intl.DateTimeFormat(
+      language === "English"
+        ? "en-US"
+        : "fa-AF",
+      {
+        month: "short",
+      },
+    ).format(date);
+  } catch {
+    const months = {
+      English: [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ],
 
-  return months[date.getMonth()] ?? "";
+      Dari: [
+        "جنوری",
+        "فبروری",
+        "مارچ",
+        "اپریل",
+        "می",
+        "جون",
+        "جولای",
+        "اگست",
+        "سپتمبر",
+        "اکتبر",
+        "نوامبر",
+        "دسمبر",
+      ],
+
+      Pashto: [
+        "جنوري",
+        "فبروري",
+        "مارچ",
+        "اپریل",
+        "می",
+        "جون",
+        "جولای",
+        "اګست",
+        "سپتمبر",
+        "اکتوبر",
+        "نومبر",
+        "دسمبر",
+      ],
+    } as const;
+
+    return months[language][
+      date.getMonth()
+    ];
+  }
+}
+
+function getRelativeDateLabel(
+  index: number,
+  language: LanguageName,
+): string | undefined {
+  if (index === 0) {
+    if (language === "Dari") {
+      return "امروز";
+    }
+
+    if (language === "Pashto") {
+      return "نن";
+    }
+
+    return "Today";
+  }
+
+  if (index === 1) {
+    if (language === "Dari") {
+      return "فردا";
+    }
+
+    if (language === "Pashto") {
+      return "سبا";
+    }
+
+    return "Tomorrow";
+  }
+
+  return undefined;
+}
+
+function timeToMinutes(
+  value: string,
+): number | null {
+  const [hoursRaw, minutesRaw] =
+    value.split(":");
+
+  const hours =
+    Number(hoursRaw);
+
+  const minutes =
+    Number(minutesRaw);
+
+  if (
+    !Number.isFinite(hours) ||
+    !Number.isFinite(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return null;
+  }
+
+  return hours * 60 + minutes;
+}
+
+function minutesToTime(
+  value: number,
+): string {
+  const normalized =
+    Math.max(0, value);
+
+  const hours = Math.floor(
+    normalized / 60,
+  );
+
+  const minutes =
+    normalized % 60;
+
+  return `${String(hours).padStart(
+    2,
+    "0",
+  )}:${String(minutes).padStart(
+    2,
+    "0",
+  )}`;
+}
+
+function formatTime(
+  value: string,
+  language: LanguageName,
+): string {
+  const minutes =
+    timeToMinutes(value);
+
+  if (minutes === null) {
+    return language === "English"
+      ? value
+      : formatDigits(
+          value,
+          true,
+        );
+  }
+
+  const date = new Date();
+
+  date.setHours(
+    Math.floor(minutes / 60),
+    minutes % 60,
+    0,
+    0,
+  );
+
+  try {
+    const formatted =
+      new Intl.DateTimeFormat(
+        language === "English"
+          ? "en-US"
+          : "fa-AF",
+        {
+          hour: "numeric",
+          minute: "2-digit",
+        },
+      ).format(date);
+
+    return language === "English"
+      ? formatted
+      : formatDigits(
+          formatted,
+          true,
+        );
+  } catch {
+    return language === "English"
+      ? value
+      : formatDigits(
+          value,
+          true,
+        );
+  }
 }
 
 function formatWorkingDays(
   workingDays: string[],
+  language: LanguageName,
 ): string {
-  const labels: Record<string, string> = {
-    saturday: "شنبه",
-    sunday: "یک‌شنبه",
-    monday: "دوشنبه",
-    tuesday: "سه‌شنبه",
-    wednesday: "چهارشنبه",
-    thursday: "پنج‌شنبه",
-    friday: "جمعه",
-  };
+  if (
+    !workingDays ||
+    workingDays.length === 0
+  ) {
+    if (language === "Dari") {
+      return "روز کاری مشخص نشده";
+    }
+
+    if (language === "Pashto") {
+      return "کاري ورځې نه دي ټاکل شوي";
+    }
+
+    return "No working days set";
+  }
 
   return workingDays
-    .map((day) => labels[day] ?? day)
-    .join("، ");
+    .map((day) =>
+      translateWorkingDay(
+        day,
+        language,
+      ),
+    )
+    .join(
+      language === "English"
+        ? ", "
+        : "، ",
+    );
 }
 
-function getServiceIcon(
-  serviceId: string,
-): IconName {
-  if (
-    serviceId.includes("wiring") ||
-    serviceId.includes("socket") ||
-    serviceId.includes("lighting") ||
-    serviceId.includes("breaker") ||
-    serviceId.includes("generator")
-  ) {
-    return "flash-outline";
-  }
-
-  if (
-    serviceId.includes("pipe") ||
-    serviceId.includes("drain") ||
-    serviceId.includes("water") ||
-    serviceId.includes("heater")
-  ) {
-    return "water-outline";
-  }
-
-  if (serviceId.includes("clean")) {
-    return "sparkles-outline";
-  }
-
-  if (
-    serviceId.includes("computer") ||
-    serviceId.includes("hardware") ||
-    serviceId.includes("virus")
-  ) {
-    return "laptop-outline";
-  }
-
-  if (
-    serviceId.includes("cabinet") ||
-    serviceId.includes("door") ||
-    serviceId.includes("furniture")
-  ) {
-    return "hammer-outline";
-  }
-
-  return "construct-outline";
-}
-
-function formatTimeForDari(
-  value: string,
+function translateWorkingDay(
+  day: string,
+  language: LanguageName,
 ): string {
-  const hour = Number(
-    value.split(":")[0],
-  );
+  const normalized =
+    day
+      .trim()
+      .toLowerCase();
 
-  if (Number.isNaN(hour)) {
-    return value;
+  const translations: Record<
+    string,
+    {
+      English: string;
+      Dari: string;
+      Pashto: string;
+    }
+  > = {
+    sunday: {
+      English: "Sunday",
+      Dari: "یکشنبه",
+      Pashto: "یکشنبه",
+    },
+
+    monday: {
+      English: "Monday",
+      Dari: "دوشنبه",
+      Pashto: "دوشنبه",
+    },
+
+    tuesday: {
+      English: "Tuesday",
+      Dari: "سه‌شنبه",
+      Pashto: "سه‌شنبه",
+    },
+
+    wednesday: {
+      English: "Wednesday",
+      Dari: "چهارشنبه",
+      Pashto: "چهارشنبه",
+    },
+
+    thursday: {
+      English: "Thursday",
+      Dari: "پنجشنبه",
+      Pashto: "پنجشنبه",
+    },
+
+    friday: {
+      English: "Friday",
+      Dari: "جمعه",
+      Pashto: "جمعه",
+    },
+
+    saturday: {
+      English: "Saturday",
+      Dari: "شنبه",
+      Pashto: "شنبه",
+    },
+
+    sun: {
+      English: "Sunday",
+      Dari: "یکشنبه",
+      Pashto: "یکشنبه",
+    },
+
+    mon: {
+      English: "Monday",
+      Dari: "دوشنبه",
+      Pashto: "دوشنبه",
+    },
+
+    tue: {
+      English: "Tuesday",
+      Dari: "سه‌شنبه",
+      Pashto: "سه‌شنبه",
+    },
+
+    wed: {
+      English: "Wednesday",
+      Dari: "چهارشنبه",
+      Pashto: "چهارشنبه",
+    },
+
+    thu: {
+      English: "Thursday",
+      Dari: "پنجشنبه",
+      Pashto: "پنجشنبه",
+    },
+
+    fri: {
+      English: "Friday",
+      Dari: "جمعه",
+      Pashto: "جمعه",
+    },
+
+    sat: {
+      English: "Saturday",
+      Dari: "شنبه",
+      Pashto: "شنبه",
+    },
+  };
+
+  const translated =
+    translations[normalized];
+
+  if (translated) {
+    return translated[language];
   }
 
-  if (hour === 12) {
-    return "۱۲:۰۰ ظهر";
-  }
-
-  if (hour < 12) {
-    return `${toDariDigits(
-      hour.toString(),
-    )}:۰۰ صبح`;
-  }
-
-  if (hour < 18) {
-    return `${toDariDigits(
-      (hour - 12).toString(),
-    )}:۰۰ بعد از ظهر`;
-  }
-
-  return `${toDariDigits(
-    (hour - 12).toString(),
-  )}:۰۰ عصر`;
+  return day;
 }
 
 function formatCurrency(
-  value: number,
+  amount: number,
+  language: LanguageName,
 ): string {
-  return `${new Intl.NumberFormat(
-    "fa-AF",
-  ).format(value)} افغانی`;
+  const formatted =
+    new Intl.NumberFormat(
+      "en-US",
+    ).format(amount);
+
+  if (language === "English") {
+    return `${formatted} AFN`;
+  }
+
+  const localized =
+    formatDigits(
+      formatted,
+      true,
+    );
+
+  return language === "Dari"
+    ? `${localized} افغانی`
+    : `${localized} افغانۍ`;
 }
 
-function toDariDigits(
-  value: string,
+function getShortBookingId(
+  bookingId: string,
+  language: LanguageName,
 ): string {
-  const digits: Record<string, string> = {
+  const finalPart =
+    bookingId.split("-").pop() ??
+    bookingId;
+
+  const shortened =
+    finalPart.slice(-8);
+
+  return language === "English"
+    ? shortened
+    : formatDigits(
+        shortened,
+        true,
+      );
+}
+
+function formatDigits(
+  value: string,
+  localized: boolean,
+): string {
+  if (!localized) {
+    return value;
+  }
+
+  const digits: Record<
+    string,
+    string
+  > = {
     "0": "۰",
     "1": "۱",
     "2": "۲",
@@ -1074,19 +2713,391 @@ function toDariDigits(
 
   return value.replace(
     /\d/g,
-    (digit) => digits[digit] ?? digit,
+    (digit) =>
+      digits[digit] ?? digit,
   );
+}
+
+function normalizeLanguage(
+  language: string,
+): LanguageName {
+  if (language === "Dari") {
+    return "Dari";
+  }
+
+  if (language === "Pashto") {
+    return "Pashto";
+  }
+
+  return "English";
+}
+
+function directionStyle(
+  isRtl: boolean,
+) {
+  return {
+    textAlign: isRtl
+      ? ("right" as const)
+      : ("left" as const),
+
+    writingDirection: isRtl
+      ? ("rtl" as const)
+      : ("ltr" as const),
+  };
+}
+
+function getCalendarCopy(
+  language: LanguageName,
+) {
+  if (language === "Dari") {
+    return {
+      eyebrow:
+        "برنامهٔ کاری",
+
+      title: "تقویم",
+
+      subtitle:
+        "رزروها، ساعت‌های آزاد و برنامهٔ کاری خود را مدیریت کنید.",
+
+      selectedDay:
+        "روز انتخاب‌شده",
+
+      bookings: "رزرو",
+
+      chooseDay:
+        "انتخاب روز",
+
+      nextFourteenDays:
+        "برنامهٔ چهارده روز آینده",
+
+      confirmed:
+        "تأییدشده",
+
+      pending:
+        "در انتظار",
+
+      freeSlots:
+        "زمان آزاد",
+
+      expectedRevenue:
+        "درآمد مورد انتظار",
+
+      dailySchedule:
+        "برنامهٔ روز",
+
+      booked: "رزروشده",
+
+      temporary:
+        "غیرفعال",
+
+      available: "آزاد",
+
+      availableForBooking:
+        "قابل رزرو",
+
+      workingHours:
+        "ساعت‌های کاری",
+
+      workingHoursSubtitle:
+        "برنامهٔ عادی فعالیت حرفه‌ای شما",
+
+      workingDays:
+        "روزهای کاری",
+
+      dailyHours:
+        "ساعت روزانه",
+
+      slotDuration:
+        "مدت هر بازه",
+
+      sameDayRequests:
+        "درخواست همان‌روز",
+
+      enabled: "فعال",
+
+      disabled: "غیرفعال",
+
+      noScheduleTitle:
+        "برنامه‌ای برای این روز موجود نیست",
+
+      noScheduleSubtitle:
+        "ساعت‌های کاری یا رزروهای آینده برای این روز ثبت نشده‌اند.",
+
+      noticeTitle:
+        "برنامهٔ خود را به‌روز نگه دارید",
+
+      noticeText:
+        "زمان‌های آزاد و ساعت‌های کاری دقیق، از رزروهای هم‌زمان و تأخیر در پاسخ‌گویی جلوگیری می‌کند.",
+
+      unknown: "نامشخص",
+
+      fullDate:
+        (
+          weekday: string,
+          day: string,
+          month: string,
+        ) =>
+          `${weekday}، ${day} ${month}`,
+
+      timeRange:
+        (
+          start: string,
+          end: string,
+        ) =>
+          `${start} تا ${end}`,
+
+      minutes:
+        (value: string) =>
+          `${value} دقیقه`,
+
+      scheduleSummary:
+        (
+          occupied: string,
+          free: string,
+        ) =>
+          `${occupied} رزرو و ${free} زمان آزاد`,
+
+      bookingReference:
+        (value: string) =>
+          `رزرو ${value}`,
+    };
+  }
+
+  if (language === "Pashto") {
+    return {
+      eyebrow:
+        "کاري مهال‌وېش",
+
+      title: "کلیز",
+
+      subtitle:
+        "خپل رزرفونه، خالي وختونه او کاري مهال‌وېش مدیریت کړئ.",
+
+      selectedDay:
+        "ټاکل شوې ورځ",
+
+      bookings: "رزرفونه",
+
+      chooseDay:
+        "ورځ وټاکئ",
+
+      nextFourteenDays:
+        "د راتلونکو څوارلسو ورځو مهال‌وېش",
+
+      confirmed:
+        "تایید شوي",
+
+      pending:
+        "په تمه",
+
+      freeSlots:
+        "خالي وختونه",
+
+      expectedRevenue:
+        "اټکلی عاید",
+
+      dailySchedule:
+        "د ورځې مهال‌وېش",
+
+      booked: "رزرف شوی",
+
+      temporary:
+        "بند",
+
+      available: "خالي",
+
+      availableForBooking:
+        "د رزرف لپاره خلاص",
+
+      workingHours:
+        "کاري ساعتونه",
+
+      workingHoursSubtitle:
+        "ستاسو عادي مسلکي کاري مهال‌وېش",
+
+      workingDays:
+        "کاري ورځې",
+
+      dailyHours:
+        "ورځني ساعتونه",
+
+      slotDuration:
+        "د وخت موده",
+
+      sameDayRequests:
+        "د همدې ورځې غوښتنې",
+
+      enabled: "فعال",
+
+      disabled: "غیرفعال",
+
+      noScheduleTitle:
+        "د دې ورځې مهال‌وېش نشته",
+
+      noScheduleSubtitle:
+        "د دې ورځې لپاره کاري ساعتونه یا راتلونکي رزرفونه نه دي ثبت شوي.",
+
+      noticeTitle:
+        "خپل مهال‌وېش تازه وساتئ",
+
+      noticeText:
+        "دقیق خالي وختونه او کاري ساعتونه د هم‌مهاله رزرفونو او ځنډ مخه نیسي.",
+
+      unknown: "نامعلوم",
+
+      fullDate:
+        (
+          weekday: string,
+          day: string,
+          month: string,
+        ) =>
+          `${weekday}، ${day} ${month}`,
+
+      timeRange:
+        (
+          start: string,
+          end: string,
+        ) =>
+          `${start} تر ${end}`,
+
+      minutes:
+        (value: string) =>
+          `${value} دقیقې`,
+
+      scheduleSummary:
+        (
+          occupied: string,
+          free: string,
+        ) =>
+          `${occupied} رزرفونه او ${free} خالي وختونه`,
+
+      bookingReference:
+        (value: string) =>
+          `رزرف ${value}`,
+    };
+  }
+
+  return {
+    eyebrow: "Work schedule",
+
+    title: "Calendar",
+
+    subtitle:
+      "Manage your bookings, available slots and normal working schedule.",
+
+    selectedDay:
+      "Selected day",
+
+    bookings: "bookings",
+
+    chooseDay:
+      "Choose a day",
+
+    nextFourteenDays:
+      "Your next fourteen days",
+
+    confirmed: "Confirmed",
+
+    pending: "Pending",
+
+    freeSlots:
+      "Free slots",
+
+    expectedRevenue:
+      "Expected revenue",
+
+    dailySchedule:
+      "Daily schedule",
+
+    booked: "Booked",
+
+    temporary:
+      "Unavailable",
+
+    available: "Available",
+
+    availableForBooking:
+      "Open for booking",
+
+    workingHours:
+      "Working hours",
+
+    workingHoursSubtitle:
+      "Your normal professional schedule",
+
+    workingDays:
+      "Working days",
+
+    dailyHours:
+      "Daily hours",
+
+    slotDuration:
+      "Slot duration",
+
+    sameDayRequests:
+      "Same-day requests",
+
+    enabled: "Enabled",
+
+    disabled: "Disabled",
+
+    noScheduleTitle:
+      "No schedule for this day",
+
+    noScheduleSubtitle:
+      "No working hours or upcoming bookings are available for this date.",
+
+    noticeTitle:
+      "Keep your schedule updated",
+
+    noticeText:
+      "Accurate availability and working hours help prevent overlapping bookings and delayed responses.",
+
+    unknown: "Unknown",
+
+    fullDate:
+      (
+        weekday: string,
+        day: string,
+        month: string,
+      ) =>
+        `${weekday}, ${month} ${day}`,
+
+    timeRange:
+      (
+        start: string,
+        end: string,
+      ) =>
+        `${start} to ${end}`,
+
+    minutes:
+      (value: string) =>
+        `${value} minutes`,
+
+    scheduleSummary:
+      (
+        occupied: string,
+        free: string,
+      ) =>
+        `${occupied} bookings and ${free} free slots`,
+
+    bookingReference:
+      (value: string) =>
+        `Booking ${value}`,
+  };
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor:
+      KhedmatPalette.blue050,
   },
 
   scrollContent: {
     width: "100%",
-    maxWidth: Layout.contentMaxWidth,
+    maxWidth:
+      Layout.contentMaxWidth,
     alignSelf: "center",
     paddingHorizontal:
       Layout.screenPadding,
@@ -1096,115 +3107,122 @@ const styles = StyleSheet.create({
 
   header: {
     width: "100%",
-    alignItems: "flex-end",
     gap: Spacing.xs,
   },
 
   eyebrow: {
     ...Typography.captionStyle,
     width: "100%",
-    color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.blue500,
+    fontFamily: Fonts.medium,
   },
 
   title: {
     ...Typography.screenTitle,
     width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 28,
-    lineHeight: 35,
+    color:
+      KhedmatPalette.textPrimary,
+    fontSize: 27,
+    lineHeight: 34,
   },
 
   subtitle: {
     ...Typography.bodyStyle,
     width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    maxWidth:
+      Layout.readableTextMaxWidth,
+    color:
+      KhedmatPalette.textSecondary,
   },
 
   selectedDateCard: {
     width: "100%",
-    marginTop: Spacing.xxl,
-  },
-
-  selectedDateContent: {
     minHeight: 112,
-    flexDirection: "row-reverse",
+    marginTop: Spacing.xxl,
+    padding: Spacing.lg,
     alignItems: "center",
     gap: Spacing.md,
-    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    borderRadius: Radius.xl,
+    backgroundColor:
+      KhedmatPalette.surface,
+    ...Shadows.small,
   },
 
   selectedDateIcon: {
-    width: 52,
-    height: 52,
+    width: 54,
+    height: 54,
     flexShrink: 0,
     borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor:
-      Colors.primarySoft,
+      KhedmatPalette.surfaceSoft,
   },
 
   selectedDateCopy: {
     flex: 1,
-    alignItems: "flex-end",
     gap: 3,
   },
 
   selectedDateLabel: {
     ...Typography.captionStyle,
     width: "100%",
-    color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textMuted,
   },
 
   selectedDateTitle: {
     ...Typography.sectionTitle,
     width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textPrimary,
     fontSize: 19,
     lineHeight: 25,
   },
 
+  workingTimeRow: {
+    width: "100%",
+    alignItems: "center",
+    gap: 5,
+  },
+
   selectedDateSubtitle: {
     ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    flex: 1,
+    color:
+      KhedmatPalette.textSecondary,
   },
 
   selectedDateCount: {
-    width: 54,
-    height: 54,
+    minWidth: 58,
+    minHeight: 58,
     flexShrink: 0,
-    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor:
-      Colors.glassStrong,
+      KhedmatPalette.navy900,
   },
 
   selectedDateCountValue: {
-    color: Colors.primary,
-    fontSize: 18,
-    lineHeight: 22,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
+    color:
+      KhedmatPalette.white,
+    fontSize: 20,
+    lineHeight: 24,
   },
 
   selectedDateCountLabel: {
     ...Typography.captionStyle,
-    color: Colors.textTertiary,
+    color:
+      "rgba(255,255,255,0.76)",
     fontSize: 9,
-    writingDirection: "rtl",
+    textAlign: "center",
   },
 
   section: {
@@ -1215,140 +3233,233 @@ const styles = StyleSheet.create({
 
   sectionHeader: {
     width: "100%",
-    flexDirection: "row-reverse",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent:
+      "space-between",
     gap: Spacing.md,
+  },
+
+  scheduleSectionHeader: {
+    width: "100%",
+    alignItems: "flex-start",
+    justifyContent:
+      "space-between",
+    gap: Spacing.md,
+  },
+
+  sectionHeaderCopy: {
+    flex: 1,
+    gap: 2,
   },
 
   sectionTitle: {
     ...Typography.sectionTitle,
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    width: "100%",
+    color:
+      KhedmatPalette.textPrimary,
     fontSize: 21,
+    lineHeight: 28,
   },
 
   sectionSubtitle: {
     ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    textAlign: "left",
-    writingDirection: "rtl",
+    width: "100%",
+    color:
+      KhedmatPalette.textMuted,
+    lineHeight: 18,
+  },
+
+  calendarRangeBadge: {
+    minWidth: 48,
+    height: 38,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingHorizontal: Spacing.sm,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    borderRadius: Radius.lg,
+    backgroundColor:
+      KhedmatPalette.surface,
+  },
+
+  calendarRangeText: {
+    fontFamily: Fonts.bold,
+    color:
+      KhedmatPalette.blue500,
+    fontSize: 13,
   },
 
   datesRow: {
-    flexDirection: "row-reverse",
     gap: Spacing.sm,
     paddingHorizontal: 1,
-  },
-
-  datePressable: {
-    width: 100,
-    borderRadius: Radius.xl,
+    paddingBottom: Spacing.sm,
   },
 
   dateCard: {
-    width: "100%",
-  },
-
-  selectedDateOption: {
+    width: 84,
+    minHeight: 142,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    alignItems: "center",
+    justifyContent:
+      "space-between",
+    borderWidth: 1,
     borderColor:
-      "rgba(76, 141, 255, 0.54)",
+      KhedmatPalette.border,
+    borderRadius: Radius.xl,
     backgroundColor:
-      "rgba(76, 141, 255, 0.10)",
+      KhedmatPalette.surface,
+    ...Shadows.small,
   },
 
-  dateContent: {
-    minHeight: 146,
+  dateCardSelected: {
+    borderColor:
+      KhedmatPalette.navy900,
+    backgroundColor:
+      KhedmatPalette.navy900,
+  },
+
+  relativeBadge: {
+    minHeight: 22,
+    paddingHorizontal: 7,
+    borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    gap: 3,
-    padding: Spacing.md,
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
+  },
+
+  relativeBadgeSelected: {
+    backgroundColor:
+      "rgba(255,255,255,0.15)",
+  },
+
+  relativeBadgePlaceholder: {
+    height: 22,
   },
 
   relativeLabel: {
     ...Typography.captionStyle,
-    color: Colors.primary,
-    fontSize: 10,
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.blue500,
+    fontSize: 9,
+    fontFamily: Fonts.medium,
+  },
+
+  relativeLabelSelected: {
+    color:
+      KhedmatPalette.white,
   },
 
   weekday: {
     ...Typography.captionStyle,
-    color: Colors.textSecondary,
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textSecondary,
+    fontSize: 11,
+    textAlign: "center",
   },
 
   dayNumber: {
-    color: Colors.textPrimary,
-    fontSize: 27,
-    lineHeight: 34,
-    fontWeight: "700",
+    fontFamily: Fonts.bold,
+    color:
+      KhedmatPalette.textPrimary,
+    fontSize: 25,
+    lineHeight: 30,
+  },
+
+  dayNumberSelected: {
+    color:
+      KhedmatPalette.white,
   },
 
   month: {
     ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textMuted,
+    fontSize: 10,
+    textAlign: "center",
   },
 
-  selectedDateText: {
-    color: "#DCE9FF",
-  },
-
-  selectedDayNumber: {
-    color: Colors.white,
+  dateTextSelected: {
+    color:
+      "rgba(255,255,255,0.82)",
   },
 
   bookingCountBadge: {
-    minWidth: 24,
-    height: 24,
-    marginTop: Spacing.xs,
-    paddingHorizontal: 5,
+    minWidth: 25,
+    height: 25,
+    paddingHorizontal: 6,
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.glass,
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
   },
 
   bookingCountBadgeActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor:
+      INFO_SOFT,
+  },
+
+  bookingCountBadgeSelected: {
+    backgroundColor:
+      "rgba(255,255,255,0.17)",
   },
 
   bookingCountText: {
-    color: Colors.textTertiary,
+    fontFamily: Fonts.medium,
+    color:
+      KhedmatPalette.textMuted,
     fontSize: 10,
-    fontWeight: "700",
   },
 
   bookingCountTextActive: {
-    color: Colors.white,
+    color:
+      KhedmatPalette.blue500,
+  },
+
+  bookingCountTextSelected: {
+    color:
+      KhedmatPalette.white,
   },
 
   metricsGrid: {
     width: "100%",
-    marginTop: Spacing.xl,
-    flexDirection: "row-reverse",
+    marginTop: Spacing.lg,
+    flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    justifyContent:
+      "space-between",
     rowGap: Spacing.sm,
   },
 
   metricCard: {
-    width: "48.5%",
-  },
-
-  metricContent: {
-    minHeight: 128,
+    width: "48.7%",
+    minHeight: 132,
+    padding: Spacing.md,
     alignItems: "center",
     justifyContent: "center",
     gap: Spacing.sm,
-    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    borderRadius: Radius.xl,
+    backgroundColor:
+      KhedmatPalette.surface,
+    ...Shadows.small,
+  },
+
+  metricCardCompact: {
+    minHeight: 124,
+    paddingHorizontal: Spacing.sm,
   },
 
   metricIcon: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: Radius.md,
     alignItems: "center",
     justifyContent: "center",
@@ -1357,43 +3468,45 @@ const styles = StyleSheet.create({
   metricValue: {
     ...Typography.sectionTitle,
     width: "100%",
-    color: Colors.textPrimary,
+    color:
+      KhedmatPalette.textPrimary,
     textAlign: "center",
-    writingDirection: "rtl",
     fontSize: 18,
+    lineHeight: 24,
   },
 
   metricLabel: {
     ...Typography.captionStyle,
     width: "100%",
-    color: Colors.textTertiary,
+    color:
+      KhedmatPalette.textMuted,
     textAlign: "center",
-    writingDirection: "rtl",
+    lineHeight: 17,
   },
 
   legend: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
+    maxWidth: 160,
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
     gap: Spacing.sm,
   },
 
   legendItem: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 4,
   },
 
   legendDot: {
-    width: 6,
-    height: 6,
+    width: 8,
+    height: 8,
     borderRadius: Radius.pill,
   },
 
   legendText: {
     ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    fontSize: 10,
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textMuted,
+    fontSize: 9,
   },
 
   scheduleList: {
@@ -1402,281 +3515,421 @@ const styles = StyleSheet.create({
 
   scheduleRow: {
     width: "100%",
-    minHeight: 102,
-    flexDirection: "row-reverse",
     alignItems: "stretch",
-    gap: Spacing.md,
   },
 
-  timeColumn: {
-    width: 74,
+  scheduleTimeColumn: {
+    width: 65,
+    flexShrink: 0,
+    paddingTop: 5,
+  },
+
+  scheduleTime: {
+    ...Typography.label,
+    width: "100%",
+    color:
+      KhedmatPalette.textPrimary,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+
+  scheduleEndTime: {
+    ...Typography.captionStyle,
+    width: "100%",
+    marginTop: 2,
+    color:
+      KhedmatPalette.textMuted,
+    fontSize: 9,
+  },
+
+  timelineColumn: {
+    width: 25,
     flexShrink: 0,
     alignItems: "center",
   },
 
-  timeLabel: {
-    ...Typography.captionStyle,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-
   timelineDot: {
-    width: 11,
-    height: 11,
-    marginTop: Spacing.sm,
+    width: 17,
+    height: 17,
+    zIndex: 2,
+    borderWidth: 3,
     borderRadius: Radius.pill,
-    borderWidth: 2,
-    borderColor: Colors.background,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  timelineDotFree: {
-    backgroundColor: Colors.primary,
-  },
-
-  timelineDotUnavailable: {
-    backgroundColor: Colors.textMuted,
+  timelineDotInner: {
+    width: 5,
+    height: 5,
+    borderRadius: Radius.pill,
+    backgroundColor:
+      KhedmatPalette.white,
   },
 
   timelineLine: {
     width: 2,
     flex: 1,
-    minHeight: 42,
-    backgroundColor: Colors.separator,
+    minHeight: 94,
+    marginTop: -1,
+  },
+
+  scheduleContent: {
+    flex: 1,
+    paddingBottom: Spacing.md,
   },
 
   bookingCard: {
-    flex: 1,
-    marginBottom: Spacing.md,
-  },
-
-  bookingContent: {
-    minHeight: 94,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
+    width: "100%",
     padding: Spacing.md,
+    borderWidth: 1,
+    borderRadius: Radius.xl,
+    backgroundColor:
+      KhedmatPalette.surface,
+    ...Shadows.small,
   },
 
-  bookingIcon: {
+  bookingCardHeader: {
+    width: "100%",
+    alignItems: "flex-start",
+    gap: Spacing.sm,
+  },
+
+  serviceIcon: {
     width: 44,
     height: 44,
     flexShrink: 0,
     borderRadius: Radius.md,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.glass,
   },
 
-  bookingCopy: {
+  bookingCardCopy: {
     flex: 1,
-    alignItems: "flex-end",
-    gap: 3,
+    gap: 2,
   },
 
-  bookingTitle: {
+  bookingServiceName: {
     ...Typography.label,
     width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 16,
+    color:
+      KhedmatPalette.textPrimary,
+    fontSize: 15,
+    lineHeight: 21,
   },
 
-  bookingLocation: {
+  bookingReference: {
     ...Typography.captionStyle,
     width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textMuted,
+    fontSize: 10,
   },
 
-  bookingMeta: {
-    width: "100%",
-    marginTop: 2,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing.sm,
-  },
-
-  bookingPrice: {
-    ...Typography.captionStyle,
-    color: Colors.primary,
-    writingDirection: "rtl",
-    fontWeight: "600",
-  },
-
-  bookingStatus: {
+  bookingStatusBadge: {
+    maxWidth: 104,
+    flexShrink: 0,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: Radius.pill,
   },
 
   bookingStatusText: {
     ...Typography.captionStyle,
+    fontFamily: Fonts.medium,
     fontSize: 9,
-    writingDirection: "rtl",
+    textAlign: "center",
   },
 
-  freeSlotCard: {
+  bookingMetaRow: {
+    width: "100%",
+    marginTop: Spacing.md,
+    flexWrap: "wrap",
+    gap: Spacing.md,
+  },
+
+  bookingMeta: {
+    maxWidth: "48%",
+    alignItems: "center",
+    gap: 4,
+  },
+
+  bookingMetaText: {
+    ...Typography.captionStyle,
+    flexShrink: 1,
+    color:
+      KhedmatPalette.textSecondary,
+    fontSize: 10,
+  },
+
+  bookingAddressRow: {
+    width: "100%",
+    marginTop: Spacing.sm,
+    alignItems: "flex-start",
+    gap: 5,
+  },
+
+  bookingAddress: {
+    ...Typography.captionStyle,
     flex: 1,
-    marginBottom: Spacing.md,
+    color:
+      KhedmatPalette.textMuted,
+    lineHeight: 17,
+  },
+
+  bookingNotes: {
+    width: "100%",
+    marginTop: Spacing.sm,
+    padding: Spacing.sm,
+    alignItems: "flex-start",
+    gap: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
+  },
+
+  bookingNotesText: {
+    ...Typography.captionStyle,
+    flex: 1,
+    color:
+      KhedmatPalette.textSecondary,
+    lineHeight: 18,
+  },
+
+  emptySlotCard: {
+    width: "100%",
+    minHeight: 92,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderRadius: Radius.xl,
+  },
+
+  availableSlotCard: {
+    borderColor:
+      KhedmatPalette.blue200,
+    backgroundColor: "#F4FBFC",
   },
 
   unavailableSlotCard: {
-    opacity: 0.46,
+    borderColor: "#E5C875",
+    backgroundColor: "#FFFDF6",
   },
 
-  freeSlotContent: {
-    minHeight: 82,
-    flexDirection: "row-reverse",
+  emptySlotTopRow: {
+    width: "100%",
     alignItems: "center",
     gap: Spacing.md,
-    padding: Spacing.md,
   },
 
-  freeSlotCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: 3,
-  },
-
-  freeSlotTitle: {
-    ...Typography.label,
-    width: "100%",
-    color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  unavailableSlotText: {
-    color: Colors.textMuted,
-  },
-
-  freeSlotSubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  workingHoursCard: {
-    width: "100%",
-    marginTop: Spacing.section,
-  },
-
-  workingHoursContent: {
-    minHeight: 106,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  workingHoursIcon: {
-    width: 48,
-    height: 48,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor:
-      Colors.primarySoft,
-  },
-
-  workingHoursCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: 3,
-  },
-
-  workingHoursTitle: {
-    ...Typography.label,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  workingHoursSubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  workingHoursTime: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontWeight: "600",
-  },
-
-  scheduleStatusBadge: {
-    minHeight: 30,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: Radius.pill,
-    backgroundColor:
-      "rgba(48, 183, 106, 0.10)",
-  },
-
-  scheduleStatusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.success,
-  },
-
-  scheduleStatusText: {
-    ...Typography.captionStyle,
-    color: Colors.success,
-    fontSize: 10,
-    writingDirection: "rtl",
-  },
-
-  noticeCard: {
-    width: "100%",
-    marginTop: Spacing.lg,
-  },
-
-  noticeContent: {
-    minHeight: 90,
-    flexDirection: "row-reverse",
-    alignItems: "flex-start",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  noticeIcon: {
+  emptySlotIcon: {
     width: 42,
     height: 42,
     flexShrink: 0,
     borderRadius: Radius.md,
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  emptySlotCopy: {
+    flex: 1,
+    gap: 2,
+  },
+
+  emptySlotTitle: {
+    ...Typography.label,
+    width: "100%",
+    fontSize: 14,
+  },
+
+  emptySlotSubtitle: {
+    ...Typography.captionStyle,
+    width: "100%",
+    color:
+      KhedmatPalette.textMuted,
+    lineHeight: 17,
+  },
+
+  availableSlotBadge: {
+    marginTop: Spacing.sm,
+    alignItems: "center",
+    gap: 5,
+  },
+
+  availableSlotBadgeText: {
+    ...Typography.captionStyle,
+    color: SUCCESS,
+    fontFamily: Fonts.medium,
+    fontSize: 10,
+  },
+
+  workingHoursIcon: {
+    width: 44,
+    height: 44,
+    flexShrink: 0,
+    borderRadius: Radius.lg,
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor:
-      Colors.primarySoft,
+      KhedmatPalette.surface,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+  },
+
+  workingHoursCard: {
+    width: "100%",
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    borderRadius: Radius.xl,
+    backgroundColor:
+      KhedmatPalette.surface,
+    ...Shadows.small,
+  },
+
+  workingHoursRow: {
+    width: "100%",
+    alignItems: "center",
+    gap: Spacing.md,
+  },
+
+  workingHoursRowIcon: {
+    width: 40,
+    height: 40,
+    flexShrink: 0,
+    borderRadius: Radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
+  },
+
+  workingHoursRowCopy: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent:
+      "space-between",
+    gap: Spacing.md,
+  },
+
+  workingHoursLabel: {
+    ...Typography.captionStyle,
+    flex: 1,
+    color:
+      KhedmatPalette.textMuted,
+  },
+
+  workingHoursValue: {
+    ...Typography.label,
+    maxWidth: "58%",
+    color:
+      KhedmatPalette.textPrimary,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+
+  workingHoursDivider: {
+    width: "100%",
+    height:
+      StyleSheet.hairlineWidth,
+    marginVertical: Spacing.md,
+    backgroundColor:
+      KhedmatPalette.border,
+  },
+
+  emptySchedule: {
+    width: "100%",
+    minHeight: 270,
+    padding: Spacing.xl,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.md,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    borderRadius: Radius.xl,
+    backgroundColor:
+      KhedmatPalette.surface,
+  },
+
+  emptyScheduleIcon: {
+    width: 74,
+    height: 74,
+    borderRadius: Radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
+  },
+
+  emptyScheduleTitle: {
+    ...Typography.sectionTitle,
+    maxWidth: 340,
+    color:
+      KhedmatPalette.textPrimary,
+    textAlign: "center",
+    fontSize: 19,
+  },
+
+  emptyScheduleSubtitle: {
+    ...Typography.bodyStyle,
+    maxWidth: 350,
+    color:
+      KhedmatPalette.textSecondary,
+    textAlign: "center",
+  },
+
+  noticeCard: {
+    width: "100%",
+    minHeight: 108,
+    marginTop: Spacing.section,
+    padding: Spacing.lg,
+    alignItems: "center",
+    gap: Spacing.md,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.blue200,
+    borderRadius: Radius.xl,
+    backgroundColor: "#F4FBFC",
+  },
+
+  noticeIcon: {
+    width: 46,
+    height: 46,
+    flexShrink: 0,
+    borderRadius: Radius.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.surface,
+  },
+
+  noticeCopy: {
+    flex: 1,
+    gap: 3,
+  },
+
+  noticeTitle: {
+    ...Typography.label,
+    width: "100%",
+    color:
+      KhedmatPalette.textPrimary,
   },
 
   noticeText: {
     ...Typography.captionStyle,
-    flex: 1,
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    lineHeight: 20,
+    width: "100%",
+    color:
+      KhedmatPalette.textSecondary,
+    lineHeight: 19,
   },
 
   cardPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.992 }],
+    opacity: 0.88,
+    transform: [
+      {
+        scale: 0.99,
+      },
+    ],
   },
 });

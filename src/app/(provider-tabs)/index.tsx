@@ -1,287 +1,520 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ComponentProps, useMemo, useState } from "react";
 import {
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ComponentProps,
+  useMemo,
+  useState,
+} from "react";
+import {
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
 } from "react-native";
-import { useSession } from "../../context/session-context";
 
-import { GlassSurface } from "../../components/glass/glass-surface";
 import {
-    Colors,
-    Layout,
-    Radius,
-    Shadows,
-    Spacing,
-    Typography,
+  Fonts,
+  KhedmatPalette,
+  Layout,
+  Radius,
+  Shadows,
+  Spacing,
+  Typography,
 } from "../../constants/theme";
 import {
-    BookingRecord,
-    useBooking,
+  BookingRecord,
+  useBooking,
 } from "../../context/booking-context";
+import { useLanguage } from "../../context/languagecontext";
+import { useSession } from "../../context/session-context";
 import { getProviderById } from "../../data/providers";
 
 type IconName =
   ComponentProps<typeof Ionicons>["name"];
 
+type LanguageName =
+  | "English"
+  | "Dari"
+  | "Pashto";
+
+type ProviderRoute =
+  | "/(provider-tabs)/requests"
+  | "/(provider-tabs)/calendar"
+  | "/(provider-tabs)/messages"
+  | "/(provider-tabs)/profile";
+
+type DashboardActionId =
+  | "requests"
+  | "calendar"
+  | "messages"
+  | "profile";
+
 type DashboardAction = {
-  id: string;
+  id: DashboardActionId;
   title: string;
   subtitle: string;
   icon: IconName;
-  route:
-    | "/(provider-tabs)/requests"
-    | "/(provider-tabs)/calendar"
-    | "/(provider-tabs)/messages"
-    | "/(provider-tabs)/profile";
+  route: ProviderRoute;
 };
 
-const quickActions: DashboardAction[] = [
-  {
-    id: "requests",
-    title: "درخواست‌ها",
-    subtitle: "بررسی کارهای جدید",
-    icon: "briefcase-outline",
-    route: "/(provider-tabs)/requests",
-  },
-  {
-    id: "calendar",
-    title: "تقویم کاری",
-    subtitle: "مدیریت برنامه",
-    icon: "calendar-outline",
-    route: "/(provider-tabs)/calendar",
-  },
-  {
-    id: "messages",
-    title: "پیام‌ها",
-    subtitle: "گفتگو با مشتریان",
-    icon: "chatbubble-outline",
-    route: "/(provider-tabs)/messages",
-  },
-  {
-    id: "profile",
-    title: "پروفایل حرفه‌ای",
-    subtitle: "خدمات و معلومات",
-    icon: "person-outline",
-    route: "/(provider-tabs)/profile",
-  },
-];
+type DashboardCopy = ReturnType<
+  typeof getDashboardCopy
+>;
+
+const SUCCESS = "#268A57";
+const SUCCESS_SOFT = "#E8F6EE";
+
+const WARNING = "#9A6500";
+const WARNING_SOFT = "#FFF4D6";
+
+const ERROR = "#B3261E";
+const ERROR_SOFT = "#FCE8E6";
+
+const INFO_SOFT = "#E5F4F8";
 
 export default function ProviderDashboardScreen() {
   const router = useRouter();
-  const { bookings } = useBooking();
 
-  const { activeProviderId } = useSession();
+  const { width } =
+    useWindowDimensions();
+
+  const { bookings } =
+    useBooking();
+
+  const { activeProviderId } =
+    useSession();
+
+  const { language } =
+    useLanguage();
+
+  const activeLanguage =
+    normalizeLanguage(language);
+
+  const isRtl =
+    activeLanguage === "Dari" ||
+    activeLanguage === "Pashto";
+
+  const copy =
+    getDashboardCopy(
+      activeLanguage,
+    );
 
   const providerId =
-    activeProviderId ?? "provider-1";
+    activeProviderId ??
+    "provider-1";
 
-  const [availableNow, setAvailableNow] =
-    useState(true);
+  const [
+    availableNow,
+    setAvailableNow,
+  ] = useState(true);
 
   const provider = useMemo(
     () =>
       getProviderById(providerId) ??
-      getProviderById("provider-1")!,
+      getProviderById(
+        "provider-1",
+      )!,
     [providerId],
   );
 
-  const providerBookings = useMemo(
-    () =>
-      bookings.filter(
-        (booking) =>
-          booking.providerId === provider.id,
-      ),
-    [bookings, provider.id],
-  );
+  const providerBookings =
+    useMemo(
+      () =>
+        bookings.filter(
+          (booking) =>
+            booking.providerId ===
+            provider.id,
+        ),
+      [bookings, provider.id],
+    );
 
-  const pendingBookings = useMemo(
-    () =>
-      providerBookings.filter(
-        (booking) =>
-          booking.status === "pending",
-      ),
-    [providerBookings],
-  );
+  const pendingBookings =
+    useMemo(
+      () =>
+        providerBookings.filter(
+          (booking) =>
+            booking.status ===
+            "pending",
+        ),
+      [providerBookings],
+    );
 
-  const activeBookings = useMemo(
-    () =>
-      providerBookings.filter(
-        (booking) =>
-          booking.status === "confirmed" ||
-          booking.status === "in-progress",
-      ),
-    [providerBookings],
-  );
+  const activeBookings =
+    useMemo(
+      () =>
+        providerBookings.filter(
+          (booking) =>
+            booking.status ===
+              "confirmed" ||
+            booking.status ===
+              "in-progress",
+        ),
+      [providerBookings],
+    );
 
-  const completedBookings = useMemo(
-    () =>
-      providerBookings.filter(
-        (booking) =>
-          booking.status === "completed",
-      ),
-    [providerBookings],
-  );
+  const completedBookings =
+    useMemo(
+      () =>
+        providerBookings.filter(
+          (booking) =>
+            booking.status ===
+            "completed",
+        ),
+      [providerBookings],
+    );
 
-  const todayBookings = useMemo(() => {
-    const todayId = formatDateId(new Date());
+  const todayBookings =
+    useMemo(() => {
+      const todayId =
+        formatDateId(new Date());
 
-    return providerBookings
-      .filter(
-        (booking) =>
-          booking.date === todayId &&
-          booking.status !== "cancelled",
-      )
-      .sort((first, second) =>
-        first.time.localeCompare(second.time),
-      );
-  }, [providerBookings]);
-
-  const upcomingBookings = useMemo(
-    () =>
-      providerBookings
+      return providerBookings
         .filter(
           (booking) =>
-            booking.status === "confirmed" ||
-            booking.status === "pending",
+            booking.date ===
+              todayId &&
+            booking.status !==
+              "cancelled",
         )
         .sort((first, second) =>
-          `${first.date}-${first.time}`.localeCompare(
-            `${second.date}-${second.time}`,
+          first.time.localeCompare(
+            second.time,
           ),
-        )
-        .slice(0, 3),
-    [providerBookings],
-  );
+        );
+    }, [providerBookings]);
 
-  const completedRevenue = useMemo(
-    () =>
-      completedBookings.reduce(
-        (total, booking) =>
-          total + booking.servicePrice,
-        0,
-      ),
-    [completedBookings],
-  );
+  const upcomingBookings =
+    useMemo(
+      () =>
+        providerBookings
+          .filter(
+            (booking) =>
+              booking.status ===
+                "confirmed" ||
+              booking.status ===
+                "pending",
+          )
+          .sort(
+            (
+              first,
+              second,
+            ) =>
+              `${first.date}-${first.time}`.localeCompare(
+                `${second.date}-${second.time}`,
+              ),
+          )
+          .slice(0, 3),
+      [providerBookings],
+    );
 
-  const todayRevenue = useMemo(
-    () =>
-      todayBookings
-        .filter(
-          (booking) =>
-            booking.status === "completed",
-        )
-        .reduce(
+  const completedRevenue =
+    useMemo(
+      () =>
+        completedBookings.reduce(
           (total, booking) =>
-            total + booking.servicePrice,
+            total +
+            booking.servicePrice,
           0,
         ),
-    [todayBookings],
-  );
+      [completedBookings],
+    );
+
+  const todayRevenue =
+    useMemo(
+      () =>
+        todayBookings
+          .filter(
+            (booking) =>
+              booking.status ===
+              "completed",
+          )
+          .reduce(
+            (total, booking) =>
+              total +
+              booking.servicePrice,
+            0,
+          ),
+      [todayBookings],
+    );
+
+  const actions =
+    useMemo<DashboardAction[]>(
+      () => [
+        {
+          id: "requests",
+          title:
+            copy.quickRequests,
+          subtitle:
+            copy.quickRequestsSubtitle,
+          icon:
+            "briefcase-outline",
+          route:
+            "/(provider-tabs)/requests",
+        },
+        {
+          id: "calendar",
+          title:
+            copy.quickCalendar,
+          subtitle:
+            copy.quickCalendarSubtitle,
+          icon:
+            "calendar-outline",
+          route:
+            "/(provider-tabs)/calendar",
+        },
+        {
+          id: "messages",
+          title:
+            copy.quickMessages,
+          subtitle:
+            copy.quickMessagesSubtitle,
+          icon:
+            "chatbubble-outline",
+          route:
+            "/(provider-tabs)/messages",
+        },
+        {
+          id: "profile",
+          title:
+            copy.quickProfile,
+          subtitle:
+            copy.quickProfileSubtitle,
+          icon:
+            "person-outline",
+          route:
+            "/(provider-tabs)/profile",
+        },
+      ],
+      [copy],
+    );
+
+  const compactLayout =
+    width < 370;
+
+  const localizedDigits =
+    activeLanguage !== "English";
 
   const openRoute = (
-    route: DashboardAction["route"],
+    route: ProviderRoute,
   ) => {
     router.push(route);
   };
 
+  const getActionBadge = (
+    actionId: DashboardActionId,
+  ) => {
+    if (
+      actionId === "requests"
+    ) {
+      return pendingBookings.length;
+    }
+
+    if (
+      actionId === "messages"
+    ) {
+      return activeBookings.length;
+    }
+
+    return 0;
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={styles.safeArea}
+    >
       <ScrollView
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={
+          false
+        }
         contentContainerStyle={
           styles.scrollContent
         }
       >
-        <View style={styles.header}>
-          <View style={styles.headerTopRow}>
+        <View
+          style={[
+            styles.topBar,
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.identity,
+              {
+                flexDirection: isRtl
+                  ? "row-reverse"
+                  : "row",
+              },
+            ]}
+          >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="اعلان‌ها"
-              onPress={() => {
-                console.log(
-                  "Open provider notifications",
-                );
-              }}
+              accessibilityLabel={
+                copy.openProfile
+              }
+              onPress={() =>
+                openRoute(
+                  "/(provider-tabs)/profile",
+                )
+              }
               style={({ pressed }) => [
-                styles.notificationPressable,
-                pressed && styles.pressed,
+                styles.providerAvatar,
+                pressed &&
+                  styles.pressed,
               ]}
             >
-              <GlassSurface
-                variant="regular"
-                radius={Radius.pill}
+              <Text
                 style={
-                  styles.notificationSurface
-                }
-                contentStyle={
-                  styles.notificationContent
+                  styles.providerInitials
                 }
               >
-                <Ionicons
-                  name="notifications-outline"
-                  size={22}
-                  color={Colors.textSecondary}
-                />
+                {getInitials(
+                  provider.name,
+                )}
+              </Text>
 
-                {pendingBookings.length > 0 ? (
-                  <View
-                    style={
-                      styles.notificationBadge
+              {provider.verified ? (
+                <View
+                  style={
+                    styles.verifiedBadge
+                  }
+                >
+                  <Ionicons
+                    name="checkmark"
+                    size={10}
+                    color={
+                      KhedmatPalette.white
                     }
-                  >
-                    <Text
-                      style={
-                        styles.notificationBadgeText
-                      }
-                    >
-                      {toDariDigits(
-                        pendingBookings.length.toString(),
-                      )}
-                    </Text>
-                  </View>
-                ) : null}
-              </GlassSurface>
+                  />
+                </View>
+              ) : null}
             </Pressable>
 
-            <View style={styles.headerCopy}>
-              <Text style={styles.eyebrow}>
-                پنل ارائه‌دهنده
+            <View
+              style={[
+                styles.identityCopy,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.eyebrow,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.eyebrow}
               </Text>
 
-              <Text style={styles.title}>
-                سلام، {provider.name}
-              </Text>
-
-              <Text style={styles.subtitle}>
-                کارها، درخواست‌ها و برنامهٔ امروز
-                خود را مدیریت کنید.
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.greeting,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.greeting},{" "}
+                {provider.name}
               </Text>
             </View>
           </View>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              copy.notifications
+            }
+            onPress={() => {
+              console.log(
+                "Open provider notifications",
+              );
+            }}
+            style={({ pressed }) => [
+              styles.notificationButton,
+              pressed &&
+                styles.pressed,
+            ]}
+          >
+            <Ionicons
+              name="notifications-outline"
+              size={22}
+              color={
+                KhedmatPalette
+                  .navy900
+              }
+            />
+
+            {pendingBookings.length >
+            0 ? (
+              <View
+                style={
+                  styles.notificationBadge
+                }
+              >
+                <Text
+                  style={
+                    styles.notificationBadgeText
+                  }
+                >
+                  {formatDigits(
+                    pendingBookings.length.toString(),
+                    localizedDigits,
+                  )}
+                </Text>
+              </View>
+            ) : null}
+          </Pressable>
         </View>
 
-        <GlassSurface
-          variant="prominent"
-          radius={Radius.xl}
+        <View style={styles.hero}>
+          <Text
+            style={[
+              styles.heroTitle,
+              directionStyle(isRtl),
+            ]}
+          >
+            {copy.heroTitle}
+          </Text>
+
+          <Text
+            style={[
+              styles.heroSubtitle,
+              directionStyle(isRtl),
+            ]}
+          >
+            {copy.heroSubtitle}
+          </Text>
+        </View>
+
+        <View
           style={[
             styles.availabilityCard,
-            Shadows.small,
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
           ]}
-          contentStyle={
-            styles.availabilityContent
-          }
         >
           <View
             style={[
               styles.availabilityIcon,
-              availableNow &&
-                styles.availabilityIconActive,
+              availableNow
+                ? styles.availabilityIconActive
+                : styles.availabilityIconInactive,
             ]}
           >
             <Ionicons
@@ -290,55 +523,83 @@ export default function ProviderDashboardScreen() {
                   ? "radio-outline"
                   : "pause-outline"
               }
-              size={24}
+              size={23}
               color={
                 availableNow
-                  ? Colors.white
-                  : Colors.textTertiary
+                  ? KhedmatPalette.white
+                  : KhedmatPalette
+                      .textMuted
               }
             />
           </View>
 
-          <View style={styles.availabilityCopy}>
+          <View
+            style={[
+              styles.availabilityCopy,
+              {
+                alignItems: isRtl
+                  ? "flex-end"
+                  : "flex-start",
+              },
+            ]}
+          >
             <Text
-              style={styles.availabilityLabel}
+              style={[
+                styles.availabilityLabel,
+                directionStyle(
+                  isRtl,
+                ),
+              ]}
             >
-              وضعیت فعلی
+              {copy.currentStatus}
             </Text>
 
             <Text
-              style={styles.availabilityTitle}
+              style={[
+                styles.availabilityTitle,
+                directionStyle(
+                  isRtl,
+                ),
+              ]}
             >
               {availableNow
-                ? "آمادهٔ دریافت کار"
-                : "موقتاً در دسترس نیستید"}
+                ? copy.availableTitle
+                : copy.unavailableTitle}
             </Text>
 
             <Text
-              style={
-                styles.availabilitySubtitle
-              }
+              style={[
+                styles.availabilitySubtitle,
+                directionStyle(
+                  isRtl,
+                ),
+              ]}
             >
               {availableNow
-                ? "مشتریان می‌توانند شما را در نتایج فعال ببینند."
-                : "تا فعال‌سازی دوباره، درخواست جدید دریافت نمی‌کنید."}
+                ? copy.availableSubtitle
+                : copy.unavailableSubtitle}
             </Text>
           </View>
 
           <Pressable
             accessibilityRole="switch"
-            accessibilityLabel="وضعیت آمادگی"
+            accessibilityLabel={
+              copy.availabilityControl
+            }
             accessibilityState={{
-              checked: availableNow,
+              checked:
+                availableNow,
             }}
             onPress={() =>
               setAvailableNow(
-                (current) => !current,
+                (current) =>
+                  !current,
               )
             }
             style={({ pressed }) => [
               styles.switchPressable,
-              pressed && styles.pressed,
+              pressed &&
+                styles.pressed,
             ]}
           >
             <View
@@ -351,72 +612,133 @@ export default function ProviderDashboardScreen() {
               <View
                 style={[
                   styles.switchThumb,
-                  availableNow &&
-                    styles.switchThumbActive,
+                  availableNow && {
+                    alignSelf: isRtl
+                      ? "flex-start"
+                      : "flex-end",
+                  },
                 ]}
               />
             </View>
           </Pressable>
-        </GlassSurface>
+        </View>
 
-        <View style={styles.metricsGrid}>
+        <View
+          style={
+            styles.metricsGrid
+          }
+        >
           <MetricCard
             icon="cash-outline"
-            label="درآمد امروز"
-            value={formatCurrency(todayRevenue)}
-            accentColor={Colors.success}
+            label={copy.todayRevenue}
+            value={formatCurrency(
+              todayRevenue,
+              activeLanguage,
+            )}
+            iconColor={SUCCESS}
+            iconBackground={
+              SUCCESS_SOFT
+            }
+            compact={compactLayout}
+            isRtl={isRtl}
           />
 
           <MetricCard
             icon="briefcase-outline"
-            label="کارهای امروز"
-            value={toDariDigits(
+            label={copy.todayJobs}
+            value={formatDigits(
               todayBookings.length.toString(),
+              localizedDigits,
             )}
-            accentColor={Colors.primary}
+            iconColor={
+              KhedmatPalette.blue500
+            }
+            iconBackground={
+              INFO_SOFT
+            }
+            compact={compactLayout}
+            isRtl={isRtl}
           />
 
           <MetricCard
             icon="time-outline"
-            label="درخواست جدید"
-            value={toDariDigits(
+            label={copy.newRequests}
+            value={formatDigits(
               pendingBookings.length.toString(),
+              localizedDigits,
             )}
-            accentColor={Colors.warning}
+            iconColor={WARNING}
+            iconBackground={
+              WARNING_SOFT
+            }
+            compact={compactLayout}
+            isRtl={isRtl}
           />
 
           <MetricCard
             icon="checkmark-circle-outline"
-            label="کار تکمیل‌شده"
-            value={toDariDigits(
+            label={copy.completedJobs}
+            value={formatDigits(
               completedBookings.length.toString(),
+              localizedDigits,
             )}
-            accentColor={Colors.secondary}
+            iconColor={
+              KhedmatPalette.navy700
+            }
+            iconBackground={
+              KhedmatPalette.blue050
+            }
+            compact={compactLayout}
+            isRtl={isRtl}
           />
         </View>
 
-        {pendingBookings.length > 0 ? (
-          <View style={styles.section}>
-            <SectionHeader
-              title="درخواست‌های جدید"
-              subtitle={`${toDariDigits(
-                pendingBookings.length.toString(),
-              )} درخواست منتظر پاسخ شما است.`}
-              actionLabel="مشاهده همه"
-              onPress={() =>
-                openRoute(
-                  "/(provider-tabs)/requests",
-                )
-              }
-            />
+        <View style={styles.section}>
+          <SectionHeader
+            title={copy.newRequestsTitle}
+            subtitle={
+              pendingBookings.length >
+              0
+                ? copy.newRequestsCount(
+                    formatDigits(
+                      pendingBookings.length.toString(),
+                      localizedDigits,
+                    ),
+                  )
+                : copy.noNewRequestsSubtitle
+            }
+            actionLabel={
+              pendingBookings.length >
+              0
+                ? copy.viewAll
+                : undefined
+            }
+            isRtl={isRtl}
+            onPress={() =>
+              openRoute(
+                "/(provider-tabs)/requests",
+              )
+            }
+          />
 
-            <View style={styles.requestList}>
+          {pendingBookings.length >
+          0 ? (
+            <View
+              style={
+                styles.requestList
+              }
+            >
               {pendingBookings
                 .slice(0, 2)
                 .map((booking) => (
                   <NewRequestCard
                     key={booking.id}
                     booking={booking}
+                    language={
+                      activeLanguage
+                    }
+                    isRtl={isRtl}
+                    copy={copy}
                     onPress={() =>
                       openRoute(
                         "/(provider-tabs)/requests",
@@ -425,74 +747,121 @@ export default function ProviderDashboardScreen() {
                   />
                 ))}
             </View>
-          </View>
-        ) : (
-          <GlassSurface
-            variant="regular"
-            radius={Radius.xl}
-            style={styles.noRequestsCard}
-            contentStyle={
-              styles.noRequestsContent
-            }
-          >
-            <View style={styles.noRequestsIcon}>
-              <Ionicons
-                name="checkmark-done-outline"
-                size={24}
-                color={Colors.success}
-              />
-            </View>
-
-            <View style={styles.noRequestsCopy}>
-              <Text
-                style={styles.noRequestsTitle}
-              >
-                درخواست تازه‌ای ندارید
-              </Text>
-
-              <Text
+          ) : (
+            <View
+              style={[
+                styles.emptyRequestCard,
+                {
+                  flexDirection:
+                    isRtl
+                      ? "row-reverse"
+                      : "row",
+                },
+              ]}
+            >
+              <View
                 style={
-                  styles.noRequestsSubtitle
+                  styles.emptyRequestIcon
                 }
               >
-                درخواست‌های جدید مشتریان در این
-                بخش نمایش داده می‌شوند.
-              </Text>
+                <Ionicons
+                  name="checkmark-done-outline"
+                  size={24}
+                  color={SUCCESS}
+                />
+              </View>
+
+              <View
+                style={[
+                  styles.emptyRequestCopy,
+                  {
+                    alignItems:
+                      isRtl
+                        ? "flex-end"
+                        : "flex-start",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.emptyRequestTitle,
+                    directionStyle(
+                      isRtl,
+                    ),
+                  ]}
+                >
+                  {
+                    copy.noNewRequestsTitle
+                  }
+                </Text>
+
+                <Text
+                  style={[
+                    styles.emptyRequestSubtitle,
+                    directionStyle(
+                      isRtl,
+                    ),
+                  ]}
+                >
+                  {
+                    copy.noNewRequestsSubtitle
+                  }
+                </Text>
+              </View>
             </View>
-          </GlassSurface>
-        )}
+          )}
+        </View>
 
         <View style={styles.section}>
           <SectionHeader
-            title="دسترسی سریع"
-            subtitle="ابزارهای اصلی مدیریت کار"
+            title={copy.quickAccess}
+            subtitle={
+              copy.quickAccessSubtitle
+            }
+            isRtl={isRtl}
           />
 
-          <View style={styles.quickActionsGrid}>
-            {quickActions.map((action) => (
-              <QuickActionCard
-                key={action.id}
-                action={action}
-                badgeCount={
-                  action.id === "requests"
-                    ? pendingBookings.length
-                    : action.id === "messages"
-                      ? activeBookings.length
-                      : 0
-                }
-                onPress={() =>
-                  openRoute(action.route)
-                }
-              />
-            ))}
+          <View
+            style={
+              styles.quickActionsGrid
+            }
+          >
+            {actions.map(
+              (action) => (
+                <QuickActionCard
+                  key={action.id}
+                  action={action}
+                  badgeCount={getActionBadge(
+                    action.id,
+                  )}
+                  localizedDigits={
+                    localizedDigits
+                  }
+                  isRtl={isRtl}
+                  compact={
+                    compactLayout
+                  }
+                  onPress={() =>
+                    openRoute(
+                      action.route,
+                    )
+                  }
+                />
+              ),
+            )}
           </View>
         </View>
 
         <View style={styles.section}>
           <SectionHeader
-            title="برنامهٔ آینده"
-            subtitle="درخواست‌ها و کارهای نزدیک"
-            actionLabel="تقویم"
+            title={copy.upcomingTitle}
+            subtitle={
+              copy.upcomingSubtitle
+            }
+            actionLabel={
+              copy.calendar
+            }
+            isRtl={isRtl}
             onPress={() =>
               openRoute(
                 "/(provider-tabs)/calendar",
@@ -500,240 +869,354 @@ export default function ProviderDashboardScreen() {
             }
           />
 
-          <View style={styles.upcomingList}>
-            {upcomingBookings.length > 0 ? (
+          <View
+            style={
+              styles.upcomingList
+            }
+          >
+            {upcomingBookings.length >
+            0 ? (
               upcomingBookings.map(
                 (booking) => (
                   <UpcomingJobCard
                     key={booking.id}
                     booking={booking}
+                    language={
+                      activeLanguage
+                    }
+                    isRtl={isRtl}
+                    copy={copy}
                   />
                 ),
               )
             ) : (
-              <EmptyUpcoming />
+              <EmptyUpcoming
+                copy={copy}
+                isRtl={isRtl}
+              />
             )}
           </View>
         </View>
 
         <View style={styles.section}>
           <SectionHeader
-            title="عملکرد شما"
-            subtitle="خلاصهٔ فعالیت حساب حرفه‌ای"
+            title={copy.performance}
+            subtitle={
+              copy.performanceSubtitle
+            }
+            isRtl={isRtl}
           />
 
-          <GlassSurface
-            variant="regular"
-            radius={Radius.xl}
-            style={styles.performanceCard}
-            contentStyle={
-              styles.performanceContent
+          <View
+            style={
+              styles.performanceCard
             }
           >
             <PerformanceRow
               icon="star-outline"
-              label="امتیاز مشتریان"
-              value={`${toDariDigits(
-                provider.rating.toFixed(1),
-              )} از ۵`}
+              label={
+                copy.customerRating
+              }
+              value={copy.ratingValue(
+                formatDigits(
+                  provider.rating.toFixed(
+                    1,
+                  ),
+                  localizedDigits,
+                ),
+              )}
+              isRtl={isRtl}
             />
 
             <View
-              style={styles.performanceDivider}
+              style={
+                styles.performanceDivider
+              }
             />
 
             <PerformanceRow
               icon="chatbubble-ellipses-outline"
-              label="میانگین زمان پاسخ"
-              value={`${toDariDigits(
-                provider.averageResponseMinutes.toString(),
-              )} دقیقه`}
+              label={
+                copy.averageResponse
+              }
+              value={copy.minutesValue(
+                formatDigits(
+                  provider.averageResponseMinutes.toString(),
+                  localizedDigits,
+                ),
+              )}
+              isRtl={isRtl}
             />
 
             <View
-              style={styles.performanceDivider}
+              style={
+                styles.performanceDivider
+              }
             />
 
             <PerformanceRow
               icon="stats-chart-outline"
-              label="نرخ پاسخ‌گویی"
-              value={`${toDariDigits(
+              label={
+                copy.responseRate
+              }
+              value={`${formatDigits(
                 provider.responseRate.toString(),
-              )}٪`}
+                localizedDigits,
+              )}%`}
+              isRtl={isRtl}
             />
 
             <View
-              style={styles.performanceDivider}
+              style={
+                styles.performanceDivider
+              }
             />
 
             <PerformanceRow
               icon="wallet-outline"
-              label="مجموع درآمد ثبت‌شده"
+              label={
+                copy.totalRevenue
+              }
               value={formatCurrency(
                 completedRevenue,
+                activeLanguage,
               )}
+              isRtl={isRtl}
             />
-          </GlassSurface>
+          </View>
         </View>
 
-        <GlassSurface
-          variant="regular"
-          radius={Radius.xl}
-          style={styles.tipCard}
-          contentStyle={styles.tipContent}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            copy.improveProfile
+          }
+          onPress={() =>
+            openRoute(
+              "/(provider-tabs)/profile",
+            )
+          }
+          style={({ pressed }) => [
+            styles.tipCard,
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
+            pressed &&
+              styles.cardPressed,
+          ]}
         >
-          <View style={styles.tipIcon}>
-            <Ionicons
-              name="bulb-outline"
-              size={24}
-              color={Colors.warning}
-            />
-          </View>
-
-          <View style={styles.tipCopy}>
-            <Text style={styles.tipTitle}>
-              پروفایل کامل، درخواست بیشتر
-            </Text>
-
-            <Text style={styles.tipSubtitle}>
-              افزودن نمونه‌کار، توضیحات دقیق و
-              قیمت روشن می‌تواند اعتماد مشتریان
-              را افزایش دهد.
-            </Text>
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={() =>
-              openRoute(
-                "/(provider-tabs)/profile",
-              )
-            }
-            style={({ pressed }) => [
-              styles.tipAction,
-              pressed && styles.pressed,
-            ]}
+          <View
+            style={styles.tipIcon}
           >
             <Ionicons
-              name="chevron-back"
-              size={20}
-              color={Colors.primary}
+              name="bulb-outline"
+              size={23}
+              color={WARNING}
             />
-          </Pressable>
-        </GlassSurface>
+          </View>
+
+          <View
+            style={[
+              styles.tipCopy,
+              {
+                alignItems: isRtl
+                  ? "flex-end"
+                  : "flex-start",
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.tipTitle,
+                directionStyle(isRtl),
+              ]}
+            >
+              {copy.tipTitle}
+            </Text>
+
+            <Text
+              style={[
+                styles.tipSubtitle,
+                directionStyle(isRtl),
+              ]}
+            >
+              {copy.tipSubtitle}
+            </Text>
+          </View>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+type MetricCardProps = {
+  icon: IconName;
+  label: string;
+  value: string;
+  iconColor: string;
+  iconBackground: string;
+  compact: boolean;
+  isRtl: boolean;
+};
+
 function MetricCard({
   icon,
   label,
   value,
-  accentColor,
-}: {
-  icon: IconName;
-  label: string;
-  value: string;
-  accentColor: string;
-}) {
+  iconColor,
+  iconBackground,
+  compact,
+  isRtl,
+}: MetricCardProps) {
   return (
-    <GlassSurface
-      variant="regular"
-      radius={Radius.xl}
-      style={styles.metricCard}
-      contentStyle={styles.metricContent}
+    <View
+      style={[
+        styles.metricCard,
+        compact &&
+          styles.metricCardCompact,
+      ]}
     >
       <View
         style={[
           styles.metricIcon,
           {
-            backgroundColor: `${accentColor}18`,
+            backgroundColor:
+              iconBackground,
           },
         ]}
       >
         <Ionicons
           name={icon}
           size={21}
-          color={accentColor}
+          color={iconColor}
         />
       </View>
 
       <Text
         numberOfLines={1}
         adjustsFontSizeToFit
-        style={styles.metricValue}
+        minimumFontScale={0.75}
+        style={[
+          styles.metricValue,
+          directionStyle(isRtl),
+        ]}
       >
         {value}
       </Text>
 
-      <Text style={styles.metricLabel}>
+      <Text
+        numberOfLines={2}
+        style={[
+          styles.metricLabel,
+          directionStyle(isRtl),
+        ]}
+      >
         {label}
       </Text>
-    </GlassSurface>
+    </View>
   );
 }
+
+type SectionHeaderProps = {
+  title: string;
+  subtitle: string;
+  actionLabel?: string;
+  isRtl: boolean;
+  onPress?: () => void;
+};
 
 function SectionHeader({
   title,
   subtitle,
   actionLabel,
+  isRtl,
   onPress,
-}: {
-  title: string;
-  subtitle: string;
-  actionLabel?: string;
-  onPress?: () => void;
-}) {
+}: SectionHeaderProps) {
   return (
-    <View style={styles.sectionHeader}>
-      {actionLabel && onPress ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={onPress}
-          style={({ pressed }) => [
-            styles.sectionAction,
-            pressed && styles.pressed,
+    <View
+      style={[
+        styles.sectionHeader,
+        {
+          flexDirection: isRtl
+            ? "row-reverse"
+            : "row",
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.sectionHeaderCopy,
+          {
+            alignItems: isRtl
+              ? "flex-end"
+              : "flex-start",
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.sectionTitle,
+            directionStyle(isRtl),
           ]}
         >
-          <Ionicons
-            name="chevron-back"
-            size={16}
-            color={Colors.primary}
-          />
-
-          <Text
-            style={styles.sectionActionText}
-          >
-            {actionLabel}
-          </Text>
-        </Pressable>
-      ) : (
-        <View />
-      )}
-
-      <View style={styles.sectionHeaderCopy}>
-        <Text style={styles.sectionTitle}>
           {title}
         </Text>
 
         <Text
-          style={styles.sectionSubtitle}
+          style={[
+            styles.sectionSubtitle,
+            directionStyle(isRtl),
+          ]}
         >
           {subtitle}
         </Text>
       </View>
+
+      {actionLabel &&
+      onPress ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            actionLabel
+          }
+          onPress={onPress}
+          style={({ pressed }) => [
+            styles.sectionAction,
+            pressed &&
+              styles.pressed,
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionActionText,
+              directionStyle(isRtl),
+            ]}
+          >
+            {actionLabel}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
+type NewRequestCardProps = {
+  booking: BookingRecord;
+  language: LanguageName;
+  isRtl: boolean;
+  copy: DashboardCopy;
+  onPress: () => void;
+};
+
 function NewRequestCard({
   booking,
+  language,
+  isRtl,
+  copy,
   onPress,
-}: {
-  booking: BookingRecord;
-  onPress: () => void;
-}) {
+}: NewRequestCardProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -742,233 +1225,421 @@ function NewRequestCard({
       }
       onPress={onPress}
       style={({ pressed }) => [
-        styles.requestPressable,
-        pressed && styles.cardPressed,
+        styles.requestCard,
+        pressed &&
+          styles.cardPressed,
       ]}
     >
-      <GlassSurface
-        variant="prominent"
-        radius={Radius.xl}
-        style={styles.requestCard}
-        contentStyle={styles.requestContent}
+      <View
+        style={[
+          styles.requestTopRow,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
       >
-        <View style={styles.requestIcon}>
+        <View
+          style={
+            styles.requestIcon
+          }
+        >
           <Ionicons
             name={getServiceIcon(
               booking.serviceId,
             )}
-            size={24}
-            color={Colors.primary}
+            size={23}
+            color={
+              KhedmatPalette.blue500
+            }
           />
         </View>
 
-        <View style={styles.requestCopy}>
-          <Text style={styles.requestEyebrow}>
-            درخواست تازه
+        <View
+          style={[
+            styles.requestCopy,
+            {
+              alignItems: isRtl
+                ? "flex-end"
+                : "flex-start",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.requestEyebrow,
+              directionStyle(isRtl),
+            ]}
+          >
+            {copy.freshRequest}
           </Text>
 
           <Text
-            numberOfLines={1}
-            style={styles.requestTitle}
+            numberOfLines={2}
+            style={[
+              styles.requestTitle,
+              directionStyle(isRtl),
+            ]}
           >
             {booking.serviceName}
           </Text>
+        </View>
 
-          <View style={styles.requestMetaRow}>
-            <RequestMeta
-              icon="calendar-outline"
-              value={formatShortDate(
-                booking.date,
-              )}
-            />
-
-            <RequestMeta
-              icon="time-outline"
-              value={formatTimeForDari(
-                booking.time,
-              )}
-            />
-          </View>
+        <View
+          style={[
+            styles.requestPrice,
+            {
+              alignItems: isRtl
+                ? "flex-start"
+                : "flex-end",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.requestPriceLabel,
+              directionStyle(isRtl),
+            ]}
+          >
+            {copy.estimated}
+          </Text>
 
           <Text
             numberOfLines={1}
-            style={styles.requestAddress}
-          >
-            {booking.address.fullAddress}
-          </Text>
-        </View>
-
-        <View style={styles.requestPrice}>
-          <Text
-            style={styles.requestPriceLabel}
-          >
-            تخمینی
-          </Text>
-
-          <Text
-            style={styles.requestPriceValue}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+            style={[
+              styles.requestPriceValue,
+              directionStyle(isRtl),
+            ]}
           >
             {formatCurrency(
               booking.servicePrice,
+              language,
             )}
           </Text>
         </View>
-      </GlassSurface>
+      </View>
+
+      <View
+        style={[
+          styles.requestMetaRow,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
+      >
+        <RequestMeta
+          icon="calendar-outline"
+          value={formatShortDate(
+            booking.date,
+            language,
+          )}
+          isRtl={isRtl}
+        />
+
+        <RequestMeta
+          icon="time-outline"
+          value={formatTime(
+            booking.time,
+            language,
+          )}
+          isRtl={isRtl}
+        />
+      </View>
+
+      <View
+        style={[
+          styles.requestAddressRow,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
+      >
+        <Ionicons
+          name="location-outline"
+          size={15}
+          color={
+            KhedmatPalette.textMuted
+          }
+        />
+
+        <Text
+          numberOfLines={2}
+          style={[
+            styles.requestAddress,
+            directionStyle(isRtl),
+          ]}
+        >
+          {
+            booking.address
+              .fullAddress
+          }
+        </Text>
+      </View>
     </Pressable>
   );
 }
 
+type RequestMetaProps = {
+  icon: IconName;
+  value: string;
+  isRtl: boolean;
+};
+
 function RequestMeta({
   icon,
   value,
-}: {
-  icon: IconName;
-  value: string;
-}) {
+  isRtl,
+}: RequestMetaProps) {
   return (
-    <View style={styles.requestMeta}>
+    <View
+      style={[
+        styles.requestMeta,
+        {
+          flexDirection: isRtl
+            ? "row-reverse"
+            : "row",
+        },
+      ]}
+    >
       <Ionicons
         name={icon}
-        size={13}
-        color={Colors.textTertiary}
+        size={14}
+        color={
+          KhedmatPalette.textMuted
+        }
       />
 
-      <Text style={styles.requestMetaText}>
+      <Text
+        style={[
+          styles.requestMetaText,
+          directionStyle(isRtl),
+        ]}
+      >
         {value}
       </Text>
     </View>
   );
 }
 
+type QuickActionCardProps = {
+  action: DashboardAction;
+  badgeCount: number;
+  localizedDigits: boolean;
+  isRtl: boolean;
+  compact: boolean;
+  onPress: () => void;
+};
+
 function QuickActionCard({
   action,
   badgeCount,
+  localizedDigits,
+  isRtl,
+  compact,
   onPress,
-}: {
-  action: DashboardAction;
-  badgeCount: number;
-  onPress: () => void;
-}) {
+}: QuickActionCardProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={action.title}
+      accessibilityLabel={
+        action.title
+      }
       onPress={onPress}
       style={({ pressed }) => [
-        styles.quickActionPressable,
-        pressed && styles.cardPressed,
+        styles.quickActionCard,
+        compact &&
+          styles.quickActionCardCompact,
+        pressed &&
+          styles.cardPressed,
       ]}
     >
-      <GlassSurface
-        variant="regular"
-        radius={Radius.xl}
-        style={styles.quickActionCard}
-        contentStyle={
-          styles.quickActionContent
+      <View
+        style={
+          styles.quickActionIcon
         }
       >
-        <View style={styles.quickActionIcon}>
-          <Ionicons
-            name={action.icon}
-            size={23}
-            color={Colors.primary}
-          />
+        <Ionicons
+          name={action.icon}
+          size={23}
+          color={
+            KhedmatPalette.blue500
+          }
+        />
 
-          {badgeCount > 0 ? (
-            <View
-              style={styles.quickActionBadge}
+        {badgeCount > 0 ? (
+          <View
+            style={
+              styles.quickActionBadge
+            }
+          >
+            <Text
+              style={
+                styles.quickActionBadgeText
+              }
             >
-              <Text
-                style={
-                  styles.quickActionBadgeText
-                }
-              >
-                {toDariDigits(
-                  badgeCount.toString(),
-                )}
-              </Text>
-            </View>
-          ) : null}
-        </View>
+              {formatDigits(
+                badgeCount.toString(),
+                localizedDigits,
+              )}
+            </Text>
+          </View>
+        ) : null}
+      </View>
 
-        <Text style={styles.quickActionTitle}>
-          {action.title}
-        </Text>
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.82}
+        style={[
+          styles.quickActionTitle,
+          directionStyle(isRtl),
+        ]}
+      >
+        {action.title}
+      </Text>
 
-        <Text
-          style={styles.quickActionSubtitle}
-        >
-          {action.subtitle}
-        </Text>
-      </GlassSurface>
+      <Text
+        numberOfLines={2}
+        style={[
+          styles.quickActionSubtitle,
+          directionStyle(isRtl),
+        ]}
+      >
+        {action.subtitle}
+      </Text>
     </Pressable>
   );
 }
 
+type UpcomingJobCardProps = {
+  booking: BookingRecord;
+  language: LanguageName;
+  isRtl: boolean;
+  copy: DashboardCopy;
+};
+
 function UpcomingJobCard({
   booking,
-}: {
-  booking: BookingRecord;
-}) {
-  const status =
-    booking.status === "confirmed"
-      ? {
-          label: "تأییدشده",
-          color: Colors.success,
-          background:
-            "rgba(48, 183, 106, 0.11)",
-        }
-      : {
-          label: "در انتظار",
-          color: Colors.warning,
-          background:
-            "rgba(217, 154, 43, 0.11)",
-        };
+  language,
+  isRtl,
+  copy,
+}: UpcomingJobCardProps) {
+  const confirmed =
+    booking.status ===
+    "confirmed";
+
+  const statusLabel =
+    confirmed
+      ? copy.confirmed
+      : copy.pending;
 
   return (
-    <GlassSurface
-      variant="regular"
-      radius={Radius.xl}
-      style={styles.upcomingCard}
-      contentStyle={styles.upcomingContent}
+    <View
+      style={[
+        styles.upcomingCard,
+        {
+          flexDirection: isRtl
+            ? "row-reverse"
+            : "row",
+        },
+      ]}
     >
-      <View style={styles.upcomingDate}>
-        <Text style={styles.upcomingDay}>
-          {getDayNumber(booking.date)}
+      <View
+        style={
+          styles.upcomingDate
+        }
+      >
+        <Text
+          style={
+            styles.upcomingDay
+          }
+        >
+          {getDayNumber(
+            booking.date,
+            language,
+          )}
         </Text>
 
-        <Text style={styles.upcomingMonth}>
-          {getMonthLabel(booking.date)}
+        <Text
+          style={
+            styles.upcomingMonth
+          }
+        >
+          {getMonthLabel(
+            booking.date,
+            language,
+          )}
         </Text>
       </View>
 
-      <View style={styles.upcomingCopy}>
+      <View
+        style={[
+          styles.upcomingCopy,
+          {
+            alignItems: isRtl
+              ? "flex-end"
+              : "flex-start",
+          },
+        ]}
+      >
         <Text
           numberOfLines={1}
-          style={styles.upcomingTitle}
+          style={[
+            styles.upcomingTitle,
+            directionStyle(isRtl),
+          ]}
         >
           {booking.serviceName}
         </Text>
 
         <Text
           numberOfLines={1}
-          style={styles.upcomingCustomer}
+          style={[
+            styles.upcomingCustomer,
+            directionStyle(isRtl),
+          ]}
         >
-          مشتری · {booking.address.label}
+          {copy.customer} ·{" "}
+          {booking.address.label}
         </Text>
 
-        <View style={styles.upcomingMeta}>
+        <View
+          style={[
+            styles.upcomingMeta,
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
+          ]}
+        >
           <Ionicons
             name="time-outline"
             size={14}
-            color={Colors.textTertiary}
+            color={
+              KhedmatPalette
+                .textMuted
+            }
           />
 
           <Text
-            style={styles.upcomingMetaText}
+            style={[
+              styles.upcomingMetaText,
+              directionStyle(
+                isRtl,
+              ),
+            ]}
           >
-            {formatTimeForDari(
+            {formatTime(
               booking.time,
+              language,
             )}
           </Text>
         </View>
@@ -979,7 +1650,9 @@ function UpcomingJobCard({
           styles.upcomingStatus,
           {
             backgroundColor:
-              status.background,
+              confirmed
+                ? SUCCESS_SOFT
+                : WARNING_SOFT,
           },
         ]}
       >
@@ -987,77 +1660,135 @@ function UpcomingJobCard({
           style={[
             styles.upcomingStatusText,
             {
-              color: status.color,
+              color: confirmed
+                ? SUCCESS
+                : WARNING,
             },
+            directionStyle(isRtl),
           ]}
         >
-          {status.label}
+          {statusLabel}
         </Text>
       </View>
-    </GlassSurface>
+    </View>
   );
 }
 
-function EmptyUpcoming() {
+type EmptyUpcomingProps = {
+  copy: DashboardCopy;
+  isRtl: boolean;
+};
+
+function EmptyUpcoming({
+  copy,
+  isRtl,
+}: EmptyUpcomingProps) {
   return (
-    <GlassSurface
-      variant="regular"
-      radius={Radius.xl}
-      style={styles.emptyUpcomingCard}
-      contentStyle={
-        styles.emptyUpcomingContent
+    <View
+      style={
+        styles.emptyUpcomingCard
       }
     >
-      <View style={styles.emptyUpcomingIcon}>
+      <View
+        style={
+          styles.emptyUpcomingIcon
+        }
+      >
         <Ionicons
           name="calendar-clear-outline"
-          size={28}
-          color={Colors.textTertiary}
+          size={29}
+          color={
+            KhedmatPalette.blue500
+          }
         />
       </View>
 
-      <Text style={styles.emptyUpcomingTitle}>
-        برنامه‌ای ثبت نشده است
+      <Text
+        style={[
+          styles.emptyUpcomingTitle,
+          directionStyle(isRtl),
+        ]}
+      >
+        {copy.noUpcomingTitle}
       </Text>
 
       <Text
-        style={styles.emptyUpcomingSubtitle}
+        style={[
+          styles.emptyUpcomingSubtitle,
+          directionStyle(isRtl),
+        ]}
       >
-        درخواست‌های پذیرفته‌شده و آینده در این
-        بخش نمایش داده می‌شوند.
+        {copy.noUpcomingSubtitle}
       </Text>
-    </GlassSurface>
+    </View>
   );
 }
+
+type PerformanceRowProps = {
+  icon: IconName;
+  label: string;
+  value: string;
+  isRtl: boolean;
+};
 
 function PerformanceRow({
   icon,
   label,
   value,
-}: {
-  icon: IconName;
-  label: string;
-  value: string;
-}) {
+  isRtl,
+}: PerformanceRowProps) {
   return (
-    <View style={styles.performanceRow}>
-      <View style={styles.performanceIcon}>
+    <View
+      style={[
+        styles.performanceRow,
+        {
+          flexDirection: isRtl
+            ? "row-reverse"
+            : "row",
+        },
+      ]}
+    >
+      <View
+        style={
+          styles.performanceIcon
+        }
+      >
         <Ionicons
           name={icon}
           size={19}
-          color={Colors.primary}
+          color={
+            KhedmatPalette.blue500
+          }
         />
       </View>
 
-      <View style={styles.performanceCopy}>
+      <View
+        style={[
+          styles.performanceCopy,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
+      >
         <Text
-          style={styles.performanceLabel}
+          style={[
+            styles.performanceLabel,
+            directionStyle(isRtl),
+          ]}
         >
           {label}
         </Text>
 
         <Text
-          style={styles.performanceValue}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+          style={[
+            styles.performanceValue,
+            directionStyle(isRtl),
+          ]}
         >
           {value}
         </Text>
@@ -1069,41 +1800,82 @@ function PerformanceRow({
 function getServiceIcon(
   serviceId: string,
 ): IconName {
+  const normalized =
+    serviceId.toLowerCase();
+
   if (
-    serviceId.includes("wiring") ||
-    serviceId.includes("socket") ||
-    serviceId.includes("lighting") ||
-    serviceId.includes("breaker") ||
-    serviceId.includes("generator")
+    normalized.includes(
+      "wiring",
+    ) ||
+    normalized.includes(
+      "socket",
+    ) ||
+    normalized.includes(
+      "lighting",
+    ) ||
+    normalized.includes(
+      "breaker",
+    ) ||
+    normalized.includes(
+      "generator",
+    ) ||
+    normalized.includes(
+      "electric",
+    )
   ) {
     return "flash-outline";
   }
 
   if (
-    serviceId.includes("pipe") ||
-    serviceId.includes("drain") ||
-    serviceId.includes("water") ||
-    serviceId.includes("heater")
+    normalized.includes("pipe") ||
+    normalized.includes(
+      "drain",
+    ) ||
+    normalized.includes(
+      "water",
+    ) ||
+    normalized.includes(
+      "heater",
+    ) ||
+    normalized.includes(
+      "plumb",
+    )
   ) {
     return "water-outline";
   }
 
-  if (serviceId.includes("clean")) {
+  if (
+    normalized.includes("clean")
+  ) {
     return "sparkles-outline";
   }
 
   if (
-    serviceId.includes("computer") ||
-    serviceId.includes("hardware") ||
-    serviceId.includes("virus")
+    normalized.includes(
+      "computer",
+    ) ||
+    normalized.includes(
+      "hardware",
+    ) ||
+    normalized.includes(
+      "virus",
+    ) ||
+    normalized.includes(
+      "phone",
+    )
   ) {
     return "laptop-outline";
   }
 
   if (
-    serviceId.includes("cabinet") ||
-    serviceId.includes("door") ||
-    serviceId.includes("furniture")
+    normalized.includes(
+      "cabinet",
+    ) ||
+    normalized.includes("door") ||
+    normalized.includes(
+      "furniture",
+    ) ||
+    normalized.includes("wood")
   ) {
     return "hammer-outline";
   }
@@ -1111,8 +1883,11 @@ function getServiceIcon(
   return "construct-outline";
 }
 
-function formatDateId(date: Date): string {
-  const year = date.getFullYear();
+function formatDateId(
+  date: Date,
+): string {
+  const year =
+    date.getFullYear();
 
   const month = String(
     date.getMonth() + 1,
@@ -1125,116 +1900,255 @@ function formatDateId(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function formatShortDate(
-  value: string,
+function getInitials(
+  name: string,
 ): string {
-  if (!value) {
-    return "نامشخص";
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    return "P";
   }
 
-  const parts = value
+  return parts
+    .map((part) =>
+      part.charAt(0),
+    )
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function getBookingDate(
+  value: string,
+): Date | null {
+  const [
+    year,
+    month,
+    day,
+  ] = value
     .split("-")
     .map(Number);
 
-  const year = parts[0];
-  const month = parts[1];
-  const day = parts[2];
-
-  if (!year || !month || !day) {
-    return value;
+  if (
+    !year ||
+    !month ||
+    !day
+  ) {
+    return null;
   }
 
-  const date = new Date(
+  return new Date(
     year,
     month - 1,
     day,
   );
+}
 
-  const weekdays = [
-    "یک‌شنبه",
-    "دوشنبه",
-    "سه‌شنبه",
-    "چهارشنبه",
-    "پنج‌شنبه",
-    "جمعه",
-    "شنبه",
-  ];
+function formatShortDate(
+  value: string,
+  language: LanguageName,
+): string {
+  const date =
+    getBookingDate(value);
 
-  return `${weekdays[date.getDay()] ?? ""}، ${toDariDigits(
-    day.toString(),
-  )} ${getMonthLabel(value)}`;
+  if (!date) {
+    return language ===
+      "English"
+      ? value
+      : formatDigits(
+          value,
+          true,
+        );
+  }
+
+  try {
+    const formatted =
+      new Intl.DateTimeFormat(
+        language === "English"
+          ? "en-US"
+          : "fa-AF",
+        {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+        },
+      ).format(date);
+
+    return language ===
+      "English"
+      ? formatted
+      : formatDigits(
+          formatted,
+          true,
+        );
+  } catch {
+    return language ===
+      "English"
+      ? value
+      : formatDigits(
+          value,
+          true,
+        );
+  }
 }
 
 function getDayNumber(
   value: string,
+  language: LanguageName,
 ): string {
-  const day = value.split("-")[2];
+  const date =
+    getBookingDate(value);
 
-  return day
-    ? toDariDigits(
-        Number(day).toString(),
-      )
-    : "—";
+  const day = date
+    ? date
+        .getDate()
+        .toString()
+    : value.split("-")[2] ??
+      "";
+
+  return language ===
+    "English"
+    ? day
+    : formatDigits(day, true);
 }
 
 function getMonthLabel(
   value: string,
+  language: LanguageName,
 ): string {
-  const month = Number(
-    value.split("-")[1],
-  );
+  const date =
+    getBookingDate(value);
 
-  const months = [
-    "جنوری",
-    "فبروری",
-    "مارچ",
-    "اپریل",
-    "می",
-    "جون",
-    "جولای",
-    "اگست",
-    "سپتمبر",
-    "اکتوبر",
-    "نوامبر",
-    "دسمبر",
-  ];
+  if (!date) {
+    return "";
+  }
 
-  return months[month - 1] ?? "";
+  try {
+    return new Intl.DateTimeFormat(
+      language === "English"
+        ? "en-US"
+        : "fa-AF",
+      {
+        month: "short",
+      },
+    ).format(date);
+  } catch {
+    return "";
+  }
 }
 
-function formatTimeForDari(
+function formatTime(
   value: string,
+  language: LanguageName,
 ): string {
-  const labels: Record<string, string> = {
-    "07:00": "۷:۰۰ صبح",
-    "08:00": "۸:۰۰ صبح",
-    "09:00": "۹:۰۰ صبح",
-    "10:00": "۱۰:۰۰ صبح",
-    "11:00": "۱۱:۰۰ صبح",
-    "12:00": "۱۲:۰۰ ظهر",
-    "13:00": "۱:۰۰ بعد از ظهر",
-    "14:00": "۲:۰۰ بعد از ظهر",
-    "15:00": "۳:۰۰ بعد از ظهر",
-    "16:00": "۴:۰۰ بعد از ظهر",
-    "17:00": "۵:۰۰ بعد از ظهر",
-    "18:00": "۶:۰۰ عصر",
-  };
+  if (!value) {
+    return "";
+  }
 
-  return labels[value] ?? value;
+  const [
+    hoursRaw,
+    minutesRaw,
+  ] = value.split(":");
+
+  const hours =
+    Number(hoursRaw);
+
+  const minutes =
+    Number(minutesRaw);
+
+  if (
+    !Number.isFinite(hours) ||
+    !Number.isFinite(minutes)
+  ) {
+    return language ===
+      "English"
+      ? value
+      : formatDigits(
+          value,
+          true,
+        );
+  }
+
+  const date = new Date();
+
+  date.setHours(
+    hours,
+    minutes,
+    0,
+    0,
+  );
+
+  try {
+    const formatted =
+      new Intl.DateTimeFormat(
+        language === "English"
+          ? "en-US"
+          : "fa-AF",
+        {
+          hour: "numeric",
+          minute: "2-digit",
+        },
+      ).format(date);
+
+    return language ===
+      "English"
+      ? formatted
+      : formatDigits(
+          formatted,
+          true,
+        );
+  } catch {
+    return language ===
+      "English"
+      ? value
+      : formatDigits(
+          value,
+          true,
+        );
+  }
 }
 
 function formatCurrency(
-  value: number,
+  amount: number,
+  language: LanguageName,
 ): string {
-  return `${new Intl.NumberFormat(
-    "fa-AF",
-  ).format(value)} افغانی`;
+  const formatted =
+    new Intl.NumberFormat(
+      "en-US",
+    ).format(amount);
+
+  if (
+    language === "English"
+  ) {
+    return `${formatted} AFN`;
+  }
+
+  const localized =
+    formatDigits(
+      formatted,
+      true,
+    );
+
+  return language === "Dari"
+    ? `${localized} افغانی`
+    : `${localized} افغانۍ`;
 }
 
-function toDariDigits(
+function formatDigits(
   value: string,
+  localized: boolean,
 ): string {
-  const digits: Record<string, string> = {
+  if (!localized) {
+    return value;
+  }
+
+  const digits: Record<
+    string,
+    string
+  > = {
     "0": "۰",
     "1": "۱",
     "2": "۲",
@@ -1249,769 +2163,1708 @@ function toDariDigits(
 
   return value.replace(
     /\d/g,
-    (digit) => digits[digit] ?? digit,
+    (digit) =>
+      digits[digit] ?? digit,
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-
-  scrollContent: {
-    width: "100%",
-    maxWidth: Layout.contentMaxWidth,
-    alignSelf: "center",
-    paddingHorizontal:
-      Layout.screenPadding,
-    paddingTop: Spacing.lg,
-    paddingBottom: 130,
-  },
-
-  header: {
-    width: "100%",
-  },
-
-  headerTopRow: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: Spacing.md,
-  },
-
-  headerCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: Spacing.xs,
-  },
-
-  eyebrow: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  title: {
-    ...Typography.screenTitle,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 28,
-    lineHeight: 35,
-  },
-
-  subtitle: {
-    ...Typography.bodyStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  notificationPressable: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.pill,
-  },
-
-  notificationSurface: {
-    flex: 1,
-  },
-
-  notificationContent: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  notificationBadge: {
-    position: "absolute",
-    top: 3,
-    right: 3,
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 4,
-    borderRadius: Radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.error,
-    borderWidth: 2,
-    borderColor: Colors.backgroundRaised,
-  },
-
-  notificationBadgeText: {
-    color: Colors.white,
-    fontSize: 9,
-    fontWeight: "700",
-  },
-
-  availabilityCard: {
-    width: "100%",
-    marginTop: Spacing.xxl,
-  },
-
-  availabilityContent: {
-    minHeight: 116,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  availabilityIcon: {
-    width: 52,
-    height: 52,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.glassStrong,
-  },
-
-  availabilityIconActive: {
-    backgroundColor: Colors.success,
-  },
-
-  availabilityCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: 3,
-  },
-
-  availabilityLabel: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  availabilityTitle: {
-    ...Typography.label,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 17,
-    lineHeight: 23,
-  },
-
-  availabilitySubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    lineHeight: 19,
-  },
-
-  switchPressable: {
-    minWidth: 48,
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  switchTrack: {
-    width: 48,
-    height: 28,
-    paddingHorizontal: 3,
-    borderRadius: Radius.pill,
-    justifyContent: "center",
-    backgroundColor: Colors.glassStrong,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.borderStrong,
-  },
-
-  switchTrackActive: {
-    backgroundColor: Colors.success,
-    borderColor: Colors.success,
-  },
-
-  switchThumb: {
-    width: 22,
-    height: 22,
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.textTertiary,
-  },
-
-  switchThumbActive: {
-    alignSelf: "flex-end",
-    backgroundColor: Colors.white,
-  },
-
-  metricsGrid: {
-    width: "100%",
-    marginTop: Spacing.lg,
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: Spacing.sm,
-  },
-
-  metricCard: {
-    width: "48.5%",
-  },
-
-  metricContent: {
-    minHeight: 132,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.sm,
-    padding: Spacing.md,
-  },
-
-  metricIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: Radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  metricValue: {
-    ...Typography.sectionTitle,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "center",
-    writingDirection: "rtl",
-    fontSize: 19,
-    lineHeight: 26,
-  },
-
-  metricLabel: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textTertiary,
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-
-  section: {
-    width: "100%",
-    marginTop: Spacing.section,
-    gap: Spacing.lg,
-  },
-
-  sectionHeader: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: Spacing.md,
-  },
-
-  sectionHeaderCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: 2,
-  },
-
-  sectionTitle: {
-    ...Typography.sectionTitle,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 21,
-    lineHeight: 28,
-  },
-
-  sectionSubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  sectionAction: {
-    minHeight: 36,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-  },
-
-  sectionActionText: {
-    ...Typography.captionStyle,
-    color: Colors.primary,
-    writingDirection: "rtl",
-  },
-
-  requestList: {
-    width: "100%",
-    gap: Spacing.md,
-  },
-
-  requestPressable: {
-    width: "100%",
-    borderRadius: Radius.xl,
-  },
-
-  requestCard: {
-    width: "100%",
-    borderColor: "rgba(217, 154, 43, 0.28)",
-    backgroundColor: "rgba(217, 154, 43, 0.05)",
-  },
-
-  requestContent: {
-    minHeight: 126,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  requestIcon: {
-    width: 52,
-    height: 52,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-  },
-
-  requestCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: 4,
-  },
-
-  requestEyebrow: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.warning,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  requestTitle: {
-    ...Typography.label,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 17,
-  },
-
-  requestMetaRow: {
-    width: "100%",
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: Spacing.md,
-  },
-
-  requestMeta: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 4,
-  },
-
-  requestMetaText: {
-    ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    writingDirection: "rtl",
-    fontSize: 11,
-  },
-
-  requestAddress: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  requestPrice: {
-    flexShrink: 0,
-    alignItems: "flex-start",
-    gap: 3,
-  },
-
-  requestPriceLabel: {
-    ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    writingDirection: "rtl",
-    fontSize: 10,
-  },
-
-  requestPriceValue: {
-    ...Typography.label,
-    color: Colors.primary,
-    textAlign: "left",
-    writingDirection: "rtl",
-    fontSize: 14,
-  },
-
-  noRequestsCard: {
-    width: "100%",
-    marginTop: Spacing.section,
-  },
-
-  noRequestsContent: {
-    minHeight: 102,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  noRequestsIcon: {
-    width: 48,
-    height: 48,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(48, 183, 106, 0.11)",
-  },
-
-  noRequestsCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: 3,
-  },
-
-  noRequestsTitle: {
-    ...Typography.label,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  noRequestsSubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  quickActionsGrid: {
-    width: "100%",
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: Spacing.sm,
-  },
-
-  quickActionPressable: {
-    width: "48.5%",
-    borderRadius: Radius.xl,
-  },
-
-  quickActionCard: {
-    width: "100%",
-  },
-
-  quickActionContent: {
-    minHeight: 142,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.sm,
-    padding: Spacing.md,
-  },
-
-  quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-  },
-
-  quickActionBadge: {
-    position: "absolute",
-    top: -5,
-    right: -5,
-    minWidth: 21,
-    height: 21,
-    paddingHorizontal: 5,
-    borderRadius: Radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.error,
-    borderWidth: 2,
-    borderColor: Colors.backgroundRaised,
-  },
-
-  quickActionBadgeText: {
-    color: Colors.white,
-    fontSize: 9,
-    fontWeight: "700",
-  },
-
-  quickActionTitle: {
-    ...Typography.label,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-
-  quickActionSubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textTertiary,
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-
-  upcomingList: {
-    width: "100%",
-    gap: Spacing.md,
-  },
-
-  upcomingCard: {
-    width: "100%",
-  },
-
-  upcomingContent: {
-    minHeight: 110,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  upcomingDate: {
-    width: 54,
-    height: 62,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-  },
-
-  upcomingDay: {
-    color: Colors.primary,
-    fontSize: 21,
-    lineHeight: 25,
-    fontWeight: "700",
-  },
-
-  upcomingMonth: {
-    ...Typography.captionStyle,
-    color: Colors.textSecondary,
-    fontSize: 10,
-    writingDirection: "rtl",
-  },
-
-  upcomingCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: 3,
-  },
-
-  upcomingTitle: {
-    ...Typography.label,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 16,
-  },
-
-  upcomingCustomer: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  upcomingMeta: {
-    width: "100%",
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 4,
-  },
-
-  upcomingMetaText: {
-    ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    writingDirection: "rtl",
-  },
-
-  upcomingStatus: {
-    flexShrink: 0,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-    borderRadius: Radius.pill,
-  },
-
-  upcomingStatusText: {
-    ...Typography.captionStyle,
-    fontSize: 10,
-    writingDirection: "rtl",
-  },
-
-  emptyUpcomingCard: {
-    width: "100%",
-  },
-
-  emptyUpcomingContent: {
-    minHeight: 220,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.md,
-    padding: Spacing.xl,
-  },
-
-  emptyUpcomingIcon: {
-    width: 68,
-    height: 68,
-    borderRadius: Radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.glass,
-  },
-
-  emptyUpcomingTitle: {
-    ...Typography.sectionTitle,
-    color: Colors.textPrimary,
-    textAlign: "center",
-    writingDirection: "rtl",
-    fontSize: 18,
-  },
-
-  emptyUpcomingSubtitle: {
-    ...Typography.bodyStyle,
-    maxWidth: 330,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-
-  performanceCard: {
-    width: "100%",
-  },
-
-  performanceContent: {
-    padding: Spacing.lg,
-  },
-
-  performanceRow: {
-    width: "100%",
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-  },
-
-  performanceIcon: {
-    width: 42,
-    height: 42,
-    flexShrink: 0,
-    borderRadius: Radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-  },
-
-  performanceCopy: {
-    flex: 1,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing.md,
-  },
-
-  performanceLabel: {
-    ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  performanceValue: {
-    ...Typography.label,
-    flex: 1,
-    color: Colors.textPrimary,
-    textAlign: "left",
-    writingDirection: "rtl",
-  },
-
-  performanceDivider: {
-    width: "100%",
-    height: StyleSheet.hairlineWidth,
-    marginVertical: Spacing.md,
-    backgroundColor: Colors.separator,
-  },
-
-  tipCard: {
-    width: "100%",
-    marginTop: Spacing.section,
-    borderColor: "rgba(217, 154, 43, 0.25)",
-    backgroundColor: "rgba(217, 154, 43, 0.05)",
-  },
-
-  tipContent: {
-    minHeight: 106,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  tipIcon: {
-    width: 48,
-    height: 48,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(217, 154, 43, 0.11)",
-  },
-
-  tipCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: 3,
-  },
-
-  tipTitle: {
-    ...Typography.label,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  tipSubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    lineHeight: 19,
-  },
-
-  tipAction: {
-    width: 38,
-    height: 38,
-    flexShrink: 0,
-    borderRadius: Radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-  },
-
-  pressed: {
-    opacity: 0.82,
-  },
-
-  cardPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.993 }],
-  },
-});
+function normalizeLanguage(
+  language: string,
+): LanguageName {
+  if (
+    language === "Dari"
+  ) {
+    return "Dari";
+  }
+
+  if (
+    language === "Pashto"
+  ) {
+    return "Pashto";
+  }
+
+  return "English";
+}
+
+function directionStyle(
+  isRtl: boolean,
+) {
+  return {
+    textAlign: isRtl
+      ? ("right" as const)
+      : ("left" as const),
+
+    writingDirection: isRtl
+      ? ("rtl" as const)
+      : ("ltr" as const),
+  };
+}
+
+function getDashboardCopy(
+  language: LanguageName,
+) {
+  if (
+    language === "Dari"
+  ) {
+    return {
+      eyebrow:
+        "پنل ارائه‌دهنده",
+      greeting: "سلام",
+
+      heroTitle:
+        "امروز کارهای خود را مدیریت کنید",
+
+      heroSubtitle:
+        "درخواست‌های تازه، برنامهٔ کاری و عملکرد حرفه‌ای خود را در یک‌جا ببینید.",
+
+      notifications: "اعلان‌ها",
+      openProfile:
+        "باز کردن پروفایل",
+
+      currentStatus:
+        "وضعیت فعلی",
+
+      availableTitle:
+        "آمادهٔ دریافت کار",
+
+      unavailableTitle:
+        "موقتاً در دسترس نیستید",
+
+      availableSubtitle:
+        "مشتریان می‌توانند شما را در نتایج فعال ببینند.",
+
+      unavailableSubtitle:
+        "تا فعال‌سازی دوباره، درخواست جدید دریافت نمی‌کنید.",
+
+      availabilityControl:
+        "وضعیت آمادگی",
+
+      todayRevenue:
+        "درآمد امروز",
+
+      todayJobs:
+        "کارهای امروز",
+
+      newRequests:
+        "درخواست جدید",
+
+      completedJobs:
+        "کار تکمیل‌شده",
+
+      newRequestsTitle:
+        "درخواست‌های جدید",
+
+      newRequestsCount:
+        (count: string) =>
+          `${count} درخواست منتظر پاسخ شما است.`,
+
+      noNewRequestsTitle:
+        "درخواست تازه‌ای ندارید",
+
+      noNewRequestsSubtitle:
+        "درخواست‌های تازهٔ مشتریان در این بخش نمایش داده می‌شوند.",
+
+      viewAll:
+        "مشاهده همه",
+
+      freshRequest:
+        "درخواست تازه",
+
+      estimated: "تخمینی",
+
+      quickAccess:
+        "دسترسی سریع",
+
+      quickAccessSubtitle:
+        "ابزارهای اصلی مدیریت کار",
+
+      quickRequests:
+        "درخواست‌ها",
+
+      quickRequestsSubtitle:
+        "بررسی کارهای تازه",
+
+      quickCalendar:
+        "تقویم کاری",
+
+      quickCalendarSubtitle:
+        "مدیریت برنامه",
+
+      quickMessages:
+        "پیام‌ها",
+
+      quickMessagesSubtitle:
+        "گفتگو با مشتریان",
+
+      quickProfile:
+        "پروفایل حرفه‌ای",
+
+      quickProfileSubtitle:
+        "خدمات و معلومات",
+
+      upcomingTitle:
+        "برنامهٔ آینده",
+
+      upcomingSubtitle:
+        "درخواست‌ها و کارهای نزدیک",
+
+      calendar: "تقویم",
+
+      confirmed:
+        "تأییدشده",
+
+      pending: "در انتظار",
+
+      customer: "مشتری",
+
+      noUpcomingTitle:
+        "برنامه‌ای ثبت نشده است",
+
+      noUpcomingSubtitle:
+        "درخواست‌های پذیرفته‌شده و آینده در این بخش نمایش داده می‌شوند.",
+
+      performance:
+        "عملکرد شما",
+
+      performanceSubtitle:
+        "خلاصهٔ فعالیت حساب حرفه‌ای",
+
+      customerRating:
+        "امتیاز مشتریان",
+
+      averageResponse:
+        "میانگین زمان پاسخ",
+
+      responseRate:
+        "نرخ پاسخ‌گویی",
+
+      totalRevenue:
+        "مجموع درآمد ثبت‌شده",
+
+      ratingValue:
+        (value: string) =>
+          `${value} از ۵`,
+
+      minutesValue:
+        (value: string) =>
+          `${value} دقیقه`,
+
+      tipTitle:
+        "پروفایل کامل، درخواست بیشتر",
+
+      tipSubtitle:
+        "افزودن نمونه‌کار، توضیحات دقیق و قیمت روشن می‌تواند اعتماد مشتریان را افزایش دهد.",
+
+      improveProfile:
+        "تکمیل پروفایل حرفه‌ای",
+    };
+  }
+
+  if (
+    language === "Pashto"
+  ) {
+    return {
+      eyebrow:
+        "د خدمت وړاندې کوونکي پینل",
+      greeting: "سلام",
+
+      heroTitle:
+        "د نن ورځې کارونه مدیریت کړئ",
+
+      heroSubtitle:
+        "نوې غوښتنې، کاري مهال‌وېش او خپل مسلکي فعالیت په یوه ځای کې وګورئ.",
+
+      notifications:
+        "خبرتیاوې",
+
+      openProfile:
+        "پروفایل پرانیستل",
+
+      currentStatus:
+        "اوسنی حالت",
+
+      availableTitle:
+        "د کار ترلاسه کولو ته چمتو",
+
+      unavailableTitle:
+        "اوس مهال شتون نه لرئ",
+
+      availableSubtitle:
+        "پیرودونکي کولی شي تاسو په فعالو پایلو کې وګوري.",
+
+      unavailableSubtitle:
+        "تر بیا فعالولو پورې به نوې غوښتنې ترلاسه نه کړئ.",
+
+      availabilityControl:
+        "د چمتووالي حالت",
+
+      todayRevenue:
+        "د نن ورځې عاید",
+
+      todayJobs:
+        "د نن ورځې کارونه",
+
+      newRequests:
+        "نوې غوښتنې",
+
+      completedJobs:
+        "بشپړ شوي کارونه",
+
+      newRequestsTitle:
+        "نوې غوښتنې",
+
+      newRequestsCount:
+        (count: string) =>
+          `${count} غوښتنې ستاسو ځواب ته په تمه دي.`,
+
+      noNewRequestsTitle:
+        "نوې غوښتنه نشته",
+
+      noNewRequestsSubtitle:
+        "د پیرودونکو نوې غوښتنې به دلته ښکاره شي.",
+
+      viewAll:
+        "ټول وګورئ",
+
+      freshRequest:
+        "نوې غوښتنه",
+
+      estimated: "اټکلي",
+
+      quickAccess:
+        "چټک لاسرسی",
+
+      quickAccessSubtitle:
+        "د کار د مدیریت اصلي وسایل",
+
+      quickRequests:
+        "غوښتنې",
+
+      quickRequestsSubtitle:
+        "نوې دندې وګورئ",
+
+      quickCalendar:
+        "کاري کلیز",
+
+      quickCalendarSubtitle:
+        "مهال‌وېش مدیریت کړئ",
+
+      quickMessages:
+        "پیغامونه",
+
+      quickMessagesSubtitle:
+        "له پیرودونکو سره خبرې",
+
+      quickProfile:
+        "مسلکي پروفایل",
+
+      quickProfileSubtitle:
+        "خدمتونه او معلومات",
+
+      upcomingTitle:
+        "راتلونکی مهال‌وېش",
+
+      upcomingSubtitle:
+        "نږدې غوښتنې او کارونه",
+
+      calendar: "کلیز",
+
+      confirmed:
+        "تایید شوی",
+
+      pending: "په تمه",
+
+      customer: "پیرودونکی",
+
+      noUpcomingTitle:
+        "راتلونکی کار نشته",
+
+      noUpcomingSubtitle:
+        "منل شوې او راتلونکې غوښتنې به دلته ښکاره شي.",
+
+      performance:
+        "ستاسو فعالیت",
+
+      performanceSubtitle:
+        "د مسلکي حساب لنډیز",
+
+      customerRating:
+        "د پیرودونکو امتیاز",
+
+      averageResponse:
+        "د ځواب منځنی وخت",
+
+      responseRate:
+        "د ځواب کچه",
+
+      totalRevenue:
+        "ثبت شوی ټول عاید",
+
+      ratingValue:
+        (value: string) =>
+          `${value} له ۵ څخه`,
+
+      minutesValue:
+        (value: string) =>
+          `${value} دقیقې`,
+
+      tipTitle:
+        "بشپړ پروفایل، ډېرې غوښتنې",
+
+      tipSubtitle:
+        "نمونې، روښانه توضیحات او څرګندې بیې د پیرودونکو باور زیاتوي.",
+
+      improveProfile:
+        "مسلکي پروفایل بشپړول",
+    };
+  }
+
+  return {
+    eyebrow:
+      "Provider workspace",
+    greeting: "Hello",
+
+    heroTitle:
+      "Manage today’s work",
+
+    heroSubtitle:
+      "Review new requests, your schedule and professional performance in one place.",
+
+    notifications:
+      "Notifications",
+
+    openProfile:
+      "Open profile",
+
+    currentStatus:
+      "Current status",
+
+    availableTitle:
+      "Available for work",
+
+    unavailableTitle:
+      "Temporarily unavailable",
+
+    availableSubtitle:
+      "Customers can find you in active provider results.",
+
+    unavailableSubtitle:
+      "You will not receive new requests until you become available again.",
+
+    availabilityControl:
+      "Availability status",
+
+    todayRevenue:
+      "Today’s revenue",
+
+    todayJobs:
+      "Today’s jobs",
+
+    newRequests:
+      "New requests",
+
+    completedJobs:
+      "Completed jobs",
+
+    newRequestsTitle:
+      "New requests",
+
+    newRequestsCount:
+      (count: string) =>
+        `${count} requests are waiting for your response.`,
+
+    noNewRequestsTitle:
+      "No new requests",
+
+    noNewRequestsSubtitle:
+      "New customer requests will appear in this section.",
+
+    viewAll: "View all",
+
+    freshRequest:
+      "New request",
+
+    estimated: "Estimated",
+
+    quickAccess:
+      "Quick access",
+
+    quickAccessSubtitle:
+      "Your main work-management tools",
+
+    quickRequests:
+      "Requests",
+
+    quickRequestsSubtitle:
+      "Review new jobs",
+
+    quickCalendar:
+      "Work calendar",
+
+    quickCalendarSubtitle:
+      "Manage your schedule",
+
+    quickMessages:
+      "Messages",
+
+    quickMessagesSubtitle:
+      "Chat with customers",
+
+    quickProfile:
+      "Professional profile",
+
+    quickProfileSubtitle:
+      "Services and information",
+
+    upcomingTitle:
+      "Upcoming schedule",
+
+    upcomingSubtitle:
+      "Your nearest requests and jobs",
+
+    calendar: "Calendar",
+
+    confirmed: "Confirmed",
+
+    pending: "Pending",
+
+    customer: "Customer",
+
+    noUpcomingTitle:
+      "No upcoming work",
+
+    noUpcomingSubtitle:
+      "Accepted and upcoming requests will appear here.",
+
+    performance:
+      "Your performance",
+
+    performanceSubtitle:
+      "Professional-account activity summary",
+
+    customerRating:
+      "Customer rating",
+
+    averageResponse:
+      "Average response time",
+
+    responseRate:
+      "Response rate",
+
+    totalRevenue:
+      "Recorded revenue",
+
+    ratingValue:
+      (value: string) =>
+        `${value} out of 5`,
+
+    minutesValue:
+      (value: string) =>
+        `${value} min`,
+
+    tipTitle:
+      "Complete profiles receive more requests",
+
+    tipSubtitle:
+      "Work samples, clear descriptions and transparent pricing can improve customer trust.",
+
+    improveProfile:
+      "Improve professional profile",
+  };
+}
+
+const styles =
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+
+      backgroundColor:
+        KhedmatPalette.blue050,
+    },
+
+    scrollContent: {
+      width: "100%",
+
+      maxWidth:
+        Layout.contentMaxWidth,
+
+      alignSelf: "center",
+
+      paddingHorizontal:
+        Layout.screenPadding,
+
+      paddingTop: Spacing.md,
+
+      paddingBottom: 130,
+    },
+
+    topBar: {
+      width: "100%",
+
+      minHeight: 52,
+
+      alignItems: "center",
+
+      justifyContent:
+        "space-between",
+
+      gap: Spacing.md,
+    },
+
+    identity: {
+      flex: 1,
+
+      alignItems: "center",
+
+      gap: Spacing.md,
+    },
+
+    providerAvatar: {
+      width: 50,
+      height: 50,
+
+      flexShrink: 0,
+
+      borderRadius: Radius.pill,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      backgroundColor:
+        KhedmatPalette.navy900,
+
+      ...Shadows.small,
+    },
+
+    providerInitials: {
+      fontFamily: Fonts.bold,
+
+      color:
+        KhedmatPalette.white,
+
+      fontSize: 16,
+    },
+
+    verifiedBadge: {
+      position: "absolute",
+
+      right: -2,
+      bottom: -2,
+
+      width: 19,
+      height: 19,
+
+      borderRadius: Radius.pill,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      backgroundColor:
+        KhedmatPalette.blue500,
+
+      borderWidth: 2,
+
+      borderColor:
+        KhedmatPalette.blue050,
+    },
+
+    identityCopy: {
+      flex: 1,
+
+      gap: 1,
+    },
+
+    eyebrow: {
+      ...Typography.captionStyle,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette.blue500,
+
+      fontFamily: Fonts.medium,
+    },
+
+    greeting: {
+      ...Typography.label,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette
+          .textPrimary,
+
+      fontSize: 16,
+
+      lineHeight: 22,
+    },
+
+    notificationButton: {
+      width: 46,
+      height: 46,
+
+      flexShrink: 0,
+
+      borderRadius: Radius.pill,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      backgroundColor:
+        KhedmatPalette.surface,
+
+      borderWidth: 1,
+
+      borderColor:
+        KhedmatPalette.border,
+    },
+
+    notificationBadge: {
+      position: "absolute",
+
+      top: -2,
+      right: -2,
+
+      minWidth: 20,
+      height: 20,
+
+      paddingHorizontal: 5,
+
+      borderRadius: Radius.pill,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      backgroundColor: ERROR,
+
+      borderWidth: 2,
+
+      borderColor:
+        KhedmatPalette.blue050,
+    },
+
+    notificationBadgeText: {
+      fontFamily: Fonts.bold,
+
+      color:
+        KhedmatPalette.white,
+
+      fontSize: 10,
+    },
+
+    hero: {
+      width: "100%",
+
+      marginTop: Spacing.xl,
+
+      gap: Spacing.xs,
+    },
+
+    heroTitle: {
+      ...Typography.screenTitle,
+
+      width: "100%",
+
+      maxWidth: 460,
+
+      color:
+        KhedmatPalette
+          .textPrimary,
+
+      fontSize: 27,
+
+      lineHeight: 34,
+    },
+
+    heroSubtitle: {
+      ...Typography.bodyStyle,
+
+      width: "100%",
+
+      maxWidth:
+        Layout.readableTextMaxWidth,
+
+      color:
+        KhedmatPalette
+          .textSecondary,
+    },
+
+    availabilityCard: {
+      width: "100%",
+
+      minHeight: 116,
+
+      marginTop: Spacing.xxl,
+
+      padding: Spacing.lg,
+
+      alignItems: "center",
+
+      gap: Spacing.md,
+
+      borderWidth: 1,
+
+      borderColor:
+        KhedmatPalette.border,
+
+      borderRadius: Radius.xl,
+
+      backgroundColor:
+        KhedmatPalette.surface,
+
+      ...Shadows.small,
+    },
+
+    availabilityIcon: {
+      width: 50,
+      height: 50,
+
+      flexShrink: 0,
+
+      borderRadius: Radius.lg,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+    },
+
+    availabilityIconActive: {
+      backgroundColor: SUCCESS,
+    },
+
+    availabilityIconInactive: {
+      backgroundColor:
+        KhedmatPalette
+          .surfaceSoft,
+    },
+
+    availabilityCopy: {
+      flex: 1,
+
+      gap: 2,
+    },
+
+    availabilityLabel: {
+      ...Typography.captionStyle,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette.textMuted,
+    },
+
+    availabilityTitle: {
+      ...Typography.label,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette
+          .textPrimary,
+
+      fontSize: 17,
+
+      lineHeight: 23,
+    },
+
+    availabilitySubtitle: {
+      ...Typography.captionStyle,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette
+          .textSecondary,
+
+      lineHeight: 18,
+    },
+
+    switchPressable: {
+      flexShrink: 0,
+    },
+
+    switchTrack: {
+      width: 48,
+      height: 29,
+
+      paddingHorizontal: 3,
+
+      justifyContent: "center",
+
+      borderRadius: Radius.pill,
+
+      backgroundColor:
+        KhedmatPalette.border,
+    },
+
+    switchTrackActive: {
+      backgroundColor:
+        KhedmatPalette.blue500,
+    },
+
+    switchThumb: {
+      width: 23,
+      height: 23,
+
+      borderRadius: Radius.pill,
+
+      backgroundColor:
+        KhedmatPalette.white,
+
+      ...Shadows.small,
+    },
+
+    metricsGrid: {
+      width: "100%",
+
+      marginTop: Spacing.lg,
+
+      flexDirection: "row",
+
+      flexWrap: "wrap",
+
+      justifyContent:
+        "space-between",
+
+      rowGap: Spacing.sm,
+    },
+
+    metricCard: {
+      width: "48.7%",
+
+      minHeight: 138,
+
+      padding: Spacing.md,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      gap: Spacing.sm,
+
+      borderWidth: 1,
+
+      borderColor:
+        KhedmatPalette.border,
+
+      borderRadius: Radius.xl,
+
+      backgroundColor:
+        KhedmatPalette.surface,
+
+      ...Shadows.small,
+    },
+
+    metricCardCompact: {
+      minHeight: 130,
+
+      paddingHorizontal:
+        Spacing.sm,
+    },
+
+    metricIcon: {
+      width: 42,
+      height: 42,
+
+      borderRadius: Radius.md,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+    },
+
+    metricValue: {
+      ...Typography.sectionTitle,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette
+          .textPrimary,
+
+      textAlign: "center",
+
+      fontSize: 18,
+
+      lineHeight: 24,
+    },
+
+    metricLabel: {
+      ...Typography.captionStyle,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette.textMuted,
+
+      textAlign: "center",
+
+      lineHeight: 17,
+    },
+
+    section: {
+      width: "100%",
+
+      marginTop:
+        Spacing.section,
+
+      gap: Spacing.lg,
+    },
+
+    sectionHeader: {
+      width: "100%",
+
+      alignItems: "flex-start",
+
+      justifyContent:
+        "space-between",
+
+      gap: Spacing.md,
+    },
+
+    sectionHeaderCopy: {
+      flex: 1,
+
+      gap: 2,
+    },
+
+    sectionTitle: {
+      ...Typography.sectionTitle,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette
+          .textPrimary,
+
+      fontSize: 21,
+
+      lineHeight: 28,
+    },
+
+    sectionSubtitle: {
+      ...Typography.captionStyle,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette.textMuted,
+    },
+
+    sectionAction: {
+      minHeight: 36,
+
+      justifyContent: "center",
+    },
+
+    sectionActionText: {
+      ...Typography.captionStyle,
+
+      color:
+        KhedmatPalette.blue500,
+
+      fontFamily: Fonts.medium,
+    },
+
+    requestList: {
+      width: "100%",
+
+      gap: Spacing.md,
+    },
+
+    requestCard: {
+      width: "100%",
+
+      padding: Spacing.lg,
+
+      borderWidth: 1,
+
+      borderColor: "#E5C875",
+
+      borderRadius: Radius.xl,
+
+      backgroundColor:
+        "#FFFDF6",
+
+      ...Shadows.small,
+    },
+
+    requestTopRow: {
+      width: "100%",
+
+      alignItems: "flex-start",
+
+      gap: Spacing.md,
+    },
+
+    requestIcon: {
+      width: 50,
+      height: 50,
+
+      flexShrink: 0,
+
+      borderRadius: Radius.lg,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      backgroundColor:
+        KhedmatPalette
+          .surfaceSoft,
+    },
+
+    requestCopy: {
+      flex: 1,
+
+      gap: 3,
+    },
+
+    requestEyebrow: {
+      ...Typography.captionStyle,
+
+      width: "100%",
+
+      color: WARNING,
+
+      fontFamily: Fonts.medium,
+    },
+
+    requestTitle: {
+      ...Typography.label,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette
+          .textPrimary,
+
+      fontSize: 17,
+
+      lineHeight: 23,
+    },
+
+    requestPrice: {
+      maxWidth: 105,
+
+      flexShrink: 0,
+
+      gap: 2,
+    },
+
+    requestPriceLabel: {
+      ...Typography.captionStyle,
+
+      color:
+        KhedmatPalette.textMuted,
+
+      fontSize: 10,
+    },
+
+    requestPriceValue: {
+      ...Typography.label,
+
+      color: SUCCESS,
+
+      fontSize: 13,
+    },
+
+    requestMetaRow: {
+      width: "100%",
+
+      marginTop: Spacing.md,
+
+      flexWrap: "wrap",
+
+      gap: Spacing.md,
+    },
+
+    requestMeta: {
+      alignItems: "center",
+
+      gap: 5,
+    },
+
+    requestMetaText: {
+      ...Typography.captionStyle,
+
+      color:
+        KhedmatPalette.textMuted,
+
+      fontSize: 11,
+    },
+
+    requestAddressRow: {
+      width: "100%",
+
+      marginTop: Spacing.sm,
+
+      alignItems: "flex-start",
+
+      gap: 6,
+    },
+
+    requestAddress: {
+      ...Typography.captionStyle,
+
+      flex: 1,
+
+      color:
+        KhedmatPalette
+          .textSecondary,
+
+      lineHeight: 18,
+    },
+
+    emptyRequestCard: {
+      width: "100%",
+
+      minHeight: 100,
+
+      padding: Spacing.lg,
+
+      alignItems: "center",
+
+      gap: Spacing.md,
+
+      borderWidth: 1,
+
+      borderColor:
+        "#A9D9BD",
+
+      borderRadius: Radius.xl,
+
+      backgroundColor:
+        "#F5FCF8",
+    },
+
+    emptyRequestIcon: {
+      width: 48,
+      height: 48,
+
+      flexShrink: 0,
+
+      borderRadius: Radius.lg,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      backgroundColor:
+        SUCCESS_SOFT,
+    },
+
+    emptyRequestCopy: {
+      flex: 1,
+
+      gap: 3,
+    },
+
+    emptyRequestTitle: {
+      ...Typography.label,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette
+          .textPrimary,
+    },
+
+    emptyRequestSubtitle: {
+      ...Typography.captionStyle,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette
+          .textSecondary,
+    },
+
+    quickActionsGrid: {
+      width: "100%",
+
+      flexDirection: "row",
+
+      flexWrap: "wrap",
+
+      justifyContent:
+        "space-between",
+
+      rowGap: Spacing.sm,
+    },
+
+    quickActionCard: {
+      width: "48.7%",
+
+      minHeight: 142,
+
+      padding: Spacing.md,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      gap: Spacing.sm,
+
+      borderWidth: 1,
+
+      borderColor:
+        KhedmatPalette.border,
+
+      borderRadius: Radius.xl,
+
+      backgroundColor:
+        KhedmatPalette.surface,
+
+      ...Shadows.small,
+    },
+
+    quickActionCardCompact: {
+      minHeight: 136,
+
+      paddingHorizontal:
+        Spacing.sm,
+    },
+
+    quickActionIcon: {
+      width: 48,
+      height: 48,
+
+      borderRadius: Radius.lg,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      backgroundColor:
+        KhedmatPalette
+          .surfaceSoft,
+    },
+
+    quickActionBadge: {
+      position: "absolute",
+
+      top: -6,
+      right: -6,
+
+      minWidth: 21,
+      height: 21,
+
+      paddingHorizontal: 5,
+
+      borderRadius: Radius.pill,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      backgroundColor: ERROR,
+
+      borderWidth: 2,
+
+      borderColor:
+        KhedmatPalette.surface,
+    },
+
+    quickActionBadgeText: {
+      fontFamily: Fonts.bold,
+
+      color:
+        KhedmatPalette.white,
+
+      fontSize: 9,
+    },
+
+    quickActionTitle: {
+      ...Typography.label,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette
+          .textPrimary,
+
+      textAlign: "center",
+
+      fontSize: 15,
+    },
+
+    quickActionSubtitle: {
+      ...Typography.captionStyle,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette.textMuted,
+
+      textAlign: "center",
+
+      lineHeight: 17,
+    },
+
+    upcomingList: {
+      width: "100%",
+
+      gap: Spacing.md,
+    },
+
+    upcomingCard: {
+      width: "100%",
+
+      minHeight: 108,
+
+      padding: Spacing.md,
+
+      alignItems: "center",
+
+      gap: Spacing.md,
+
+      borderWidth: 1,
+
+      borderColor:
+        KhedmatPalette.border,
+
+      borderRadius: Radius.xl,
+
+      backgroundColor:
+        KhedmatPalette.surface,
+
+      ...Shadows.small,
+    },
+
+    upcomingDate: {
+      width: 54,
+      height: 62,
+
+      flexShrink: 0,
+
+      borderRadius: Radius.lg,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      backgroundColor:
+        KhedmatPalette
+          .surfaceSoft,
+    },
+
+    upcomingDay: {
+      fontFamily: Fonts.bold,
+
+      color:
+        KhedmatPalette.blue500,
+
+      fontSize: 20,
+
+      lineHeight: 24,
+    },
+
+    upcomingMonth: {
+      ...Typography.captionStyle,
+
+      color:
+        KhedmatPalette
+          .textSecondary,
+
+      fontSize: 10,
+    },
+
+    upcomingCopy: {
+      flex: 1,
+
+      gap: 3,
+    },
+
+    upcomingTitle: {
+      ...Typography.label,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette
+          .textPrimary,
+
+      fontSize: 16,
+    },
+
+    upcomingCustomer: {
+      ...Typography.captionStyle,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette
+          .textSecondary,
+    },
+
+    upcomingMeta: {
+      width: "100%",
+
+      alignItems: "center",
+
+      gap: 5,
+    },
+
+    upcomingMetaText: {
+      ...Typography.captionStyle,
+
+      color:
+        KhedmatPalette.textMuted,
+    },
+
+    upcomingStatus: {
+      flexShrink: 0,
+
+      paddingHorizontal:
+        Spacing.sm,
+
+      paddingVertical: 6,
+
+      borderRadius: Radius.pill,
+    },
+
+    upcomingStatusText: {
+      ...Typography.captionStyle,
+
+      fontFamily: Fonts.medium,
+
+      fontSize: 10,
+    },
+
+    emptyUpcomingCard: {
+      width: "100%",
+
+      minHeight: 230,
+
+      padding: Spacing.xl,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      gap: Spacing.md,
+
+      borderWidth: 1,
+
+      borderColor:
+        KhedmatPalette.border,
+
+      borderRadius: Radius.xl,
+
+      backgroundColor:
+        KhedmatPalette.surface,
+    },
+
+    emptyUpcomingIcon: {
+      width: 70,
+      height: 70,
+
+      borderRadius: Radius.pill,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      backgroundColor:
+        KhedmatPalette
+          .surfaceSoft,
+    },
+
+    emptyUpcomingTitle: {
+      ...Typography.sectionTitle,
+
+      color:
+        KhedmatPalette
+          .textPrimary,
+
+      textAlign: "center",
+
+      fontSize: 18,
+    },
+
+    emptyUpcomingSubtitle: {
+      ...Typography.bodyStyle,
+
+      maxWidth: 340,
+
+      color:
+        KhedmatPalette
+          .textSecondary,
+
+      textAlign: "center",
+    },
+
+    performanceCard: {
+      width: "100%",
+
+      padding: Spacing.lg,
+
+      borderWidth: 1,
+
+      borderColor:
+        KhedmatPalette.border,
+
+      borderRadius: Radius.xl,
+
+      backgroundColor:
+        KhedmatPalette.surface,
+
+      ...Shadows.small,
+    },
+
+    performanceRow: {
+      width: "100%",
+
+      alignItems: "center",
+
+      gap: Spacing.md,
+    },
+
+    performanceIcon: {
+      width: 42,
+      height: 42,
+
+      flexShrink: 0,
+
+      borderRadius: Radius.md,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      backgroundColor:
+        KhedmatPalette
+          .surfaceSoft,
+    },
+
+    performanceCopy: {
+      flex: 1,
+
+      alignItems: "center",
+
+      justifyContent:
+        "space-between",
+
+      gap: Spacing.md,
+    },
+
+    performanceLabel: {
+      ...Typography.captionStyle,
+
+      flex: 1,
+
+      color:
+        KhedmatPalette.textMuted,
+    },
+
+    performanceValue: {
+      ...Typography.label,
+
+      maxWidth: "52%",
+
+      color:
+        KhedmatPalette
+          .textPrimary,
+    },
+
+    performanceDivider: {
+      width: "100%",
+
+      height:
+        StyleSheet.hairlineWidth,
+
+      marginVertical:
+        Spacing.md,
+
+      backgroundColor:
+        KhedmatPalette.border,
+    },
+
+    tipCard: {
+      width: "100%",
+
+      minHeight: 108,
+
+      marginTop:
+        Spacing.section,
+
+      padding: Spacing.lg,
+
+      alignItems: "center",
+
+      gap: Spacing.md,
+
+      borderWidth: 1,
+
+      borderColor:
+        "#E5C875",
+
+      borderRadius: Radius.xl,
+
+      backgroundColor:
+        "#FFFDF6",
+    },
+
+    tipIcon: {
+      width: 48,
+      height: 48,
+
+      flexShrink: 0,
+
+      borderRadius: Radius.lg,
+
+      alignItems: "center",
+
+      justifyContent: "center",
+
+      backgroundColor:
+        WARNING_SOFT,
+    },
+
+    tipCopy: {
+      flex: 1,
+
+      gap: 3,
+    },
+
+    tipTitle: {
+      ...Typography.label,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette
+          .textPrimary,
+    },
+
+    tipSubtitle: {
+      ...Typography.captionStyle,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette
+          .textSecondary,
+
+      lineHeight: 19,
+    },
+
+    pressed: {
+      opacity: 0.78,
+    },
+
+    cardPressed: {
+      opacity: 0.88,
+
+      transform: [
+        {
+          scale: 0.993,
+        },
+      ],
+    },
+  });

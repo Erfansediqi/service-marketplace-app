@@ -1,5 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { ComponentProps, useMemo, useState } from "react";
+import { useRouter } from "expo-router";
+import {
+  ComponentProps,
+  useMemo,
+  useState,
+} from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -9,12 +14,12 @@ import {
   View,
 } from "react-native";
 
-import { GlassButton } from "../../components/glass/glass-button";
-import { GlassSurface } from "../../components/glass/glass-surface";
 import {
-  Colors,
+  Fonts,
+  KhedmatPalette,
   Layout,
   Radius,
+  Shadows,
   Spacing,
   Typography,
 } from "../../constants/theme";
@@ -23,8 +28,15 @@ import {
   BookingStatus,
   useBooking,
 } from "../../context/booking-context";
+import { useLanguage } from "../../context/languagecontext";
 
-type IconName = ComponentProps<typeof Ionicons>["name"];
+type IconName =
+  ComponentProps<typeof Ionicons>["name"];
+
+type LanguageName =
+  | "English"
+  | "Dari"
+  | "Pashto";
 
 type BookingFilter =
   | "active"
@@ -32,165 +44,479 @@ type BookingFilter =
   | "completed"
   | "cancelled";
 
-const filters: Array<{
+type LocalizedText = {
+  English: string;
+  Dari: string;
+  Pashto: string;
+};
+
+type FilterDefinition = {
   id: BookingFilter;
-  label: string;
-}> = [
+  label: LocalizedText;
+  icon: IconName;
+};
+
+const FILTERS: FilterDefinition[] = [
   {
     id: "active",
-    label: "فعال",
+    label: {
+      English: "Active",
+      Dari: "فعال",
+      Pashto: "فعال",
+    },
+    icon: "flash-outline",
   },
   {
     id: "pending",
-    label: "در انتظار",
+    label: {
+      English: "Pending",
+      Dari: "در انتظار",
+      Pashto: "په تمه",
+    },
+    icon: "time-outline",
   },
   {
     id: "completed",
-    label: "تکمیل‌شده",
+    label: {
+      English: "Completed",
+      Dari: "تکمیل‌شده",
+      Pashto: "بشپړ شوي",
+    },
+    icon: "checkmark-circle-outline",
   },
   {
     id: "cancelled",
-    label: "لغوشده",
+    label: {
+      English: "Cancelled",
+      Dari: "لغوشده",
+      Pashto: "لغوه شوي",
+    },
+    icon: "close-circle-outline",
   },
 ];
 
 export default function BookingsScreen() {
+  const router = useRouter();
   const { bookings } = useBooking();
+  const { language } = useLanguage();
 
-  const [selectedFilter, setSelectedFilter] =
-    useState<BookingFilter>("active");
+  const activeLanguage =
+    normalizeLanguage(language);
 
-  const filteredBookings = useMemo(() => {
-    return bookings.filter((booking) => {
-      if (selectedFilter === "active") {
-        return (
-          booking.status === "confirmed" ||
-          booking.status === "in-progress"
-        );
-      }
+  const isRtl =
+    activeLanguage === "Dari" ||
+    activeLanguage === "Pashto";
 
-      if (selectedFilter === "pending") {
-        return booking.status === "pending";
-      }
+  const copy =
+    getBookingsCopy(activeLanguage);
 
-      if (selectedFilter === "completed") {
-        return booking.status === "completed";
-      }
+  const [
+    selectedFilter,
+    setSelectedFilter,
+  ] = useState<BookingFilter>(
+    "active",
+  );
 
-      return booking.status === "cancelled";
+  const localizedFilters =
+    useMemo(
+      () =>
+        FILTERS.map((filter) => ({
+          ...filter,
+          localizedLabel:
+            filter.label[
+              activeLanguage
+            ],
+        })),
+      [activeLanguage],
+    );
+
+  const filteredBookings =
+    useMemo(() => {
+      const results =
+        bookings.filter((booking) => {
+          if (
+            selectedFilter ===
+            "active"
+          ) {
+            return (
+              booking.status ===
+                "confirmed" ||
+              booking.status ===
+                "in-progress"
+            );
+          }
+
+          if (
+            selectedFilter ===
+            "pending"
+          ) {
+            return (
+              booking.status ===
+              "pending"
+            );
+          }
+
+          if (
+            selectedFilter ===
+            "completed"
+          ) {
+            return (
+              booking.status ===
+              "completed"
+            );
+          }
+
+          return (
+            booking.status ===
+            "cancelled"
+          );
+        });
+
+      return [...results].sort(
+        (first, second) => {
+          const firstTimestamp =
+            getBookingTimestamp(
+              first,
+            );
+
+          const secondTimestamp =
+            getBookingTimestamp(
+              second,
+            );
+
+          if (
+            selectedFilter ===
+              "completed" ||
+            selectedFilter ===
+              "cancelled"
+          ) {
+            return (
+              secondTimestamp -
+              firstTimestamp
+            );
+          }
+
+          return (
+            firstTimestamp -
+            secondTimestamp
+          );
+        },
+      );
+    }, [bookings, selectedFilter]);
+
+  const statusCounts = useMemo(
+    () => ({
+      active: bookings.filter(
+        (booking) =>
+          booking.status ===
+            "confirmed" ||
+          booking.status ===
+            "in-progress",
+      ).length,
+
+      pending: bookings.filter(
+        (booking) =>
+          booking.status ===
+          "pending",
+      ).length,
+
+      completed: bookings.filter(
+        (booking) =>
+          booking.status ===
+          "completed",
+      ).length,
+
+      cancelled: bookings.filter(
+        (booking) =>
+          booking.status ===
+          "cancelled",
+      ).length,
+    }),
+    [bookings],
+  );
+
+  const openMessages = (
+    booking: BookingRecord,
+  ) => {
+    router.push({
+      pathname: "/(tabs)/messages",
+      params: {
+        providerId:
+          booking.providerId,
+        providerName:
+          booking.providerName,
+        bookingId: booking.id,
+      },
     });
-  }, [bookings, selectedFilter]);
+  };
+
+  const repeatBooking = (
+    booking: BookingRecord,
+  ) => {
+    router.push({
+      pathname: "/booking-create",
+      params: {
+        providerId:
+          booking.providerId,
+        serviceId:
+          booking.serviceId,
+      },
+    });
+  };
+
+  const openBooking = (
+    booking: BookingRecord,
+  ) => {
+    /*
+     * There is not yet a dedicated route for
+     * viewing an existing BookingRecord.
+     *
+     * Keep this action safe until a booking-record
+     * details screen is added.
+     */
+    console.log(
+      "Open booking:",
+      booking.id,
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={styles.safeArea}
+    >
       <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={
+          false
+        }
+        contentContainerStyle={
+          styles.scrollContent
+        }
       >
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>
-            مدیریت درخواست‌ها
+          <Text
+            style={[
+              styles.eyebrow,
+              directionStyle(isRtl),
+            ]}
+          >
+            {copy.eyebrow}
           </Text>
 
-          <Text style={styles.title}>
-            رزروهای شما
+          <Text
+            style={[
+              styles.title,
+              directionStyle(isRtl),
+            ]}
+          >
+            {copy.title}
           </Text>
 
-          <Text style={styles.subtitle}>
-            درخواست‌های فعال، در انتظار و تکمیل‌شدهٔ خود را مدیریت کنید.
+          <Text
+            style={[
+              styles.subtitle,
+              directionStyle(isRtl),
+            ]}
+          >
+            {copy.subtitle}
           </Text>
         </View>
 
         <ScrollView
           horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersRow}
+          showsHorizontalScrollIndicator={
+            false
+          }
+          contentContainerStyle={
+            styles.filtersRow
+          }
+          style={{
+            direction: isRtl
+              ? "rtl"
+              : "ltr",
+          }}
         >
-          {filters.map((filter) => {
-            const selected =
-              selectedFilter === filter.id;
+          {localizedFilters.map(
+            (filter) => {
+              const selected =
+                selectedFilter ===
+                filter.id;
 
-            return (
-              <Pressable
-                key={filter.id}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                onPress={() =>
-                  setSelectedFilter(filter.id)
-                }
-                style={({ pressed }) => [
-                  styles.filterPressable,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <GlassSurface
-                  variant={
-                    selected
-                      ? "prominent"
-                      : "regular"
+              const count =
+                statusCounts[
+                  filter.id
+                ];
+
+              return (
+                <Pressable
+                  key={filter.id}
+                  accessibilityRole="button"
+                  accessibilityState={{
+                    selected,
+                  }}
+                  accessibilityLabel={
+                    filter.localizedLabel
                   }
-                  radius={Radius.pill}
-                  style={[
-                    styles.filterSurface,
+                  onPress={() =>
+                    setSelectedFilter(
+                      filter.id,
+                    )
+                  }
+                  style={({ pressed }) => [
+                    styles.filterChip,
                     selected &&
-                      styles.selectedFilterSurface,
+                      styles.filterChipSelected,
+                    pressed &&
+                      styles.pressed,
                   ]}
-                  contentStyle={styles.filterContent}
                 >
+                  <Ionicons
+                    name={filter.icon}
+                    size={17}
+                    color={
+                      selected
+                        ? KhedmatPalette
+                            .white
+                        : KhedmatPalette
+                            .navy700
+                    }
+                  />
+
                   <Text
                     style={[
                       styles.filterText,
                       selected &&
-                        styles.selectedFilterText,
+                        styles.filterTextSelected,
+                      directionStyle(
+                        isRtl,
+                      ),
                     ]}
                   >
-                    {filter.label}
+                    {
+                      filter.localizedLabel
+                    }
                   </Text>
-                </GlassSurface>
-              </Pressable>
-            );
-          })}
+
+                  <View
+                    style={[
+                      styles.filterCount,
+                      selected &&
+                        styles.filterCountSelected,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.filterCountText,
+                        selected &&
+                          styles.filterCountTextSelected,
+                      ]}
+                    >
+                      {formatDigits(
+                        count.toString(),
+                        activeLanguage !==
+                          "English",
+                      )}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            },
+          )}
         </ScrollView>
 
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryCopy}>
-            <Text style={styles.summaryTitle}>
-              {getFilterTitle(selectedFilter)}
+        <View
+          style={[
+            styles.summaryRow,
+            {
+              flexDirection: isRtl
+                ? "row-reverse"
+                : "row",
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.summaryCopy,
+              {
+                alignItems: isRtl
+                  ? "flex-end"
+                  : "flex-start",
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.summaryTitle,
+                directionStyle(isRtl),
+              ]}
+            >
+              {getFilterTitle(
+                selectedFilter,
+                activeLanguage,
+              )}
             </Text>
 
-            <Text style={styles.summarySubtitle}>
-              {toDariDigits(
+            <Text
+              style={[
+                styles.summarySubtitle,
+                directionStyle(isRtl),
+              ]}
+            >
+              {formatDigits(
                 filteredBookings.length.toString(),
+                activeLanguage !==
+                  "English",
               )}{" "}
-              رزرو
+              {copy.bookingsCount}
             </Text>
           </View>
 
-          <GlassSurface
-            variant="regular"
-            radius={Radius.pill}
-            style={styles.summaryIconSurface}
-            contentStyle={styles.summaryIconContent}
+          <View
+            style={styles.summaryIcon}
           >
             <Ionicons
               name="calendar-outline"
-              size={21}
-              color={Colors.primary}
+              size={23}
+              color={
+                KhedmatPalette.blue500
+              }
             />
-          </GlassSurface>
+          </View>
         </View>
 
-        <View style={styles.bookingsList}>
-          {filteredBookings.map((booking) => (
-            <BookingCard
-              key={booking.id}
-              booking={booking}
-            />
-          ))}
+        <View
+          style={styles.bookingsList}
+        >
+          {filteredBookings.map(
+            (booking) => (
+              <BookingCard
+                key={booking.id}
+                booking={booking}
+                language={
+                  activeLanguage
+                }
+                isRtl={isRtl}
+                copy={copy}
+                onOpen={() =>
+                  openBooking(booking)
+                }
+                onMessage={() =>
+                  openMessages(booking)
+                }
+                onRepeat={() =>
+                  repeatBooking(booking)
+                }
+              />
+            ),
+          )}
 
-          {filteredBookings.length === 0 ? (
+          {filteredBookings.length ===
+          0 ? (
             <EmptyBookings
               filter={selectedFilter}
+              language={
+                activeLanguage
+              }
+              isRtl={isRtl}
             />
           ) : null}
         </View>
@@ -199,60 +525,118 @@ export default function BookingsScreen() {
   );
 }
 
+type BookingCardProps = {
+  booking: BookingRecord;
+  language: LanguageName;
+  isRtl: boolean;
+  copy: ReturnType<
+    typeof getBookingsCopy
+  >;
+  onOpen: () => void;
+  onMessage: () => void;
+  onRepeat: () => void;
+};
+
 function BookingCard({
   booking,
-}: {
-  booking: BookingRecord;
-}) {
-  const status =
-    getStatusConfig(booking.status);
-
-  const providerInitials = getInitials(
-    booking.providerName,
+  language,
+  isRtl,
+  copy,
+  onOpen,
+  onMessage,
+  onRepeat,
+}: BookingCardProps) {
+  const status = getStatusConfig(
+    booking.status,
+    language,
   );
 
-  const serviceIcon = getServiceIcon(
-    booking.serviceId,
-  );
+  const providerInitials =
+    getInitials(
+      booking.providerName,
+    );
 
-  const formattedDate = formatBookingDate(
-    booking.date,
-  );
+  const serviceIcon =
+    getServiceIcon(
+      booking.serviceId,
+    );
 
-  const formattedTime = formatTimeForDari(
-    booking.time,
-  );
+  const formattedDate =
+    formatBookingDate(
+      booking.date,
+      language,
+    );
+
+  const formattedTime =
+    formatBookingTime(
+      booking.time,
+      language,
+    );
 
   const showMessageButton =
-    booking.status === "confirmed" ||
-    booking.status === "in-progress";
+    booking.status ===
+      "confirmed" ||
+    booking.status ===
+      "in-progress";
 
   const showRepeatButton =
-    booking.status === "completed";
+    booking.status ===
+    "completed";
 
   return (
-    <GlassSurface
-      variant="regular"
-      radius={Radius.xl}
-      style={styles.bookingCard}
-      contentStyle={styles.bookingContent}
-    >
-      <View style={styles.bookingHeader}>
-        <View style={styles.bookingIcon}>
+    <View style={styles.bookingCard}>
+      <View
+        style={[
+          styles.bookingHeader,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
+      >
+        <View
+          style={styles.bookingIcon}
+        >
           <Ionicons
             name={serviceIcon}
-            size={24}
-            color={Colors.primary}
+            size={25}
+            color={
+              KhedmatPalette.blue500
+            }
           />
         </View>
 
-        <View style={styles.bookingMainCopy}>
-          <Text style={styles.bookingService}>
+        <View
+          style={[
+            styles.bookingMainCopy,
+            {
+              alignItems: isRtl
+                ? "flex-end"
+                : "flex-start",
+            },
+          ]}
+        >
+          <Text
+            numberOfLines={2}
+            style={[
+              styles.bookingService,
+              directionStyle(isRtl),
+            ]}
+          >
             {booking.serviceName}
           </Text>
 
-          <Text style={styles.bookingCategory}>
-            {booking.providerProfession}
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.bookingCategory,
+              directionStyle(isRtl),
+            ]}
+          >
+            {
+              booking.providerProfession
+            }
           </Text>
         </View>
 
@@ -271,6 +655,7 @@ function BookingCard({
               {
                 color: status.color,
               },
+              directionStyle(isRtl),
             ]}
           >
             {status.label}
@@ -278,27 +663,70 @@ function BookingCard({
         </View>
       </View>
 
-      <View style={styles.providerRow}>
-        <View style={styles.providerAvatar}>
-          <Text style={styles.providerInitials}>
+      <View
+        style={[
+          styles.providerRow,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
+      >
+        <View
+          style={
+            styles.providerAvatar
+          }
+        >
+          <Text
+            style={
+              styles.providerInitials
+            }
+          >
             {providerInitials}
           </Text>
 
-          <View style={styles.verifiedBadge}>
+          <View
+            style={
+              styles.verifiedBadge
+            }
+          >
             <Ionicons
               name="checkmark"
               size={10}
-              color={Colors.white}
+              color={
+                KhedmatPalette.white
+              }
             />
           </View>
         </View>
 
-        <View style={styles.providerCopy}>
-          <Text style={styles.providerLabel}>
-            ارائه‌دهنده
+        <View
+          style={[
+            styles.providerCopy,
+            {
+              alignItems: isRtl
+                ? "flex-end"
+                : "flex-start",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.providerLabel,
+              directionStyle(isRtl),
+            ]}
+          >
+            {copy.provider}
           </Text>
 
-          <Text style={styles.providerName}>
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.providerName,
+              directionStyle(isRtl),
+            ]}
+          >
             {booking.providerName}
           </Text>
         </View>
@@ -307,78 +735,78 @@ function BookingCard({
       <View style={styles.details}>
         <BookingDetail
           icon="calendar-outline"
-          label="تاریخ"
+          label={copy.date}
           value={formattedDate}
+          isRtl={isRtl}
         />
 
         <BookingDetail
           icon="time-outline"
-          label="زمان"
+          label={copy.time}
           value={formattedTime}
+          isRtl={isRtl}
         />
 
         <BookingDetail
           icon="location-outline"
-          label="آدرس"
-          value={booking.address.fullAddress}
+          label={copy.address}
+          value={
+            booking.address
+              .fullAddress
+          }
+          isRtl={isRtl}
         />
 
         <BookingDetail
           icon="cash-outline"
-          label="مبلغ"
-          value={formatCurrency(booking.total)}
+          label={copy.amount}
+          value={formatCurrency(
+            booking.total,
+            language,
+          )}
+          isRtl={isRtl}
         />
       </View>
 
-      <View style={styles.cardActions}>
-        <GlassButton
-          label="مشاهده جزئیات"
+      <View
+        style={[
+          styles.cardActions,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
+      >
+        <ActionButton
+          label={copy.viewDetails}
           icon="document-text-outline"
-          iconPosition="left"
           variant="secondary"
-          fullWidth={false}
-          style={styles.actionButton}
-          onPress={() => {
-            console.log(
-              "Open booking:",
-              booking.id,
-            );
-          }}
+          isRtl={isRtl}
+          onPress={onOpen}
         />
 
         {showMessageButton ? (
-          <GlassButton
-            label="پیام"
+          <ActionButton
+            label={copy.message}
             icon="chatbubble-outline"
-            iconPosition="left"
-            fullWidth={false}
-            style={styles.actionButton}
-            onPress={() => {
-              console.log(
-                "Message provider:",
-                booking.providerName,
-              );
-            }}
+            variant="primary"
+            isRtl={isRtl}
+            onPress={onMessage}
           />
         ) : null}
 
         {showRepeatButton ? (
-          <GlassButton
-            label="رزرو دوباره"
+          <ActionButton
+            label={copy.bookAgain}
             icon="refresh-outline"
-            iconPosition="left"
-            fullWidth={false}
-            style={styles.actionButton}
-            onPress={() => {
-              console.log(
-                "Repeat booking:",
-                booking.id,
-              );
-            }}
+            variant="primary"
+            isRtl={isRtl}
+            onPress={onRepeat}
           />
         ) : null}
       </View>
-    </GlassSurface>
+    </View>
   );
 }
 
@@ -386,31 +814,63 @@ type BookingDetailProps = {
   icon: IconName;
   label: string;
   value: string;
+  isRtl: boolean;
 };
 
 function BookingDetail({
   icon,
   label,
   value,
+  isRtl,
 }: BookingDetailProps) {
   return (
-    <View style={styles.detailItem}>
-      <View style={styles.detailIcon}>
+    <View
+      style={[
+        styles.detailItem,
+        {
+          flexDirection: isRtl
+            ? "row-reverse"
+            : "row",
+        },
+      ]}
+    >
+      <View
+        style={styles.detailIcon}
+      >
         <Ionicons
           name={icon}
-          size={17}
-          color={Colors.textTertiary}
+          size={18}
+          color={
+            KhedmatPalette.blue500
+          }
         />
       </View>
 
-      <View style={styles.detailCopy}>
-        <Text style={styles.detailLabel}>
+      <View
+        style={[
+          styles.detailCopy,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.detailLabel,
+            directionStyle(isRtl),
+          ]}
+        >
           {label}
         </Text>
 
         <Text
           numberOfLines={3}
-          style={styles.detailValue}
+          style={[
+            styles.detailValue,
+            directionStyle(isRtl),
+          ]}
         >
           {value}
         </Text>
@@ -419,32 +879,128 @@ function BookingDetail({
   );
 }
 
+type ActionButtonProps = {
+  label: string;
+  icon: IconName;
+  variant:
+    | "primary"
+    | "secondary";
+  isRtl: boolean;
+  onPress: () => void;
+};
+
+function ActionButton({
+  label,
+  icon,
+  variant,
+  isRtl,
+  onPress,
+}: ActionButtonProps) {
+  const primary =
+    variant === "primary";
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.actionButton,
+        primary
+          ? styles.actionButtonPrimary
+          : styles.actionButtonSecondary,
+        pressed && styles.pressed,
+      ]}
+    >
+      <View
+        style={[
+          styles.actionButtonContent,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
+      >
+        <Ionicons
+          name={icon}
+          size={17}
+          color={
+            primary
+              ? KhedmatPalette.white
+              : KhedmatPalette
+                  .navy700
+          }
+        />
+
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.82}
+          style={[
+            styles.actionButtonText,
+            primary
+              ? styles.actionButtonTextPrimary
+              : styles.actionButtonTextSecondary,
+            directionStyle(isRtl),
+          ]}
+        >
+          {label}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+type EmptyBookingsProps = {
+  filter: BookingFilter;
+  language: LanguageName;
+  isRtl: boolean;
+};
+
 function EmptyBookings({
   filter,
-}: {
-  filter: BookingFilter;
-}) {
+  language,
+  isRtl,
+}: EmptyBookingsProps) {
   return (
     <View style={styles.emptyState}>
-      <GlassSurface
-        variant="regular"
-        radius={Radius.xxl}
-        style={styles.emptyIconSurface}
-        contentStyle={styles.emptyIconContent}
+      <View
+        style={
+          styles.emptyIconContainer
+        }
       >
         <Ionicons
           name="calendar-clear-outline"
-          size={32}
-          color={Colors.textTertiary}
+          size={35}
+          color={
+            KhedmatPalette.blue500
+          }
         />
-      </GlassSurface>
+      </View>
 
-      <Text style={styles.emptyTitle}>
-        {getEmptyTitle(filter)}
+      <Text
+        style={[
+          styles.emptyTitle,
+          directionStyle(isRtl),
+        ]}
+      >
+        {getEmptyTitle(
+          filter,
+          language,
+        )}
       </Text>
 
-      <Text style={styles.emptySubtitle}>
-        {getEmptySubtitle(filter)}
+      <Text
+        style={[
+          styles.emptySubtitle,
+          directionStyle(isRtl),
+        ]}
+      >
+        {getEmptySubtitle(
+          filter,
+          language,
+        )}
       </Text>
     </View>
   );
@@ -452,7 +1008,40 @@ function EmptyBookings({
 
 function getFilterTitle(
   filter: BookingFilter,
+  language: LanguageName,
 ): string {
+  if (language === "English") {
+    if (filter === "active") {
+      return "Active bookings";
+    }
+
+    if (filter === "pending") {
+      return "Awaiting confirmation";
+    }
+
+    if (filter === "completed") {
+      return "Completed bookings";
+    }
+
+    return "Cancelled bookings";
+  }
+
+  if (language === "Pashto") {
+    if (filter === "active") {
+      return "فعال رزرفونه";
+    }
+
+    if (filter === "pending") {
+      return "د تایید په تمه";
+    }
+
+    if (filter === "completed") {
+      return "بشپړ شوي رزرفونه";
+    }
+
+    return "لغوه شوي رزرفونه";
+  }
+
   if (filter === "active") {
     return "رزروهای فعال";
   }
@@ -470,7 +1059,40 @@ function getFilterTitle(
 
 function getEmptyTitle(
   filter: BookingFilter,
+  language: LanguageName,
 ): string {
+  if (language === "English") {
+    if (filter === "active") {
+      return "No active bookings";
+    }
+
+    if (filter === "pending") {
+      return "No pending requests";
+    }
+
+    if (filter === "completed") {
+      return "No completed bookings yet";
+    }
+
+    return "No cancelled bookings";
+  }
+
+  if (language === "Pashto") {
+    if (filter === "active") {
+      return "فعال رزرف نه لرئ";
+    }
+
+    if (filter === "pending") {
+      return "په تمه غوښتنه نشته";
+    }
+
+    if (filter === "completed") {
+      return "تر اوسه رزرف نه دی بشپړ شوی";
+    }
+
+    return "لغوه شوی رزرف نه لرئ";
+  }
+
   if (filter === "active") {
     return "رزرو فعالی ندارید";
   }
@@ -488,7 +1110,40 @@ function getEmptyTitle(
 
 function getEmptySubtitle(
   filter: BookingFilter,
+  language: LanguageName,
 ): string {
+  if (language === "English") {
+    if (filter === "active") {
+      return "Confirmed and in-progress bookings will appear here.";
+    }
+
+    if (filter === "pending") {
+      return "New requests awaiting a provider response will appear here.";
+    }
+
+    if (filter === "completed") {
+      return "Your completed services and booking history will appear here.";
+    }
+
+    return "Bookings that have been cancelled will appear here.";
+  }
+
+  if (language === "Pashto") {
+    if (filter === "active") {
+      return "تایید شوي او روان رزرفونه به دلته ښکاره شي.";
+    }
+
+    if (filter === "pending") {
+      return "هغه نوې غوښتنې چې د خدمت وړاندې کوونکي ځواب ته په تمه دي، دلته ښکاري.";
+    }
+
+    if (filter === "completed") {
+      return "بشپړ شوي خدمتونه او د رزرفونو تاریخچه به دلته ښکاره شي.";
+    }
+
+    return "لغوه شوي رزرفونه به دلته ښکاره شي.";
+  }
+
   if (filter === "active") {
     return "پس از تأیید ارائه‌دهنده، رزروهای فعال شما در اینجا نمایش داده می‌شوند.";
   }
@@ -506,56 +1161,102 @@ function getEmptySubtitle(
 
 function getStatusConfig(
   status: BookingStatus,
+  language: LanguageName,
 ) {
+  const labels =
+    getStatusLabels(language);
+
   if (status === "confirmed") {
     return {
-      label: "تأییدشده",
-      color: Colors.primary,
-      backgroundColor: Colors.primarySoft,
+      label: labels.confirmed,
+      color:
+        KhedmatPalette.blue500,
+      backgroundColor:
+        "#E1F2F7",
     };
   }
 
-  if (status === "in-progress") {
+  if (
+    status === "in-progress"
+  ) {
     return {
-      label: "در حال انجام",
-      color: Colors.secondary,
+      label: labels.inProgress,
+      color:
+        KhedmatPalette.navy700,
       backgroundColor:
-        "rgba(86, 183, 201, 0.12)",
+        KhedmatPalette.blue050,
     };
   }
 
   if (status === "completed") {
     return {
-      label: "تکمیل‌شده",
-      color: Colors.success,
+      label: labels.completed,
+      color:
+        KhedmatPalette.success,
       backgroundColor:
-        "rgba(48, 183, 106, 0.12)",
+        KhedmatPalette.successSoft,
     };
   }
 
   if (status === "cancelled") {
     return {
-      label: "لغوشده",
-      color: Colors.error,
+      label: labels.cancelled,
+      color:
+        KhedmatPalette.error,
       backgroundColor:
-        "rgba(225, 90, 90, 0.12)",
+        KhedmatPalette.errorSoft,
     };
   }
 
   return {
-    label: "در انتظار",
-    color: Colors.warning,
-    backgroundColor:
-      "rgba(217, 154, 43, 0.12)",
+    label: labels.pending,
+    color: "#8A5A00",
+    backgroundColor: "#FFF4D6",
   };
 }
 
-function getInitials(name: string): string {
+function getStatusLabels(
+  language: LanguageName,
+) {
+  if (language === "English") {
+    return {
+      confirmed: "Confirmed",
+      inProgress: "In progress",
+      completed: "Completed",
+      cancelled: "Cancelled",
+      pending: "Pending",
+    };
+  }
+
+  if (language === "Pashto") {
+    return {
+      confirmed: "تایید شوی",
+      inProgress: "د ترسره کېدو په حال کې",
+      completed: "بشپړ شوی",
+      cancelled: "لغوه شوی",
+      pending: "په تمه",
+    };
+  }
+
+  return {
+    confirmed: "تأییدشده",
+    inProgress: "در حال انجام",
+    completed: "تکمیل‌شده",
+    cancelled: "لغوشده",
+    pending: "در انتظار",
+  };
+}
+
+function getInitials(
+  name: string,
+): string {
   return name
     .trim()
     .split(/\s+/)
     .filter(Boolean)
-    .map((part) => part.charAt(0))
+    .map((part) =>
+      part.charAt(0),
+    )
     .join("")
     .slice(0, 2);
 }
@@ -563,39 +1264,48 @@ function getInitials(name: string): string {
 function getServiceIcon(
   serviceId: string,
 ): IconName {
+  const normalized =
+    serviceId.toLowerCase();
+
   if (
-    serviceId.includes("wiring") ||
-    serviceId.includes("socket") ||
-    serviceId.includes("lighting") ||
-    serviceId.includes("breaker") ||
-    serviceId.includes("generator")
+    normalized.includes("wiring") ||
+    normalized.includes("socket") ||
+    normalized.includes("lighting") ||
+    normalized.includes("breaker") ||
+    normalized.includes("generator") ||
+    normalized.includes("electric")
   ) {
     return "flash-outline";
   }
 
   if (
-    serviceId.includes("pipe") ||
-    serviceId.includes("drain") ||
-    serviceId.includes("water")
+    normalized.includes("pipe") ||
+    normalized.includes("drain") ||
+    normalized.includes("water") ||
+    normalized.includes("plumb")
   ) {
     return "water-outline";
   }
 
-  if (serviceId.includes("clean")) {
+  if (
+    normalized.includes("clean")
+  ) {
     return "sparkles-outline";
   }
 
   if (
-    serviceId.includes("computer") ||
-    serviceId.includes("software")
+    normalized.includes("computer") ||
+    normalized.includes("software") ||
+    normalized.includes("phone")
   ) {
     return "laptop-outline";
   }
 
   if (
-    serviceId.includes("carpenter") ||
-    serviceId.includes("cabinet") ||
-    serviceId.includes("door")
+    normalized.includes("carpenter") ||
+    normalized.includes("cabinet") ||
+    normalized.includes("door") ||
+    normalized.includes("wood")
   ) {
     return "hammer-outline";
   }
@@ -603,19 +1313,47 @@ function getServiceIcon(
   return "construct-outline";
 }
 
+function getBookingTimestamp(
+  booking: BookingRecord,
+): number {
+  const date =
+    booking.date || "1970-01-01";
+
+  const time =
+    booking.time || "00:00";
+
+  const timestamp = new Date(
+    `${date}T${time}:00`,
+  ).getTime();
+
+  return Number.isFinite(timestamp)
+    ? timestamp
+    : 0;
+}
+
 function formatBookingDate(
   value: string,
+  language: LanguageName,
 ): string {
   if (!value) {
+    if (language === "English") {
+      return "Date unavailable";
+    }
+
+    if (language === "Pashto") {
+      return "نېټه نه ده معلومه";
+    }
+
     return "تاریخ نامشخص";
   }
 
-  const [year, month, day] = value
-    .split("-")
-    .map(Number);
+  const [year, month, day] =
+    value.split("-").map(Number);
 
   if (!year || !month || !day) {
-    return value;
+    return language === "English"
+      ? value
+      : formatDigits(value, true);
   }
 
   const date = new Date(
@@ -624,68 +1362,138 @@ function formatBookingDate(
     day,
   );
 
-  const weekdays = [
-    "یک‌شنبه",
-    "دوشنبه",
-    "سه‌شنبه",
-    "چهارشنبه",
-    "پنج‌شنبه",
-    "جمعه",
-    "شنبه",
-  ];
+  const locale =
+    language === "English"
+      ? "en-US"
+      : "fa-AF";
 
-  const months = [
-    "جنوری",
-    "فبروری",
-    "مارچ",
-    "اپریل",
-    "می",
-    "جون",
-    "جولای",
-    "اگست",
-    "سپتمبر",
-    "اکتوبر",
-    "نوامبر",
-    "دسمبر",
-  ];
+  try {
+    const formatted =
+      new Intl.DateTimeFormat(
+        locale,
+        {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+        },
+      ).format(date);
 
-  return `${weekdays[date.getDay()] ?? ""}، ${toDariDigits(
-    day.toString(),
-  )} ${months[date.getMonth()] ?? ""}`;
+    return language === "English"
+      ? formatted
+      : formatDigits(
+          formatted,
+          true,
+        );
+  } catch {
+    return language === "English"
+      ? `${day}/${month}/${year}`
+      : formatDigits(
+          `${day}/${month}/${year}`,
+          true,
+        );
+  }
 }
 
-function formatTimeForDari(
+function formatBookingTime(
   value: string,
+  language: LanguageName,
 ): string {
-  const labels: Record<string, string> = {
-    "08:00": "۸:۰۰ صبح",
-    "09:00": "۹:۰۰ صبح",
-    "10:00": "۱۰:۰۰ صبح",
-    "11:00": "۱۱:۰۰ صبح",
-    "12:00": "۱۲:۰۰ ظهر",
-    "13:00": "۱:۰۰ بعد از ظهر",
-    "14:00": "۲:۰۰ بعد از ظهر",
-    "15:00": "۳:۰۰ بعد از ظهر",
-    "16:00": "۴:۰۰ بعد از ظهر",
-    "17:00": "۵:۰۰ بعد از ظهر",
-    "18:00": "۶:۰۰ عصر",
-  };
+  if (!value) {
+    if (language === "English") {
+      return "Time unavailable";
+    }
 
-  return labels[value] ?? value;
+    if (language === "Pashto") {
+      return "وخت نه دی معلوم";
+    }
+
+    return "زمان نامشخص";
+  }
+
+  const [hoursRaw, minutesRaw] =
+    value.split(":");
+
+  const hours =
+    Number(hoursRaw);
+
+  const minutes =
+    Number(minutesRaw);
+
+  if (
+    !Number.isFinite(hours) ||
+    !Number.isFinite(minutes)
+  ) {
+    return language === "English"
+      ? value
+      : formatDigits(value, true);
+  }
+
+  const date = new Date();
+  date.setHours(
+    hours,
+    minutes,
+    0,
+    0,
+  );
+
+  try {
+    const formatted =
+      new Intl.DateTimeFormat(
+        language === "English"
+          ? "en-US"
+          : "fa-AF",
+        {
+          hour: "numeric",
+          minute: "2-digit",
+        },
+      ).format(date);
+
+    return language === "English"
+      ? formatted
+      : formatDigits(
+          formatted,
+          true,
+        );
+  } catch {
+    return language === "English"
+      ? value
+      : formatDigits(value, true);
+  }
 }
 
 function formatCurrency(
   amount: number,
+  language: LanguageName,
 ): string {
-  return `${new Intl.NumberFormat(
-    "fa-AF",
-  ).format(amount)} افغانی`;
+  const formatted =
+    new Intl.NumberFormat(
+      "en-US",
+    ).format(amount);
+
+  if (language === "English") {
+    return `${formatted} AFN`;
+  }
+
+  const localized =
+    formatDigits(formatted, true);
+
+  return language === "Dari"
+    ? `${localized} افغانی`
+    : `${localized} افغانۍ`;
 }
 
-function toDariDigits(
+function formatDigits(
   value: string,
+  localized: boolean,
 ): string {
-  const digits: Record<string, string> = {
+  if (!localized) {
+    return value;
+  }
+
+  const digits: Record<
+    string,
+    string
+  > = {
     "0": "۰",
     "1": "۱",
     "2": "۲",
@@ -700,135 +1508,255 @@ function toDariDigits(
 
   return value.replace(
     /\d/g,
-    (digit) => digits[digit] ?? digit,
+    (digit) =>
+      digits[digit] ?? digit,
   );
+}
+
+function normalizeLanguage(
+  language: string,
+): LanguageName {
+  if (language === "Dari") {
+    return "Dari";
+  }
+
+  if (language === "Pashto") {
+    return "Pashto";
+  }
+
+  return "English";
+}
+
+function directionStyle(
+  isRtl: boolean,
+) {
+  return {
+    textAlign: isRtl
+      ? ("right" as const)
+      : ("left" as const),
+
+    writingDirection: isRtl
+      ? ("rtl" as const)
+      : ("ltr" as const),
+  };
+}
+
+function getBookingsCopy(
+  language: LanguageName,
+) {
+  if (language === "Dari") {
+    return {
+      eyebrow: "مدیریت درخواست‌ها",
+      title: "رزروهای شما",
+      subtitle:
+        "درخواست‌های فعال، در انتظار و تکمیل‌شدهٔ خود را مدیریت کنید.",
+      bookingsCount: "رزرو",
+      provider: "ارائه‌دهنده",
+      date: "تاریخ",
+      time: "زمان",
+      address: "آدرس",
+      amount: "مبلغ",
+      viewDetails: "مشاهده جزئیات",
+      message: "پیام",
+      bookAgain: "رزرو دوباره",
+    };
+  }
+
+  if (language === "Pashto") {
+    return {
+      eyebrow:
+        "د غوښتنو مدیریت",
+      title: "ستاسو رزرفونه",
+      subtitle:
+        "خپل فعال، په تمه او بشپړ شوي رزرفونه مدیریت کړئ.",
+      bookingsCount: "رزرفونه",
+      provider:
+        "خدمت وړاندې کوونکی",
+      date: "نېټه",
+      time: "وخت",
+      address: "پته",
+      amount: "مبلغ",
+      viewDetails:
+        "تفصیل وګورئ",
+      message: "پیغام",
+      bookAgain:
+        "بیا رزرف کړئ",
+    };
+  }
+
+  return {
+    eyebrow: "Request management",
+    title: "Your bookings",
+    subtitle:
+      "Manage your active, pending and completed service requests.",
+    bookingsCount: "bookings",
+    provider: "Provider",
+    date: "Date",
+    time: "Time",
+    address: "Address",
+    amount: "Amount",
+    viewDetails: "View details",
+    message: "Message",
+    bookAgain: "Book again",
+  };
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor:
+      KhedmatPalette.blue050,
   },
 
   scrollContent: {
     width: "100%",
-    maxWidth: Layout.contentMaxWidth,
+    maxWidth:
+      Layout.contentMaxWidth,
     alignSelf: "center",
-    paddingHorizontal: Layout.screenPadding,
+    paddingHorizontal:
+      Layout.screenPadding,
     paddingTop: Spacing.lg,
     paddingBottom: 130,
   },
 
   header: {
     width: "100%",
-    alignItems: "flex-end",
     gap: Spacing.xs,
   },
 
   eyebrow: {
     ...Typography.captionStyle,
     width: "100%",
-    color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.blue500,
+    fontFamily: Fonts.medium,
   },
 
   title: {
     ...Typography.screenTitle,
     width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 28,
-    lineHeight: 35,
+    color:
+      KhedmatPalette.textPrimary,
+    fontSize: 27,
+    lineHeight: 34,
   },
 
   subtitle: {
     ...Typography.bodyStyle,
     width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    maxWidth:
+      Layout.readableTextMaxWidth,
+    color:
+      KhedmatPalette.textSecondary,
   },
 
   filtersRow: {
     marginTop: Spacing.xxl,
-    flexDirection: "row-reverse",
     gap: Spacing.sm,
     paddingHorizontal: 1,
   },
 
-  filterPressable: {
-    borderRadius: Radius.pill,
-  },
-
-  filterSurface: {
-    minHeight: 42,
-  },
-
-  selectedFilterSurface: {
-    borderColor:
-      "rgba(76, 141, 255, 0.50)",
-    backgroundColor: Colors.primarySoft,
-  },
-
-  filterContent: {
-    minHeight: 42,
+  filterChip: {
+    minHeight: 44,
     paddingHorizontal: Spacing.md,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 7,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    backgroundColor:
+      KhedmatPalette.surface,
+  },
+
+  filterChipSelected: {
+    borderColor:
+      KhedmatPalette.navy900,
+    backgroundColor:
+      KhedmatPalette.navy900,
   },
 
   filterText: {
     ...Typography.captionStyle,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textSecondary,
   },
 
-  selectedFilterText: {
-    color: Colors.textPrimary,
-    fontWeight: "600",
+  filterTextSelected: {
+    color:
+      KhedmatPalette.white,
+    fontFamily: Fonts.medium,
+  },
+
+  filterCount: {
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: 6,
+    borderRadius: Radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
+  },
+
+  filterCountSelected: {
+    backgroundColor:
+      "rgba(255,255,255,0.18)",
+  },
+
+  filterCountText: {
+    fontFamily: Fonts.medium,
+    fontSize: 11,
+    color:
+      KhedmatPalette.textMuted,
+  },
+
+  filterCountTextSelected: {
+    color:
+      KhedmatPalette.white,
   },
 
   summaryRow: {
     width: "100%",
     marginTop: Spacing.section,
-    flexDirection: "row-reverse",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent:
+      "space-between",
   },
 
   summaryCopy: {
-    alignItems: "flex-end",
+    flex: 1,
     gap: 2,
   },
 
   summaryTitle: {
     ...Typography.sectionTitle,
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    width: "100%",
+    color:
+      KhedmatPalette.textPrimary,
     fontSize: 21,
     lineHeight: 28,
   },
 
   summarySubtitle: {
     ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    width: "100%",
+    color:
+      KhedmatPalette.textMuted,
   },
 
-  summaryIconSurface: {
-    width: 44,
-    height: 44,
-  },
-
-  summaryIconContent: {
-    flex: 1,
+  summaryIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.surface,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
   },
 
   bookingsList: {
@@ -839,41 +1767,43 @@ const styles = StyleSheet.create({
 
   bookingCard: {
     width: "100%",
-  },
-
-  bookingContent: {
     padding: Spacing.lg,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    backgroundColor:
+      KhedmatPalette.surface,
+    ...Shadows.small,
   },
 
   bookingHeader: {
     width: "100%",
-    flexDirection: "row-reverse",
     alignItems: "flex-start",
     gap: Spacing.md,
   },
 
   bookingIcon: {
-    width: 50,
-    height: 50,
+    width: 52,
+    height: 52,
     flexShrink: 0,
     borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
   },
 
   bookingMainCopy: {
     flex: 1,
-    alignItems: "flex-end",
     gap: 3,
   },
 
   bookingService: {
     ...Typography.sectionTitle,
     width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textPrimary,
     fontSize: 18,
     lineHeight: 24,
   },
@@ -881,9 +1811,8 @@ const styles = StyleSheet.create({
   bookingCategory: {
     ...Typography.captionStyle,
     width: "100%",
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textMuted,
   },
 
   statusBadge: {
@@ -897,13 +1826,12 @@ const styles = StyleSheet.create({
     ...Typography.captionStyle,
     fontSize: 11,
     textAlign: "center",
-    writingDirection: "rtl",
+    fontFamily: Fonts.medium,
   },
 
   providerRow: {
     width: "100%",
     marginTop: Spacing.lg,
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: Spacing.md,
   },
@@ -915,16 +1843,15 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor:
-      "rgba(76, 141, 255, 0.28)",
+    backgroundColor:
+      KhedmatPalette.navy900,
   },
 
   providerInitials: {
-    color: Colors.primary,
+    fontFamily: Fonts.bold,
+    color:
+      KhedmatPalette.white,
     fontSize: 16,
-    fontWeight: "700",
   },
 
   verifiedBadge: {
@@ -936,31 +1863,30 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primary,
+    backgroundColor:
+      KhedmatPalette.blue500,
     borderWidth: 2,
-    borderColor: Colors.backgroundRaised,
+    borderColor:
+      KhedmatPalette.surface,
   },
 
   providerCopy: {
     flex: 1,
-    alignItems: "flex-end",
     gap: 2,
   },
 
   providerLabel: {
     ...Typography.captionStyle,
     width: "100%",
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textMuted,
   },
 
   providerName: {
     ...Typography.label,
     width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textPrimary,
     fontSize: 16,
   },
 
@@ -972,59 +1898,97 @@ const styles = StyleSheet.create({
       StyleSheet.hairlineWidth,
     borderBottomWidth:
       StyleSheet.hairlineWidth,
-    borderColor: Colors.separator,
+    borderColor:
+      KhedmatPalette.border,
     gap: Spacing.md,
   },
 
   detailItem: {
     width: "100%",
-    flexDirection: "row-reverse",
     alignItems: "center",
     gap: Spacing.md,
   },
 
   detailIcon: {
-    width: 34,
-    height: 34,
+    width: 36,
+    height: 36,
     flexShrink: 0,
     borderRadius: Radius.md,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.glass,
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
   },
 
   detailCopy: {
     flex: 1,
-    flexDirection: "row-reverse",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent:
+      "space-between",
     gap: Spacing.md,
   },
 
   detailLabel: {
     ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
+    flexShrink: 0,
+    color:
+      KhedmatPalette.textMuted,
   },
 
   detailValue: {
     ...Typography.label,
     flex: 1,
-    color: Colors.textPrimary,
-    textAlign: "left",
-    writingDirection: "rtl",
+    color:
+      KhedmatPalette.textPrimary,
   },
 
   cardActions: {
     width: "100%",
     marginTop: Spacing.lg,
-    flexDirection: "row-reverse",
     gap: Spacing.sm,
   },
 
   actionButton: {
     flex: 1,
+    minHeight: 46,
+    borderRadius: Radius.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: Spacing.sm,
+  },
+
+  actionButtonPrimary: {
+    backgroundColor:
+      KhedmatPalette.navy900,
+  },
+
+  actionButtonSecondary: {
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+  },
+
+  actionButtonContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+
+  actionButtonText: {
+    ...Typography.captionStyle,
+    fontFamily: Fonts.medium,
+  },
+
+  actionButtonTextPrimary: {
+    color:
+      KhedmatPalette.white,
+  },
+
+  actionButtonTextSecondary: {
+    color:
+      KhedmatPalette.navy700,
   },
 
   emptyState: {
@@ -1035,33 +1999,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
   },
 
-  emptyIconSurface: {
-    width: 78,
-    height: 78,
-  },
-
-  emptyIconContent: {
-    flex: 1,
+  emptyIconContainer: {
+    width: 82,
+    height: 82,
+    borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor:
+      KhedmatPalette.surface,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
   },
 
   emptyTitle: {
     ...Typography.sectionTitle,
-    color: Colors.textPrimary,
+    maxWidth: 340,
+    color:
+      KhedmatPalette.textPrimary,
     textAlign: "center",
-    writingDirection: "rtl",
   },
 
   emptySubtitle: {
     ...Typography.bodyStyle,
     maxWidth: 350,
-    color: Colors.textSecondary,
+    color:
+      KhedmatPalette.textSecondary,
     textAlign: "center",
-    writingDirection: "rtl",
   },
 
   pressed: {
-    opacity: 0.82,
+    opacity: 0.78,
+    transform: [
+      {
+        scale: 0.985,
+      },
+    ],
   },
 });
