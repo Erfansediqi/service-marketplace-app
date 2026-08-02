@@ -246,9 +246,9 @@ export default function BookingSummaryScreen() {
             new Date().toISOString(),
         };
 
-        addBooking(booking);
+       await addBooking(booking);
 
-        router.replace({
+       router.replace({
           pathname:
             "/booking-success",
           params: {

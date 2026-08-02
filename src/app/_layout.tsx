@@ -9,7 +9,10 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 
-import { BookingProvider } from "../context/booking-context";
+import {
+  BookingProvider,
+  useBooking,
+} from "../context/booking-context";
 import {
   LanguageProvider,
   useLanguage,
@@ -38,10 +41,15 @@ function AppNavigator({
     isHydrated: sessionIsHydrated,
   } = useSession();
 
+  const {
+    isHydrated: bookingIsHydrated,
+  } = useBooking();
+
   const appIsReady =
     fontsReady &&
     languageIsHydrated &&
-    sessionIsHydrated;
+    sessionIsHydrated &&
+    bookingIsHydrated;
 
   useEffect(() => {
     if (!appIsReady) {
@@ -107,17 +115,15 @@ function AppNavigator({
 }
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] =
-    useFonts({
-      Roboto_400Regular,
-      Roboto_500Medium,
-      Roboto_600SemiBold,
-      Roboto_700Bold,
-    });
+  const [fontsLoaded, fontError] = useFonts({
+    Roboto_400Regular,
+    Roboto_500Medium,
+    Roboto_600SemiBold,
+    Roboto_700Bold,
+  });
 
   const fontsReady =
-    fontsLoaded ||
-    Boolean(fontError);
+    fontsLoaded || Boolean(fontError);
 
   return (
     <SessionProvider>
