@@ -1,45 +1,75 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ComponentProps, useMemo, useState } from "react";
 import {
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ComponentProps,
+  useMemo,
+  useState,
+} from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
-import { GlassButton } from "../components/glass/glass-button";
-import { GlassIconButton } from "../components/glass/glass-icon-button";
-import { GlassInput } from "../components/glass/glass-input";
-import { GlassSurface } from "../components/glass/glass-surface";
 import {
-    Colors,
-    Layout,
-    Radius,
-    Shadows,
-    Spacing,
-    Typography,
+  Fonts,
+  KhedmatPalette,
+  Layout,
+  Radius,
+  Shadows,
+  Spacing,
+  Typography,
 } from "../constants/theme";
 import {
-    BookingAddress,
-    useBooking,
+  BookingAddress,
+  useBooking,
 } from "../context/booking-context";
+import { useLanguage } from "../context/languagecontext";
 
-type IconName = ComponentProps<typeof Ionicons>["name"];
+type IconName =
+  ComponentProps<typeof Ionicons>["name"];
+
+type LanguageName =
+  | "English"
+  | "Dari"
+  | "Pashto";
 
 type AddressOption = BookingAddress & {
   icon: IconName;
-  subtitle: string;
+  subtitleKey:
+    | "primaryAddress"
+    | "savedAddress";
 };
 
-const savedAddresses: AddressOption[] = [
+type DetailsCopy = ReturnType<
+  typeof getDetailsCopy
+>;
+
+const CURRENT_STEP = 3;
+const TOTAL_STEPS = 4;
+const MINIMUM_ADDRESS_LENGTH = 8;
+const MINIMUM_NOTES_LENGTH = 10;
+const MAXIMUM_NOTES_LENGTH = 700;
+const MAXIMUM_ACCESS_NOTES_LENGTH = 300;
+
+const SUCCESS = "#268A57";
+const SUCCESS_SOFT = "#E8F6EE";
+const ERROR = "#B3261E";
+const ERROR_SOFT = "#FCE8E6";
+
+const SAVED_ADDRESSES: AddressOption[] = [
   {
     id: "home",
     label: "خانه",
-    fullAddress: "کابل، ناحیه دهم، سرک سوم، خانه ۲۴",
-    subtitle: "آدرس اصلی",
+    fullAddress:
+      "کابل، ناحیه دهم، سرک سوم، خانه ۲۴",
+    subtitleKey: "primaryAddress",
     latitude: 34.5553,
     longitude: 69.2075,
     icon: "home-outline",
@@ -47,8 +77,9 @@ const savedAddresses: AddressOption[] = [
   {
     id: "work",
     label: "محل کار",
-    fullAddress: "کابل، شهر نو، سرک انصاری، ساختمان ۸",
-    subtitle: "آدرس ذخیره‌شده",
+    fullAddress:
+      "کابل، شهر نو، سرک انصاری، ساختمان ۸",
+    subtitleKey: "savedAddress",
     latitude: 34.5326,
     longitude: 69.1717,
     icon: "business-outline",
@@ -63,11 +94,30 @@ export default function BookingDetailsScreen() {
     updateBookingDraft,
   } = useBooking();
 
+  const { language } =
+    useLanguage();
+
+  const activeLanguage =
+    normalizeLanguage(language);
+
+  const isRtl =
+    activeLanguage === "Dari" ||
+    activeLanguage === "Pashto";
+
+  const localizedDigits =
+    activeLanguage !== "English";
+
+  const copy =
+    getDetailsCopy(
+      activeLanguage,
+    );
+
   const initialAddressId =
     bookingDraft.address?.id &&
-    savedAddresses.some(
+    SAVED_ADDRESSES.some(
       (address) =>
-        address.id === bookingDraft.address?.id,
+        address.id ===
+        bookingDraft.address?.id,
     )
       ? bookingDraft.address.id
       : "";
@@ -75,104 +125,196 @@ export default function BookingDetailsScreen() {
   const initialManualAddress =
     bookingDraft.address &&
     !initialAddressId
-      ? bookingDraft.address.fullAddress
+      ? bookingDraft.address
+          .fullAddress
       : "";
 
-  const [selectedAddressId, setSelectedAddressId] =
-    useState(initialAddressId);
-
-  const [manualAddressEnabled, setManualAddressEnabled] =
-    useState(Boolean(initialManualAddress));
-
-  const [manualAddress, setManualAddress] =
-    useState(initialManualAddress);
-
-  const [notes, setNotes] = useState(
-    bookingDraft.notes,
+  const [
+    selectedAddressId,
+    setSelectedAddressId,
+  ] = useState(
+    initialAddressId,
   );
 
-  const [contactNotes, setContactNotes] =
-    useState("");
-
-  const [submitted, setSubmitted] = useState(false);
-
-  const selectedSavedAddress = useMemo(
-    () =>
-      savedAddresses.find(
-        (address) =>
-          address.id === selectedAddressId,
-      ) ?? null,
-    [selectedAddressId],
+  const [
+    manualAddressEnabled,
+    setManualAddressEnabled,
+  ] = useState(
+    Boolean(
+      initialManualAddress,
+    ),
   );
 
-  const resolvedAddress = useMemo<BookingAddress | null>(
-    () => {
-      if (manualAddressEnabled) {
-        const normalizedAddress =
-          manualAddress.trim();
+  const [
+    manualAddress,
+    setManualAddress,
+  ] = useState(
+    initialManualAddress,
+  );
 
-        if (normalizedAddress.length < 8) {
+  const [notes, setNotes] =
+    useState(
+      extractPrimaryNotes(
+        bookingDraft.notes,
+      ),
+    );
+
+  const [
+    accessNotes,
+    setAccessNotes,
+  ] = useState(
+    extractAccessNotes(
+      bookingDraft.notes,
+    ),
+  );
+
+  const [
+    submitted,
+    setSubmitted,
+  ] = useState(false);
+
+  const selectedSavedAddress =
+    useMemo(
+      () =>
+        SAVED_ADDRESSES.find(
+          (address) =>
+            address.id ===
+            selectedAddressId,
+        ) ?? null,
+      [selectedAddressId],
+    );
+
+  const resolvedAddress =
+    useMemo<BookingAddress | null>(
+      () => {
+        if (
+          manualAddressEnabled
+        ) {
+          const normalized =
+            manualAddress.trim();
+
+          if (
+            normalized.length <
+            MINIMUM_ADDRESS_LENGTH
+          ) {
+            return null;
+          }
+
+          return {
+            label:
+              copy.otherAddress,
+            fullAddress:
+              normalized,
+          };
+        }
+
+        if (
+          !selectedSavedAddress
+        ) {
           return null;
         }
 
         return {
-          label: "آدرس دیگر",
-          fullAddress: normalizedAddress,
+          id:
+            selectedSavedAddress.id,
+          label:
+            selectedSavedAddress.label,
+          fullAddress:
+            selectedSavedAddress.fullAddress,
+          latitude:
+            selectedSavedAddress.latitude,
+          longitude:
+            selectedSavedAddress.longitude,
         };
-      }
-
-      if (!selectedSavedAddress) {
-        return null;
-      }
-
-      return {
-        id: selectedSavedAddress.id,
-        label: selectedSavedAddress.label,
-        fullAddress:
-          selectedSavedAddress.fullAddress,
-        latitude:
-          selectedSavedAddress.latitude,
-        longitude:
-          selectedSavedAddress.longitude,
-      };
-    },
-    [
-      manualAddress,
-      manualAddressEnabled,
-      selectedSavedAddress,
-    ],
-  );
+      },
+      [
+        copy.otherAddress,
+        manualAddress,
+        manualAddressEnabled,
+        selectedSavedAddress,
+      ],
+    );
 
   const addressError =
-    submitted && !resolvedAddress
+    submitted &&
+    !resolvedAddress
       ? manualAddressEnabled
-        ? "لطفاً آدرس کامل و معتبر را وارد کنید."
-        : "لطفاً یک آدرس را انتخاب کنید."
+        ? copy.manualAddressError(
+            formatDigits(
+              MINIMUM_ADDRESS_LENGTH.toString(),
+              localizedDigits,
+            ),
+          )
+        : copy.addressSelectionError
       : undefined;
 
   const notesError =
-    submitted && notes.trim().length < 10
-      ? "لطفاً مشکل یا کار مورد نیاز را با حداقل ۱۰ حرف توضیح دهید."
+    submitted &&
+    notes.trim().length <
+      MINIMUM_NOTES_LENGTH
+      ? copy.notesError(
+          formatDigits(
+            MINIMUM_NOTES_LENGTH.toString(),
+            localizedDigits,
+          ),
+        )
       : undefined;
 
   const formIsValid =
     Boolean(resolvedAddress) &&
-    notes.trim().length >= 10;
+    notes.trim().length >=
+      MINIMUM_NOTES_LENGTH;
+
+  const notesProgress =
+    Math.min(
+      100,
+      Math.round(
+        (notes.trim().length /
+          MINIMUM_NOTES_LENGTH) *
+          100,
+      ),
+    );
 
   const selectSavedAddress = (
     addressId: string,
   ) => {
-    setSelectedAddressId(addressId);
-    setManualAddressEnabled(false);
+    setSelectedAddressId(
+      addressId,
+    );
+    setManualAddressEnabled(
+      false,
+    );
 
     if (submitted) {
       setSubmitted(false);
     }
   };
 
-  const enableManualAddress = () => {
-    setSelectedAddressId("");
-    setManualAddressEnabled(true);
+  const enableManualAddress =
+    () => {
+      setSelectedAddressId("");
+      setManualAddressEnabled(
+        true,
+      );
+
+      if (submitted) {
+        setSubmitted(false);
+      }
+    };
+
+  const handleManualAddressChange =
+    (value: string) => {
+      setManualAddress(value);
+
+      if (submitted) {
+        setSubmitted(false);
+      }
+    };
+
+  const handleNotesChange = (
+    value: string,
+  ) => {
+    setNotes(value);
 
     if (submitted) {
       setSubmitted(false);
@@ -182,568 +324,1628 @@ export default function BookingDetailsScreen() {
   const handleContinue = () => {
     setSubmitted(true);
 
-    if (!formIsValid || !resolvedAddress) {
+    if (
+      !formIsValid ||
+      !resolvedAddress
+    ) {
       return;
     }
 
     const combinedNotes = [
       notes.trim(),
-      contactNotes.trim()
-        ? `یادداشت دسترسی و تماس: ${contactNotes.trim()}`
+      accessNotes.trim()
+        ? `${copy.accessNotePrefix}: ${accessNotes.trim()}`
         : "",
     ]
       .filter(Boolean)
       .join("\n\n");
 
     updateBookingDraft({
-      address: resolvedAddress,
+      address:
+        resolvedAddress,
       notes: combinedNotes,
     });
 
-    router.push("/booking-summary");
+    router.push(
+      "/booking-summary",
+    );
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={
-          styles.scrollContent
+    <SafeAreaView
+      style={styles.safeArea}
+    >
+      <KeyboardAvoidingView
+        style={styles.root}
+        behavior={
+          Platform.OS === "ios"
+            ? "padding"
+            : undefined
         }
       >
-        <View style={styles.topBar}>
-          <GlassIconButton
-            icon="chevron-back"
-            accessibilityLabel="بازگشت"
-            onPress={() => router.back()}
-          />
-
-          <Text style={styles.stepText}>
-            مرحله ۳ از ۴
-          </Text>
-        </View>
-
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>
-            جزئیات خدمت
-          </Text>
-
-          <Text style={styles.title}>
-            آدرس و توضیحات کار را وارد کنید
-          </Text>
-
-          <Text style={styles.subtitle}>
-            آدرس انجام خدمت و اطلاعات لازم برای
-            آماده‌شدن ارائه‌دهنده را مشخص کنید.
-          </Text>
-        </View>
-
-        <GlassSurface
-          variant="regular"
-          radius={Radius.xl}
-          style={styles.summaryCard}
-          contentStyle={styles.summaryContent}
+        <ScrollView
+          showsVerticalScrollIndicator={
+            false
+          }
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={
+            styles.scrollContent
+          }
         >
-          <View style={styles.summaryIcon}>
-            <Ionicons
-              name="calendar-outline"
-              size={23}
-              color={Colors.primary}
-            />
-          </View>
-
-          <View style={styles.summaryCopy}>
-            <Text style={styles.summaryEyebrow}>
-              رزرو فعلی
-            </Text>
-
-            <Text style={styles.summaryTitle}>
-              {bookingDraft.serviceName ||
-                "خدمت انتخاب‌شده"}
-            </Text>
-
-            <Text style={styles.summarySubtitle}>
-              {formatBookingDate(
-                bookingDraft.date,
-              )}{" "}
-              ·{" "}
-              {formatTimeForDari(
-                bookingDraft.time,
-              )}
-            </Text>
-          </View>
-        </GlassSurface>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              آدرس انجام خدمت
-            </Text>
-
-            <Text style={styles.sectionSubtitle}>
-              یک آدرس ذخیره‌شده را انتخاب کنید یا
-              آدرس دیگری وارد نمایید.
-            </Text>
-          </View>
-
-          <View style={styles.addresses}>
-            {savedAddresses.map((address) => {
-              const selected =
-                !manualAddressEnabled &&
-                selectedAddressId === address.id;
-
-              return (
-                <Pressable
-                  key={address.id}
-                  accessibilityRole="radio"
-                  accessibilityLabel={
-                    address.label
-                  }
-                  accessibilityState={{
-                    selected,
-                  }}
-                  onPress={() =>
-                    selectSavedAddress(
-                      address.id ?? "",
-                    )
-                  }
-                  style={({ pressed }) => [
-                    styles.addressPressable,
-                    pressed &&
-                      styles.cardPressed,
-                  ]}
-                >
-                  <GlassSurface
-                    variant={
-                      selected
-                        ? "prominent"
-                        : "regular"
-                    }
-                    radius={Radius.xl}
-                    style={[
-                      styles.addressSurface,
-                      selected &&
-                        styles.selectedAddressSurface,
-                      selected && Shadows.small,
-                    ]}
-                    contentStyle={
-                      styles.addressContent
-                    }
-                  >
-                    <View
-                      style={[
-                        styles.addressIcon,
-                        selected &&
-                          styles.selectedAddressIcon,
-                      ]}
-                    >
-                      <Ionicons
-                        name={address.icon}
-                        size={23}
-                        color={
-                          selected
-                            ? Colors.white
-                            : Colors.primary
-                        }
-                      />
-                    </View>
-
-                    <View style={styles.addressCopy}>
-                      <View
-                        style={
-                          styles.addressTitleRow
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.addressTitle,
-                            selected &&
-                              styles.selectedAddressTitle,
-                          ]}
-                        >
-                          {address.label}
-                        </Text>
-
-                        <Text
-                          style={
-                            styles.addressSubtitle
-                          }
-                        >
-                          {address.subtitle}
-                        </Text>
-                      </View>
-
-                      <Text
-                        style={
-                          styles.fullAddressText
-                        }
-                      >
-                        {address.fullAddress}
-                      </Text>
-                    </View>
-
-                    <View
-                      style={[
-                        styles.radioOuter,
-                        selected &&
-                          styles.radioOuterSelected,
-                      ]}
-                    >
-                      {selected ? (
-                        <View
-                          style={styles.radioInner}
-                        />
-                      ) : null}
-                    </View>
-                  </GlassSurface>
-                </Pressable>
-              );
-            })}
-
+          <View
+            style={[
+              styles.topBar,
+              {
+                flexDirection: isRtl
+                  ? "row-reverse"
+                  : "row",
+              },
+            ]}
+          >
             <Pressable
-              accessibilityRole="radio"
-              accessibilityLabel="وارد کردن آدرس دیگر"
-              accessibilityState={{
-                selected: manualAddressEnabled,
-              }}
-              onPress={enableManualAddress}
+              accessibilityRole="button"
+              accessibilityLabel={
+                copy.back
+              }
+              hitSlop={8}
+              onPress={() =>
+                router.back()
+              }
               style={({ pressed }) => [
-                styles.addressPressable,
-                pressed && styles.cardPressed,
+                styles.backButton,
+                pressed &&
+                  styles.pressed,
               ]}
             >
-              <GlassSurface
-                variant={
-                  manualAddressEnabled
-                    ? "prominent"
-                    : "regular"
+              <Ionicons
+                name={
+                  isRtl
+                    ? "chevron-forward"
+                    : "chevron-back"
                 }
-                radius={Radius.xl}
+                size={24}
+                color={
+                  KhedmatPalette
+                    .navy900
+                }
+              />
+            </Pressable>
+
+            <View
+              style={
+                styles.stepBadge
+              }
+            >
+              <Text
                 style={[
-                  styles.addressSurface,
-                  manualAddressEnabled &&
-                    styles.selectedAddressSurface,
+                  styles.stepText,
+                  directionStyle(
+                    isRtl,
+                  ),
                 ]}
-                contentStyle={
-                  styles.addressContent
+              >
+                {copy.step(
+                  formatDigits(
+                    CURRENT_STEP.toString(),
+                    localizedDigits,
+                  ),
+                  formatDigits(
+                    TOTAL_STEPS.toString(),
+                    localizedDigits,
+                  ),
+                )}
+              </Text>
+            </View>
+          </View>
+
+          <View
+            style={styles.header}
+          >
+            <View
+              style={
+                styles.headerIcon
+              }
+            >
+              <Ionicons
+                name="document-text-outline"
+                size={30}
+                color={
+                  KhedmatPalette
+                    .white
                 }
+              />
+            </View>
+
+            <View
+              style={[
+                styles.headerCopy,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.eyebrow,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.eyebrow}
+              </Text>
+
+              <Text
+                style={[
+                  styles.title,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.title}
+              </Text>
+
+              <Text
+                style={[
+                  styles.subtitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.subtitle}
+              </Text>
+            </View>
+          </View>
+
+          <View
+            style={[
+              styles.bookingSummaryCard,
+              {
+                flexDirection: isRtl
+                  ? "row-reverse"
+                  : "row",
+              },
+            ]}
+          >
+            <View
+              style={
+                styles.bookingSummaryIcon
+              }
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={23}
+                color={
+                  KhedmatPalette
+                    .blue500
+                }
+              />
+            </View>
+
+            <View
+              style={[
+                styles.bookingSummaryCopy,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.bookingSummaryEyebrow,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.currentBooking}
+              </Text>
+
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.bookingSummaryTitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {bookingDraft.serviceName ||
+                  copy.serviceFallback}
+              </Text>
+
+              <Text
+                numberOfLines={2}
+                style={[
+                  styles.bookingSummarySubtitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {formatBookingDate(
+                  bookingDraft.date,
+                  activeLanguage,
+                )}
+                {" · "}
+                {formatTime(
+                  bookingDraft.time,
+                  activeLanguage,
+                )}
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.providerBadge
+              }
+            >
+              <Ionicons
+                name="person-outline"
+                size={15}
+                color={
+                  KhedmatPalette
+                    .blue500
+                }
+              />
+
+              <Text
+                numberOfLines={2}
+                style={[
+                  styles.providerBadgeText,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {bookingDraft.providerName ||
+                  copy.providerFallback}
+              </Text>
+            </View>
+          </View>
+
+          <View
+            style={styles.section}
+          >
+            <View
+              style={[
+                styles.sectionHeader,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.sectionTitleRow,
+                  {
+                    flexDirection: isRtl
+                      ? "row-reverse"
+                      : "row",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    directionStyle(
+                      isRtl,
+                    ),
+                  ]}
+                >
+                  {copy.addressTitle}
+                </Text>
+
+                <Text
+                  style={[
+                    styles.requiredLabel,
+                    directionStyle(
+                      isRtl,
+                    ),
+                  ]}
+                >
+                  {copy.required}
+                </Text>
+              </View>
+
+              <Text
+                style={[
+                  styles.sectionSubtitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.addressSubtitle}
+              </Text>
+            </View>
+
+            <View
+              style={styles.addresses}
+            >
+              {SAVED_ADDRESSES.map(
+                (address) => {
+                  const selected =
+                    !manualAddressEnabled &&
+                    selectedAddressId ===
+                      address.id;
+
+                  return (
+                    <AddressCard
+                      key={address.id}
+                      address={address}
+                      selected={
+                        selected
+                      }
+                      subtitle={
+                        copy[
+                          address.subtitleKey
+                        ]
+                      }
+                      isRtl={isRtl}
+                      onPress={() =>
+                        selectSavedAddress(
+                          address.id ??
+                            "",
+                        )
+                      }
+                    />
+                  );
+                },
+              )}
+
+              <Pressable
+                accessibilityRole="radio"
+                accessibilityLabel={
+                  copy.otherAddress
+                }
+                accessibilityState={{
+                  selected:
+                    manualAddressEnabled,
+                }}
+                onPress={
+                  enableManualAddress
+                }
+                style={({ pressed }) => [
+                  styles.addressCard,
+                  manualAddressEnabled &&
+                    styles.addressCardSelected,
+                  pressed &&
+                    styles.cardPressed,
+                ]}
               >
                 <View
                   style={[
-                    styles.addressIcon,
-                    manualAddressEnabled &&
-                      styles.selectedAddressIcon,
+                    styles.addressCardContent,
+                    {
+                      flexDirection: isRtl
+                        ? "row-reverse"
+                        : "row",
+                    },
                   ]}
                 >
-                  <Ionicons
-                    name="add-outline"
-                    size={24}
-                    color={
+                  <View
+                    style={[
+                      styles.addressIcon,
+                      manualAddressEnabled &&
+                        styles.addressIconSelected,
+                    ]}
+                  >
+                    <Ionicons
+                      name="add-outline"
+                      size={23}
+                      color={
+                        manualAddressEnabled
+                          ? KhedmatPalette
+                              .white
+                          : KhedmatPalette
+                              .blue500
+                      }
+                    />
+                  </View>
+
+                  <View
+                    style={[
+                      styles.addressCopy,
+                      {
+                        alignItems: isRtl
+                          ? "flex-end"
+                          : "flex-start",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.addressTitleText,
+                        manualAddressEnabled &&
+                          styles.addressTitleSelected,
+                        directionStyle(
+                          isRtl,
+                        ),
+                      ]}
+                    >
+                      {copy.otherAddress}
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.fullAddressText,
+                        directionStyle(
+                          isRtl,
+                        ),
+                      ]}
+                    >
+                      {copy.otherAddressSubtitle}
+                    </Text>
+                  </View>
+
+                  <Radio
+                    selected={
                       manualAddressEnabled
-                        ? Colors.white
-                        : Colors.primary
+                    }
+                  />
+                </View>
+              </Pressable>
+
+              {manualAddressEnabled ? (
+                <View
+                  style={styles.field}
+                >
+                  <Text
+                    style={[
+                      styles.fieldLabel,
+                      directionStyle(
+                        isRtl,
+                      ),
+                    ]}
+                  >
+                    {
+                      copy.completeAddress
+                    }
+                  </Text>
+
+                  <View
+                    style={[
+                      styles.inputShell,
+                      addressError &&
+                        styles.inputShellError,
+                    ]}
+                  >
+                    <TextInput
+                      value={
+                        manualAddress
+                      }
+                      onChangeText={
+                        handleManualAddressChange
+                      }
+                      placeholder={
+                        copy.addressPlaceholder
+                      }
+                      placeholderTextColor={
+                        KhedmatPalette
+                          .textMuted
+                      }
+                      selectionColor={
+                        KhedmatPalette
+                          .blue500
+                      }
+                      multiline
+                      numberOfLines={4}
+                      maxLength={220}
+                      textAlignVertical="top"
+                      style={[
+                        styles.multilineInput,
+                        styles.addressInput,
+                        directionStyle(
+                          isRtl,
+                        ),
+                      ]}
+                    />
+                  </View>
+
+                  {addressError ? (
+                    <ErrorText
+                      text={
+                        addressError
+                      }
+                      isRtl={isRtl}
+                    />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.fieldHint,
+                        directionStyle(
+                          isRtl,
+                        ),
+                      ]}
+                    >
+                      {
+                        copy.addressHint
+                      }
+                    </Text>
+                  )}
+                </View>
+              ) : addressError ? (
+                <ErrorText
+                  text={addressError}
+                  isRtl={isRtl}
+                />
+              ) : null}
+            </View>
+          </View>
+
+          <View
+            style={styles.section}
+          >
+            <View
+              style={[
+                styles.sectionHeader,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.sectionTitleRow,
+                  {
+                    flexDirection: isRtl
+                      ? "row-reverse"
+                      : "row",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    directionStyle(
+                      isRtl,
+                    ),
+                  ]}
+                >
+                  {copy.problemTitle}
+                </Text>
+
+                <Text
+                  style={[
+                    styles.requiredLabel,
+                    directionStyle(
+                      isRtl,
+                    ),
+                  ]}
+                >
+                  {copy.required}
+                </Text>
+              </View>
+
+              <Text
+                style={[
+                  styles.sectionSubtitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.problemSubtitle}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.inputShell,
+                styles.largeInputShell,
+                notesError &&
+                  styles.inputShellError,
+              ]}
+            >
+              <View
+                style={[
+                  styles.inputHeader,
+                  {
+                    flexDirection: isRtl
+                      ? "row-reverse"
+                      : "row",
+                  },
+                ]}
+              >
+                <View
+                  style={
+                    styles.inputHeaderIcon
+                  }
+                >
+                  <Ionicons
+                    name="create-outline"
+                    size={19}
+                    color={
+                      KhedmatPalette
+                        .blue500
                     }
                   />
                 </View>
 
-                <View style={styles.addressCopy}>
-                  <Text
-                    style={[
-                      styles.addressTitle,
-                      manualAddressEnabled &&
-                        styles.selectedAddressTitle,
-                    ]}
-                  >
-                    آدرس دیگر
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.fullAddressText
-                    }
-                  >
-                    آدرس جدید را برای این رزرو وارد
-                    کنید.
-                  </Text>
-                </View>
-
-                <View
+                <Text
                   style={[
-                    styles.radioOuter,
-                    manualAddressEnabled &&
-                      styles.radioOuterSelected,
+                    styles.inputHeaderText,
+                    directionStyle(
+                      isRtl,
+                    ),
                   ]}
                 >
-                  {manualAddressEnabled ? (
-                    <View
-                      style={styles.radioInner}
-                    />
-                  ) : null}
-                </View>
-              </GlassSurface>
-            </Pressable>
+                  {copy.requestDescription}
+                </Text>
+              </View>
 
-            {manualAddressEnabled ? (
-              <GlassInput
-                label="آدرس کامل"
-                placeholder="ولایت، شهر یا ولسوالی، ناحیه، سرک و شماره خانه"
-                value={manualAddress}
-                onChangeText={(value) => {
-                  setManualAddress(value);
-
-                  if (submitted) {
-                    setSubmitted(false);
-                  }
-                }}
+              <TextInput
+                value={notes}
+                onChangeText={
+                  handleNotesChange
+                }
+                placeholder={
+                  copy.notesPlaceholder
+                }
+                placeholderTextColor={
+                  KhedmatPalette
+                    .textMuted
+                }
+                selectionColor={
+                  KhedmatPalette
+                    .blue500
+                }
                 multiline
-                numberOfLines={4}
+                numberOfLines={7}
+                maxLength={
+                  MAXIMUM_NOTES_LENGTH
+                }
                 textAlignVertical="top"
-                style={styles.addressInput}
-                error={addressError}
+                style={[
+                  styles.multilineInput,
+                  styles.notesInput,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
               />
-            ) : null}
 
-            {!manualAddressEnabled &&
-            addressError ? (
-              <Text style={styles.errorText}>
-                {addressError}
-              </Text>
-            ) : null}
-          </View>
-        </View>
+              <View
+                style={
+                  styles.progressTrack
+                }
+              >
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${notesProgress}%`,
+                    },
+                    notes.trim().length >=
+                      MINIMUM_NOTES_LENGTH &&
+                      styles.progressFillValid,
+                  ]}
+                />
+              </View>
+            </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              توضیح مشکل یا کار
-            </Text>
-
-            <Text style={styles.sectionSubtitle}>
-              توضیح روشن به ارائه‌دهنده کمک می‌کند
-              ابزار و زمان مناسب را آماده کند.
-            </Text>
-          </View>
-
-          <GlassInput
-            label="شرح درخواست"
-            placeholder="مثلاً برق دو اتاق قطع شده و فیوز چند بار خاموش می‌شود..."
-            value={notes}
-            onChangeText={(value) => {
-              setNotes(value);
-
-              if (submitted) {
-                setSubmitted(false);
-              }
-            }}
-            multiline
-            numberOfLines={7}
-            textAlignVertical="top"
-            style={styles.notesInput}
-            error={notesError}
-          />
-
-          <View style={styles.characterRow}>
-            <Text
+            <View
               style={[
-                styles.characterCount,
-                notes.trim().length >= 10 &&
-                  styles.characterCountValid,
+                styles.characterRow,
+                {
+                  flexDirection: isRtl
+                    ? "row-reverse"
+                    : "row",
+                },
               ]}
             >
-              {toDariDigits(
-                notes.length.toString(),
-              )}{" "}
-              حرف
-            </Text>
+              <Text
+                style={[
+                  styles.characterCount,
+                  notes.trim().length >=
+                    MINIMUM_NOTES_LENGTH &&
+                    styles.characterCountValid,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.characterCount(
+                  formatDigits(
+                    notes.length.toString(),
+                    localizedDigits,
+                  ),
+                  formatDigits(
+                    MAXIMUM_NOTES_LENGTH.toString(),
+                    localizedDigits,
+                  ),
+                )}
+              </Text>
+
+              <Text
+                style={[
+                  styles.characterRequirement,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.minimumCharacters(
+                  formatDigits(
+                    MINIMUM_NOTES_LENGTH.toString(),
+                    localizedDigits,
+                  ),
+                )}
+              </Text>
+            </View>
+
+            {notesError ? (
+              <ErrorText
+                text={notesError}
+                isRtl={isRtl}
+              />
+            ) : null}
+          </View>
+
+          <View
+            style={styles.section}
+          >
+            <View
+              style={[
+                styles.sectionHeader,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.sectionTitleRow,
+                  {
+                    flexDirection: isRtl
+                      ? "row-reverse"
+                      : "row",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    directionStyle(
+                      isRtl,
+                    ),
+                  ]}
+                >
+                  {copy.accessTitle}
+                </Text>
+
+                <Text
+                  style={[
+                    styles.optionalLabel,
+                    directionStyle(
+                      isRtl,
+                    ),
+                  ]}
+                >
+                  {copy.optional}
+                </Text>
+              </View>
+
+              <Text
+                style={[
+                  styles.sectionSubtitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.accessSubtitle}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.inputShell,
+                styles.mediumInputShell,
+              ]}
+            >
+              <View
+                style={[
+                  styles.inputHeader,
+                  {
+                    flexDirection: isRtl
+                      ? "row-reverse"
+                      : "row",
+                  },
+                ]}
+              >
+                <View
+                  style={
+                    styles.inputHeaderIcon
+                  }
+                >
+                  <Ionicons
+                    name="call-outline"
+                    size={19}
+                    color={
+                      KhedmatPalette
+                        .blue500
+                    }
+                  />
+                </View>
+
+                <Text
+                  style={[
+                    styles.inputHeaderText,
+                    directionStyle(
+                      isRtl,
+                    ),
+                  ]}
+                >
+                  {copy.extraNote}
+                </Text>
+              </View>
+
+              <TextInput
+                value={
+                  accessNotes
+                }
+                onChangeText={
+                  setAccessNotes
+                }
+                placeholder={
+                  copy.accessPlaceholder
+                }
+                placeholderTextColor={
+                  KhedmatPalette
+                    .textMuted
+                }
+                selectionColor={
+                  KhedmatPalette
+                    .blue500
+                }
+                multiline
+                numberOfLines={4}
+                maxLength={
+                  MAXIMUM_ACCESS_NOTES_LENGTH
+                }
+                textAlignVertical="top"
+                style={[
+                  styles.multilineInput,
+                  styles.accessInput,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              />
+            </View>
 
             <Text
+              style={[
+                styles.fieldHint,
+                directionStyle(isRtl),
+              ]}
+            >
+              {copy.accessHint(
+                formatDigits(
+                  accessNotes.length.toString(),
+                  localizedDigits,
+                ),
+                formatDigits(
+                  MAXIMUM_ACCESS_NOTES_LENGTH.toString(),
+                  localizedDigits,
+                ),
+              )}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.photoCard,
+              {
+                flexDirection: isRtl
+                  ? "row-reverse"
+                  : "row",
+              },
+            ]}
+          >
+            <View
               style={
-                styles.characterRequirement
+                styles.photoIcon
               }
             >
-              حداقل ۱۰ حرف
+              <Ionicons
+                name="images-outline"
+                size={24}
+                color={
+                  KhedmatPalette
+                    .textMuted
+                }
+              />
+            </View>
+
+            <View
+              style={[
+                styles.photoCopy,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.photoTitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.photosTitle}
+              </Text>
+
+              <Text
+                style={[
+                  styles.photoSubtitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.photosSubtitle}
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.comingSoonBadge
+              }
+            >
+              <Text
+                style={[
+                  styles.comingSoonText,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.comingSoon}
+              </Text>
+            </View>
+          </View>
+
+          <View
+            style={[
+              styles.privacyCard,
+              {
+                flexDirection: isRtl
+                  ? "row-reverse"
+                  : "row",
+              },
+            ]}
+          >
+            <View
+              style={
+                styles.privacyIcon
+              }
+            >
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={22}
+                color={SUCCESS}
+              />
+            </View>
+
+            <View
+              style={[
+                styles.privacyCopy,
+                {
+                  alignItems: isRtl
+                    ? "flex-end"
+                    : "flex-start",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.privacyTitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.privacyTitle}
+              </Text>
+
+              <Text
+                style={[
+                  styles.privacyText,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {copy.privacyText}
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <View
+            style={
+              styles.footerContent
+            }
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                copy.continue
+              }
+              onPress={
+                handleContinue
+              }
+              style={({ pressed }) => [
+                styles.primaryButton,
+                pressed &&
+                  styles.primaryButtonPressed,
+              ]}
+            >
+              <View
+                style={[
+                  styles.primaryButtonContent,
+                  {
+                    flexDirection: isRtl
+                      ? "row-reverse"
+                      : "row",
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="receipt-outline"
+                  size={20}
+                  color={
+                    KhedmatPalette
+                      .white
+                  }
+                />
+
+                <Text
+                  style={[
+                    styles.primaryButtonText,
+                    directionStyle(
+                      isRtl,
+                    ),
+                  ]}
+                >
+                  {copy.continue}
+                </Text>
+
+                <Ionicons
+                  name={
+                    isRtl
+                      ? "arrow-back"
+                      : "arrow-forward"
+                  }
+                  size={19}
+                  color={
+                    KhedmatPalette
+                      .white
+                  }
+                />
+              </View>
+            </Pressable>
+
+            <Text
+              style={[
+                styles.footerHint,
+                directionStyle(isRtl),
+              ]}
+            >
+              {formIsValid
+                ? copy.ready
+                : copy.completeRequired}
             </Text>
           </View>
         </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              راهنمای دسترسی و تماس
-            </Text>
-
-            <Text style={styles.sectionSubtitle}>
-              این بخش اختیاری است.
-            </Text>
-          </View>
-
-          <GlassInput
-            label="یادداشت اضافی"
-            placeholder="مثلاً قبل از رسیدن تماس بگیرید، زنگ در خراب است یا ورودی از کوچه پشتی است..."
-            value={contactNotes}
-            onChangeText={setContactNotes}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-            style={styles.contactInput}
-          />
-        </View>
-
-        <GlassSurface
-          variant="regular"
-          radius={Radius.xl}
-          style={styles.photoPlaceholderCard}
-          contentStyle={
-            styles.photoPlaceholderContent
-          }
-        >
-          <View style={styles.photoIcon}>
-            <Ionicons
-              name="images-outline"
-              size={24}
-              color={Colors.textTertiary}
-            />
-          </View>
-
-          <View style={styles.photoCopy}>
-            <Text style={styles.photoTitle}>
-              افزودن عکس
-            </Text>
-
-            <Text style={styles.photoSubtitle}>
-              در نسخهٔ بعد می‌توانید عکس مشکل یا
-              محل کار را به درخواست پیوست کنید.
-            </Text>
-          </View>
-
-          <View style={styles.comingSoonBadge}>
-            <Text style={styles.comingSoonText}>
-              به‌زودی
-            </Text>
-          </View>
-        </GlassSurface>
-
-        <GlassSurface
-          variant="regular"
-          radius={Radius.xl}
-          style={styles.noticeCard}
-          contentStyle={styles.noticeContent}
-        >
-          <View style={styles.noticeIcon}>
-            <Ionicons
-              name="shield-checkmark-outline"
-              size={22}
-              color={Colors.success}
-            />
-          </View>
-
-          <Text style={styles.noticeText}>
-            آدرس دقیق شما فقط پس از پذیرش درخواست
-            برای ارائه‌دهنده نمایش داده می‌شود.
-          </Text>
-        </GlassSurface>
-      </ScrollView>
-
-      <View style={styles.footer}>
-        <GlassButton
-          label="بررسی و تأیید رزرو"
-          icon="document-text-outline"
-          iconPosition="left"
-          onPress={handleContinue}
-        />
-
-        <Text style={styles.footerSummary}>
-          {resolvedAddress
-            ? `${resolvedAddress.label} · ${resolvedAddress.fullAddress}`
-            : "برای ادامه آدرس و توضیحات کار را تکمیل کنید."}
-        </Text>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-function formatBookingDate(
+function AddressCard({
+  address,
+  selected,
+  subtitle,
+  isRtl,
+  onPress,
+}: {
+  address: AddressOption;
+  selected: boolean;
+  subtitle: string;
+  isRtl: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityLabel={
+        address.label
+      }
+      accessibilityState={{
+        selected,
+      }}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.addressCard,
+        selected &&
+          styles.addressCardSelected,
+        pressed &&
+          styles.cardPressed,
+      ]}
+    >
+      <View
+        style={[
+          styles.addressCardContent,
+          {
+            flexDirection: isRtl
+              ? "row-reverse"
+              : "row",
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.addressIcon,
+            selected &&
+              styles.addressIconSelected,
+          ]}
+        >
+          <Ionicons
+            name={address.icon}
+            size={23}
+            color={
+              selected
+                ? KhedmatPalette
+                    .white
+                : KhedmatPalette
+                    .blue500
+            }
+          />
+        </View>
+
+        <View
+          style={[
+            styles.addressCopy,
+            {
+              alignItems: isRtl
+                ? "flex-end"
+                : "flex-start",
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.addressTitleRow,
+              {
+                flexDirection: isRtl
+                  ? "row-reverse"
+                  : "row",
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.addressTitleText,
+                selected &&
+                  styles.addressTitleSelected,
+                directionStyle(
+                  isRtl,
+                ),
+              ]}
+            >
+              {address.label}
+            </Text>
+
+            <Text
+              style={[
+                styles.addressSubtitleText,
+                directionStyle(
+                  isRtl,
+                ),
+              ]}
+            >
+              {subtitle}
+            </Text>
+          </View>
+
+          <Text
+            style={[
+              styles.fullAddressText,
+              directionStyle(isRtl),
+            ]}
+          >
+            {address.fullAddress}
+          </Text>
+        </View>
+
+        <Radio
+          selected={selected}
+        />
+      </View>
+    </Pressable>
+  );
+}
+
+function Radio({
+  selected,
+}: {
+  selected: boolean;
+}) {
+  return (
+    <View
+      style={[
+        styles.radioOuter,
+        selected &&
+          styles.radioOuterSelected,
+      ]}
+    >
+      {selected ? (
+        <View
+          style={styles.radioInner}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+function ErrorText({
+  text,
+  isRtl,
+}: {
+  text: string;
+  isRtl: boolean;
+}) {
+  return (
+    <View
+      style={[
+        styles.errorRow,
+        {
+          flexDirection: isRtl
+            ? "row-reverse"
+            : "row",
+        },
+      ]}
+    >
+      <Ionicons
+        name="alert-circle-outline"
+        size={15}
+        color={ERROR}
+      />
+
+      <Text
+        style={[
+          styles.errorText,
+          directionStyle(isRtl),
+        ]}
+      >
+        {text}
+      </Text>
+    </View>
+  );
+}
+
+function extractPrimaryNotes(
   value: string,
 ): string {
   if (!value) {
-    return "تاریخ انتخاب نشده";
+    return "";
   }
 
-  const [year, month, day] = value
-    .split("-")
-    .map(Number);
+  return (
+    value
+      .split("\n\n")[0]
+      ?.trim() ?? ""
+  );
+}
 
-  if (!year || !month || !day) {
+function extractAccessNotes(
+  value: string,
+): string {
+  if (!value) {
+    return "";
+  }
+
+  const parts =
+    value.split("\n\n");
+
+  if (parts.length < 2) {
+    return "";
+  }
+
+  return parts
+    .slice(1)
+    .join("\n\n")
+    .replace(
+      /^[^:：]+[:：]\s*/,
+      "",
+    )
+    .trim();
+}
+
+function formatBookingDate(
+  value: string,
+  language: LanguageName,
+): string {
+  if (!value) {
+    return language === "English"
+      ? "Date not selected"
+      : language === "Dari"
+        ? "تاریخ انتخاب نشده"
+        : "نېټه نه ده ټاکل شوې";
+  }
+
+  const date =
+    parseLocalDate(value);
+
+  if (!date) {
     return value;
   }
 
-  const date = new Date(
-    year,
-    month - 1,
-    day,
-  );
+  const weekdays = {
+    English: [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ],
+    Dari: [
+      "یک‌شنبه",
+      "دوشنبه",
+      "سه‌شنبه",
+      "چهارشنبه",
+      "پنج‌شنبه",
+      "جمعه",
+      "شنبه",
+    ],
+    Pashto: [
+      "یکشنبه",
+      "دوشنبه",
+      "سه‌شنبه",
+      "چهارشنبه",
+      "پنجشنبه",
+      "جمعه",
+      "شنبه",
+    ],
+  } as const;
 
-  const weekdays = [
-    "یک‌شنبه",
-    "دوشنبه",
-    "سه‌شنبه",
-    "چهارشنبه",
-    "پنج‌شنبه",
-    "جمعه",
-    "شنبه",
-  ];
+  const months = {
+    English: [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ],
+    Dari: [
+      "جنوری",
+      "فبروری",
+      "مارچ",
+      "اپریل",
+      "می",
+      "جون",
+      "جولای",
+      "اگست",
+      "سپتمبر",
+      "اکتوبر",
+      "نوامبر",
+      "دسمبر",
+    ],
+    Pashto: [
+      "جنوري",
+      "فبروري",
+      "مارچ",
+      "اپرېل",
+      "می",
+      "جون",
+      "جولای",
+      "اګست",
+      "سپتمبر",
+      "اکتوبر",
+      "نومبر",
+      "دسمبر",
+    ],
+  } as const;
 
-  const months = [
-    "جنوری",
-    "فبروری",
-    "مارچ",
-    "اپریل",
-    "می",
-    "جون",
-    "جولای",
-    "اگست",
-    "سپتمبر",
-    "اکتوبر",
-    "نوامبر",
-    "دسمبر",
-  ];
+  const day =
+    formatDigits(
+      date.getDate().toString(),
+      language !== "English",
+    );
 
-  const weekday =
-    weekdays[date.getDay()] ?? "";
+  const year =
+    formatDigits(
+      date.getFullYear().toString(),
+      language !== "English",
+    );
 
-  const monthLabel =
-    months[date.getMonth()] ?? "";
+  if (
+    language === "English"
+  ) {
+    return `${weekdays.English[date.getDay()]}, ${months.English[date.getMonth()]} ${day}, ${year}`;
+  }
 
-  return `${weekday}، ${toDariDigits(
-    day.toString(),
-  )} ${monthLabel}`;
+  return `${weekdays[language][date.getDay()]}، ${day} ${months[language][date.getMonth()]} ${year}`;
 }
 
-function formatTimeForDari(
+function parseLocalDate(
   value: string,
+): Date | null {
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})$/.exec(
+      value,
+    );
+
+  if (!match) {
+    const parsed =
+      new Date(value);
+
+    return Number.isNaN(
+      parsed.getTime(),
+    )
+      ? null
+      : parsed;
+  }
+
+  const year =
+    Number(match[1]);
+
+  const month =
+    Number(match[2]) - 1;
+
+  const day =
+    Number(match[3]);
+
+  const date =
+    new Date(
+      year,
+      month,
+      day,
+    );
+
+  return Number.isNaN(
+    date.getTime(),
+  )
+    ? null
+    : date;
+}
+
+function formatTime(
+  value: string,
+  language: LanguageName,
 ): string {
-  const labels: Record<string, string> = {
-    "08:00": "۸:۰۰ صبح",
-    "09:00": "۹:۰۰ صبح",
-    "10:00": "۱۰:۰۰ صبح",
-    "11:00": "۱۱:۰۰ صبح",
-    "12:00": "۱۲:۰۰ ظهر",
-    "13:00": "۱:۰۰ بعد از ظهر",
-    "14:00": "۲:۰۰ بعد از ظهر",
-    "15:00": "۳:۰۰ بعد از ظهر",
-    "16:00": "۴:۰۰ بعد از ظهر",
-    "17:00": "۵:۰۰ بعد از ظهر",
-    "18:00": "۶:۰۰ عصر",
+  if (!value) {
+    return language === "English"
+      ? "Time not selected"
+      : language === "Dari"
+        ? "زمان انتخاب نشده"
+        : "وخت نه دی ټاکل شوی";
+  }
+
+  const [
+    hourText,
+    minute = "00",
+  ] = value.split(":");
+
+  const hour =
+    Number(hourText);
+
+  if (
+    !Number.isFinite(hour)
+  ) {
+    return value;
+  }
+
+  if (
+    language === "English"
+  ) {
+    const period =
+      hour >= 12 ? "PM" : "AM";
+
+    const displayHour =
+      hour % 12 || 12;
+
+    return `${displayHour}:${minute} ${period}`;
+  }
+
+  const displayHour =
+    hour % 12 || 12;
+
+  const period =
+    hour < 12
+      ? language === "Dari"
+        ? "صبح"
+        : "سهار"
+      : hour === 12
+        ? language === "Dari"
+          ? "ظهر"
+          : "غرمه"
+        : hour < 18
+          ? language === "Dari"
+            ? "بعد از ظهر"
+            : "ماسپښین"
+          : language === "Dari"
+            ? "عصر"
+            : "ماښام";
+
+  return `${formatDigits(
+    `${displayHour}:${minute}`,
+    true,
+  )} ${period}`;
+}
+
+function normalizeLanguage(
+  language: string,
+): LanguageName {
+  if (
+    language === "Dari"
+  ) {
+    return "Dari";
+  }
+
+  if (
+    language === "Pashto"
+  ) {
+    return "Pashto";
+  }
+
+  return "English";
+}
+
+function directionStyle(
+  isRtl: boolean,
+) {
+  return {
+    textAlign: isRtl
+      ? ("right" as const)
+      : ("left" as const),
+    writingDirection: isRtl
+      ? ("rtl" as const)
+      : ("ltr" as const),
   };
-
-  return labels[value] ?? value;
 }
 
-function toDariDigits(
+function formatDigits(
   value: string,
+  localized: boolean,
 ): string {
-  const digits: Record<string, string> = {
+  if (!localized) {
+    return value;
+  }
+
+  const digits: Record<
+    string,
+    string
+  > = {
     "0": "۰",
     "1": "۱",
     "2": "۲",
@@ -758,438 +1960,959 @@ function toDariDigits(
 
   return value.replace(
     /\d/g,
-    (digit) => digits[digit] ?? digit,
+    (digit) =>
+      digits[digit] ??
+      digit,
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+function getDetailsCopy(
+  language: LanguageName,
+) {
+  if (
+    language === "Dari"
+  ) {
+    return {
+      back: "بازگشت",
+      step:
+        (
+          current: string,
+          total: string,
+        ) =>
+          `مرحله ${current} از ${total}`,
+      eyebrow:
+        "جزئیات خدمت",
+      title:
+        "آدرس و توضیحات کار را وارد کنید",
+      subtitle:
+        "محل انجام خدمت و معلومات لازم برای آماده‌شدن ارائه‌دهنده را مشخص کنید.",
+      currentBooking:
+        "رزرو فعلی",
+      serviceFallback:
+        "خدمت انتخاب‌شده",
+      providerFallback:
+        "ارائه‌دهنده",
+      addressTitle:
+        "آدرس انجام خدمت",
+      addressSubtitle:
+        "یک آدرس ذخیره‌شده را انتخاب کنید یا آدرس دیگری وارد نمایید.",
+      required: "ضروری",
+      optional: "اختیاری",
+      primaryAddress:
+        "آدرس اصلی",
+      savedAddress:
+        "آدرس ذخیره‌شده",
+      otherAddress:
+        "آدرس دیگر",
+      otherAddressSubtitle:
+        "آدرس جدید را فقط برای این رزرو وارد کنید.",
+      completeAddress:
+        "آدرس کامل",
+      addressPlaceholder:
+        "ولایت، شهر یا ولسوالی، ناحیه، سرک، کوچه و شمارهٔ خانه",
+      addressHint:
+        "آدرس را به‌گونه‌ای بنویسید که ارائه‌دهنده بتواند محل را بدون ابهام پیدا کند.",
+      addressSelectionError:
+        "لطفاً یک آدرس را انتخاب کنید.",
+      manualAddressError:
+        (value: string) =>
+          `لطفاً آدرس کامل و معتبر با حداقل ${value} حرف وارد کنید.`,
+      problemTitle:
+        "توضیح مشکل یا کار",
+      problemSubtitle:
+        "توضیح روشن به ارائه‌دهنده کمک می‌کند ابزار، زمان و مواد مناسب را آماده کند.",
+      requestDescription:
+        "شرح درخواست",
+      notesPlaceholder:
+        "مثلاً برق دو اتاق قطع شده و فیوز چند بار خاموش می‌شود. مشکل از امروز صبح آغاز شده است...",
+      notesError:
+        (value: string) =>
+          `لطفاً مشکل یا کار مورد نیاز را با حداقل ${value} حرف توضیح دهید.`,
+      characterCount:
+        (
+          current: string,
+          maximum: string,
+        ) =>
+          `${current} از ${maximum} حرف`,
+      minimumCharacters:
+        (value: string) =>
+          `حداقل ${value} حرف`,
+      accessTitle:
+        "راهنمای دسترسی و تماس",
+      accessSubtitle:
+        "معلوماتی را اضافه کنید که پیدا کردن محل یا تماس پیش از رسیدن را آسان‌تر می‌کند.",
+      extraNote:
+        "یادداشت اضافی",
+      accessPlaceholder:
+        "مثلاً قبل از رسیدن تماس بگیرید، زنگ در خراب است یا ورودی از کوچهٔ پشتی است...",
+      accessHint:
+        (
+          current: string,
+          maximum: string,
+        ) =>
+          `${current} از ${maximum} حرف`,
+      accessNotePrefix:
+        "یادداشت دسترسی و تماس",
+      photosTitle:
+        "افزودن عکس",
+      photosSubtitle:
+        "در نسخهٔ بعد می‌توانید عکس مشکل یا محل کار را به درخواست پیوست کنید.",
+      comingSoon:
+        "به‌زودی",
+      privacyTitle:
+        "آدرس فقط برای انجام این خدمت استفاده می‌شود",
+      privacyText:
+        "جزئیات دقیق محل در مرحلهٔ مناسب و فقط برای ارائه‌دهندهٔ مرتبط قابل مشاهده خواهد بود.",
+      continue:
+        "بررسی خلاصهٔ رزرو",
+      ready:
+        "آدرس و شرح درخواست آماده است.",
+      completeRequired:
+        "برای ادامه آدرس و شرح درخواست را تکمیل کنید.",
+    };
+  }
 
-  scrollContent: {
-    width: "100%",
-    maxWidth: Layout.contentMaxWidth,
-    alignSelf: "center",
-    paddingHorizontal: Layout.screenPadding,
-    paddingTop: Spacing.md,
-    paddingBottom: 160,
-  },
+  if (
+    language === "Pashto"
+  ) {
+    return {
+      back: "بېرته",
+      step:
+        (
+          current: string,
+          total: string,
+        ) =>
+          `مرحله ${current} له ${total}`,
+      eyebrow:
+        "د خدمت جزئیات",
+      title:
+        "پته او د کار جزئیات ولیکئ",
+      subtitle:
+        "د خدمت ځای او هغه معلومات مشخص کړئ چې خدمت وړاندې کوونکی ورته د چمتووالي لپاره اړتیا لري.",
+      currentBooking:
+        "اوسنی رزرف",
+      serviceFallback:
+        "ټاکل شوی خدمت",
+      providerFallback:
+        "خدمت وړاندې کوونکی",
+      addressTitle:
+        "د خدمت پته",
+      addressSubtitle:
+        "یوه خوندي شوې پته وټاکئ یا نوې پته ولیکئ.",
+      required: "اړین",
+      optional: "اختیاري",
+      primaryAddress:
+        "اصلي پته",
+      savedAddress:
+        "خوندي شوې پته",
+      otherAddress:
+        "بله پته",
+      otherAddressSubtitle:
+        "یوازې د دې رزرف لپاره نوې پته ولیکئ.",
+      completeAddress:
+        "بشپړه پته",
+      addressPlaceholder:
+        "ولایت، ښار یا ولسوالۍ، ناحیه، سړک، کوڅه او د کور شمېره",
+      addressHint:
+        "پته داسې ولیکئ چې خدمت وړاندې کوونکی ځای بې له ابهامه پیدا کړي.",
+      addressSelectionError:
+        "مهرباني وکړئ یوه پته وټاکئ.",
+      manualAddressError:
+        (value: string) =>
+          `مهرباني وکړئ لږ تر لږه ${value} تورو یوه بشپړه او معتبره پته ولیکئ.`,
+      problemTitle:
+        "د ستونزې یا کار تشریح",
+      problemSubtitle:
+        "روښانه تشریح خدمت وړاندې کوونکي سره د مناسبو وسایلو، وخت او موادو په چمتو کولو کې مرسته کوي.",
+      requestDescription:
+        "د غوښتنې تشریح",
+      notesPlaceholder:
+        "د بېلګې په توګه: د دوو خونو برېښنا پرې شوې او فیوز څو ځله بندېږي. ستونزه نن سهار پیل شوې...",
+      notesError:
+        (value: string) =>
+          `مهرباني وکړئ ستونزه یا اړین کار لږ تر لږه په ${value} تورو تشریح کړئ.`,
+      characterCount:
+        (
+          current: string,
+          maximum: string,
+        ) =>
+          `${current} له ${maximum} تورو`,
+      minimumCharacters:
+        (value: string) =>
+          `لږ تر لږه ${value} توري`,
+      accessTitle:
+        "د لاسرسي او اړیکې لارښوونې",
+      accessSubtitle:
+        "هغه معلومات ورزیات کړئ چې د ځای موندل یا تر رسېدو مخکې اړیکه اسانه کوي.",
+      extraNote:
+        "اضافي یادښت",
+      accessPlaceholder:
+        "د بېلګې په توګه: تر رسېدو مخکې زنګ ووهئ، د دروازې زنګ خراب دی یا ننوتل له شا کوڅې دي...",
+      accessHint:
+        (
+          current: string,
+          maximum: string,
+        ) =>
+          `${current} له ${maximum} تورو`,
+      accessNotePrefix:
+        "د لاسرسي او اړیکې یادښت",
+      photosTitle:
+        "عکسونه ورزیات کړئ",
+      photosSubtitle:
+        "په راتلونکې نسخه کې به د ستونزې یا کار ځای عکسونه غوښتنې ته نښلولای شئ.",
+      comingSoon:
+        "ژر",
+      privacyTitle:
+        "پته یوازې د دې خدمت لپاره کارول کېږي",
+      privacyText:
+        "د ځای دقیق جزئیات به په مناسب پړاو کې یوازې اړوند خدمت وړاندې کوونکي ته ښکاره شي.",
+      continue:
+        "د رزرف لنډیز وګورئ",
+      ready:
+        "پته او د غوښتنې تشریح چمتو ده.",
+      completeRequired:
+        "د دوام لپاره پته او د غوښتنې تشریح بشپړه کړئ.",
+    };
+  }
 
-  topBar: {
-    minHeight: Layout.minimumTouchTarget,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
+  return {
+    back: "Back",
+    step:
+      (
+        current: string,
+        total: string,
+      ) =>
+        `Step ${current} of ${total}`,
+    eyebrow:
+      "Service details",
+    title:
+      "Add the address and job details",
+    subtitle:
+      "Specify where the service will take place and what the provider should know before arriving.",
+    currentBooking:
+      "Current booking",
+    serviceFallback:
+      "Selected service",
+    providerFallback:
+      "Provider",
+    addressTitle:
+      "Service address",
+    addressSubtitle:
+      "Choose a saved address or enter another address for this booking.",
+    required: "Required",
+    optional: "Optional",
+    primaryAddress:
+      "Primary address",
+    savedAddress:
+      "Saved address",
+    otherAddress:
+      "Another address",
+    otherAddressSubtitle:
+      "Enter a new address for this booking only.",
+    completeAddress:
+      "Complete address",
+    addressPlaceholder:
+      "Province, city or district, area, street, alley and house number",
+    addressHint:
+      "Write the address clearly enough for the provider to find the location without ambiguity.",
+    addressSelectionError:
+      "Please select an address.",
+    manualAddressError:
+      (value: string) =>
+        `Enter a complete and valid address using at least ${value} characters.`,
+    problemTitle:
+      "Describe the problem or work",
+    problemSubtitle:
+      "A clear description helps the provider prepare the right tools, time and materials.",
+    requestDescription:
+      "Request description",
+    notesPlaceholder:
+      "For example: Electricity is out in two rooms and the breaker keeps switching off. The problem started this morning...",
+    notesError:
+      (value: string) =>
+        `Describe the required work using at least ${value} characters.`,
+    characterCount:
+      (
+        current: string,
+        maximum: string,
+      ) =>
+        `${current} of ${maximum} characters`,
+    minimumCharacters:
+      (value: string) =>
+        `Minimum ${value} characters`,
+    accessTitle:
+      "Access and contact guidance",
+    accessSubtitle:
+      "Add details that make the location easier to find or explain how the provider should contact you before arrival.",
+    extraNote:
+      "Additional note",
+    accessPlaceholder:
+      "For example: Call before arriving, the doorbell is broken, or use the rear alley entrance...",
+    accessHint:
+      (
+        current: string,
+        maximum: string,
+      ) =>
+        `${current} of ${maximum} characters`,
+    accessNotePrefix:
+      "Access and contact note",
+    photosTitle:
+      "Add photos",
+    photosSubtitle:
+      "A future version will let you attach photos of the problem or work location.",
+    comingSoon:
+      "Coming soon",
+    privacyTitle:
+      "The address is used only to fulfil this service",
+    privacyText:
+      "Exact location details will be visible only to the relevant provider at the appropriate stage.",
+    continue:
+      "Review booking summary",
+    ready:
+      "The address and request description are ready.",
+    completeRequired:
+      "Complete the address and request description to continue.",
+  };
+}
 
-  stepText: {
-    ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  header: {
-    width: "100%",
-    marginTop: Spacing.xl,
-    alignItems: "flex-end",
-    gap: Spacing.xs,
-  },
-
-  eyebrow: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  title: {
-    ...Typography.screenTitle,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 28,
-    lineHeight: 35,
-  },
-
-  subtitle: {
-    ...Typography.bodyStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  summaryCard: {
-    width: "100%",
-    marginTop: Spacing.xxl,
-  },
-
-  summaryContent: {
-    minHeight: 96,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  summaryIcon: {
-    width: 48,
-    height: 48,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-  },
-
-  summaryCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: 2,
-  },
-
-  summaryEyebrow: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.primary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  summaryTitle: {
-    ...Typography.label,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 17,
-    lineHeight: 23,
-  },
-
-  summarySubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  section: {
-    width: "100%",
-    marginTop: Spacing.section,
-    gap: Spacing.lg,
-  },
-
-  sectionHeader: {
-    width: "100%",
-    alignItems: "flex-end",
-    gap: Spacing.xs,
-  },
-
-  sectionTitle: {
-    ...Typography.sectionTitle,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 21,
-    lineHeight: 28,
-  },
-
-  sectionSubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  addresses: {
-    width: "100%",
-    gap: Spacing.md,
-  },
-
-  addressPressable: {
-    width: "100%",
-    borderRadius: Radius.xl,
-  },
-
-  addressSurface: {
-    width: "100%",
-  },
-
-  selectedAddressSurface: {
-    borderColor: "rgba(76, 141, 255, 0.58)",
-    backgroundColor: "rgba(76, 141, 255, 0.11)",
-  },
-
-  addressContent: {
-    minHeight: 104,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  addressIcon: {
-    width: 50,
-    height: 50,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(76, 141, 255, 0.22)",
-  },
-
-  selectedAddressIcon: {
-    backgroundColor: Colors.primary,
-    borderColor: "rgba(255, 255, 255, 0.22)",
-  },
-
-  addressCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: Spacing.xs,
-  },
-
-  addressTitleRow: {
-    width: "100%",
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.sm,
-  },
-
-  addressTitle: {
-    ...Typography.label,
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    fontSize: 17,
-  },
-
-  selectedAddressTitle: {
-    color: "#DCE9FF",
-  },
-
-  addressSubtitle: {
-    ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  fullAddressText: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    lineHeight: 19,
-  },
-
-  radioOuter: {
-    width: 26,
-    height: 26,
-    flexShrink: 0,
-    borderRadius: Radius.pill,
-    borderWidth: 1.5,
-    borderColor: Colors.borderStrong,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  radioOuterSelected: {
-    borderColor: Colors.primary,
-  },
-
-  radioInner: {
-    width: 14,
-    height: 14,
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.primary,
-  },
-
-  addressInput: {
-    minHeight: 116,
-    paddingTop: Spacing.lg,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  notesInput: {
-    minHeight: 164,
-    paddingTop: Spacing.lg,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  contactInput: {
-    minHeight: 116,
-    paddingTop: Spacing.lg,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  characterRow: {
-    marginTop: -Spacing.md,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  characterCount: {
-    ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  characterCountValid: {
-    color: Colors.success,
-  },
-
-  characterRequirement: {
-    ...Typography.captionStyle,
-    color: Colors.textMuted,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  errorText: {
-    ...Typography.captionStyle,
-    color: Colors.error,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  photoPlaceholderCard: {
-    width: "100%",
-    marginTop: Spacing.section,
-    opacity: 0.72,
-  },
-
-  photoPlaceholderContent: {
-    minHeight: 100,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  photoIcon: {
-    width: 48,
-    height: 48,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.glass,
-  },
-
-  photoCopy: {
-    flex: 1,
-    alignItems: "flex-end",
-    gap: Spacing.xs,
-  },
-
-  photoTitle: {
-    ...Typography.label,
-    width: "100%",
-    color: Colors.textPrimary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-
-  photoSubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textTertiary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    lineHeight: 19,
-  },
-
-  comingSoonBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.glassStrong,
-  },
-
-  comingSoonText: {
-    ...Typography.captionStyle,
-    color: Colors.textTertiary,
-    textAlign: "center",
-    writingDirection: "rtl",
-    fontSize: 10,
-  },
-
-  noticeCard: {
-    width: "100%",
-    marginTop: Spacing.xl,
-    borderColor: "rgba(48, 183, 106, 0.26)",
-    backgroundColor: "rgba(48, 183, 106, 0.05)",
-  },
-
-  noticeContent: {
-    minHeight: 86,
-    flexDirection: "row-reverse",
-    alignItems: "flex-start",
-    gap: Spacing.md,
-    padding: Spacing.lg,
-  },
-
-  noticeIcon: {
-    width: 42,
-    height: 42,
-    flexShrink: 0,
-    borderRadius: Radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(48, 183, 106, 0.12)",
-  },
-
-  noticeText: {
-    ...Typography.captionStyle,
-    flex: 1,
-    color: Colors.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    lineHeight: 20,
-  },
-
-  footer: {
-    position: "absolute",
-    right: 0,
-    bottom: 0,
-    left: 0,
-    minHeight: 108,
-    paddingHorizontal: Layout.screenPadding,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.lg,
-    gap: Spacing.sm,
-    backgroundColor: "rgba(7, 10, 15, 0.96)",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
-  },
-
-  footerSummary: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: Colors.textTertiary,
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-
-  cardPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.993 }],
-  },
-});
+const styles =
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor:
+        KhedmatPalette.blue050,
+    },
+    root: {
+      flex: 1,
+    },
+    scrollContent: {
+      width: "100%",
+      maxWidth:
+        Layout.contentMaxWidth,
+      alignSelf: "center",
+      paddingHorizontal:
+        Layout.screenPadding,
+      paddingTop: Spacing.md,
+      paddingBottom: 166,
+    },
+    topBar: {
+      width: "100%",
+      minHeight:
+        Layout.minimumTouchTarget,
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+    },
+    backButton: {
+      width: 44,
+      height: 44,
+      borderRadius: Radius.pill,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor:
+        KhedmatPalette.border,
+      backgroundColor:
+        KhedmatPalette.surface,
+    },
+    stepBadge: {
+      minHeight: 34,
+      paddingHorizontal:
+        Spacing.md,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: Radius.pill,
+      backgroundColor:
+        KhedmatPalette.surfaceSoft,
+    },
+    stepText: {
+      ...Typography.captionStyle,
+      color:
+        KhedmatPalette.blue500,
+      fontFamily: Fonts.medium,
+    },
+    header: {
+      width: "100%",
+      marginTop: Spacing.xl,
+      gap: Spacing.lg,
+    },
+    headerIcon: {
+      width: 64,
+      height: 64,
+      borderRadius: Radius.xl,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.navy900,
+      ...Shadows.small,
+    },
+    headerCopy: {
+      width: "100%",
+      gap: Spacing.sm,
+    },
+    eyebrow: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.blue500,
+      fontFamily: Fonts.medium,
+    },
+    title: {
+      ...Typography.screenTitle,
+      width: "100%",
+      maxWidth: 470,
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 27,
+      lineHeight: 35,
+    },
+    subtitle: {
+      ...Typography.bodyLarge,
+      width: "100%",
+      maxWidth: 470,
+      color:
+        KhedmatPalette.textSecondary,
+      lineHeight: 25,
+    },
+    bookingSummaryCard: {
+      width: "100%",
+      minHeight: 112,
+      marginTop: Spacing.xxl,
+      padding: Spacing.lg,
+      alignItems: "center",
+      gap: Spacing.md,
+      borderWidth: 1,
+      borderColor:
+        KhedmatPalette.border,
+      borderRadius: Radius.xl,
+      backgroundColor:
+        KhedmatPalette.surface,
+      ...Shadows.small,
+    },
+    bookingSummaryIcon: {
+      width: 48,
+      height: 48,
+      flexShrink: 0,
+      borderRadius: Radius.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.surfaceSoft,
+    },
+    bookingSummaryCopy: {
+      flex: 1,
+      gap: 2,
+    },
+    bookingSummaryEyebrow: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.blue500,
+      fontFamily: Fonts.medium,
+    },
+    bookingSummaryTitle: {
+      ...Typography.label,
+      width: "100%",
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 17,
+      lineHeight: 23,
+    },
+    bookingSummarySubtitle: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textSecondary,
+      lineHeight: 18,
+    },
+    providerBadge: {
+      maxWidth: 112,
+      flexShrink: 0,
+      paddingHorizontal:
+        Spacing.sm,
+      paddingVertical: 7,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 4,
+      borderRadius: Radius.lg,
+      backgroundColor:
+        KhedmatPalette.surfaceSoft,
+    },
+    providerBadgeText: {
+      ...Typography.captionStyle,
+      color:
+        KhedmatPalette.blue500,
+      textAlign: "center",
+      fontSize: 9,
+      lineHeight: 13,
+    },
+    section: {
+      width: "100%",
+      marginTop:
+        Spacing.section,
+      gap: Spacing.md,
+    },
+    sectionHeader: {
+      width: "100%",
+      gap: Spacing.xs,
+    },
+    sectionTitleRow: {
+      width: "100%",
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+      gap: Spacing.md,
+    },
+    sectionTitle: {
+      ...Typography.sectionTitle,
+      flex: 1,
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 21,
+      lineHeight: 28,
+    },
+    sectionSubtitle: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textMuted,
+      lineHeight: 19,
+    },
+    requiredLabel: {
+      ...Typography.captionStyle,
+      color:
+        KhedmatPalette.blue500,
+      fontFamily: Fonts.medium,
+      fontSize: 10,
+    },
+    optionalLabel: {
+      ...Typography.captionStyle,
+      color:
+        KhedmatPalette.textMuted,
+      fontSize: 10,
+    },
+    addresses: {
+      width: "100%",
+      gap: Spacing.md,
+    },
+    addressCard: {
+      width: "100%",
+      minHeight: 110,
+      borderWidth: 1,
+      borderColor:
+        KhedmatPalette.border,
+      borderRadius: Radius.xl,
+      backgroundColor:
+        KhedmatPalette.surface,
+      ...Shadows.small,
+    },
+    addressCardSelected: {
+      borderColor:
+        KhedmatPalette.blue500,
+      backgroundColor:
+        "#F4FBFC",
+    },
+    addressCardContent: {
+      width: "100%",
+      minHeight: 110,
+      padding: Spacing.lg,
+      alignItems: "center",
+      gap: Spacing.md,
+    },
+    addressIcon: {
+      width: 50,
+      height: 50,
+      flexShrink: 0,
+      borderRadius: Radius.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.surfaceSoft,
+    },
+    addressIconSelected: {
+      backgroundColor:
+        KhedmatPalette.blue500,
+    },
+    addressCopy: {
+      flex: 1,
+      gap: 4,
+    },
+    addressTitleRow: {
+      width: "100%",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: Spacing.sm,
+    },
+    addressTitleText: {
+      ...Typography.label,
+      flexShrink: 1,
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 16,
+    },
+    addressTitleSelected: {
+      color:
+        KhedmatPalette.navy900,
+      fontFamily: Fonts.bold,
+    },
+    addressSubtitleText: {
+      ...Typography.captionStyle,
+      color:
+        KhedmatPalette.blue500,
+      fontFamily: Fonts.medium,
+      fontSize: 9,
+      paddingHorizontal:
+        Spacing.sm,
+      paddingVertical: 3,
+      borderRadius: Radius.pill,
+      backgroundColor:
+        KhedmatPalette.surfaceSoft,
+    },
+    fullAddressText: {
+      ...Typography.bodyStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textSecondary,
+      fontSize: 14,
+      lineHeight: 20,
+    },
+    radioOuter: {
+      width: 25,
+      height: 25,
+      flexShrink: 0,
+      borderRadius: Radius.pill,
+      borderWidth: 1.5,
+      borderColor:
+        KhedmatPalette.border,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.surface,
+    },
+    radioOuterSelected: {
+      borderColor:
+        KhedmatPalette.blue500,
+    },
+    radioInner: {
+      width: 13,
+      height: 13,
+      borderRadius: Radius.pill,
+      backgroundColor:
+        KhedmatPalette.blue500,
+    },
+    field: {
+      width: "100%",
+      gap: Spacing.sm,
+    },
+    fieldLabel: {
+      ...Typography.label,
+      width: "100%",
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 15,
+    },
+    fieldHint: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textMuted,
+      lineHeight: 18,
+    },
+    inputShell: {
+      width: "100%",
+      padding: Spacing.md,
+      borderWidth: 1,
+      borderColor:
+        KhedmatPalette.border,
+      borderRadius: Radius.xl,
+      backgroundColor:
+        KhedmatPalette.surface,
+      ...Shadows.small,
+    },
+    inputShellError: {
+      borderColor: ERROR,
+      backgroundColor:
+        "#FFF9F8",
+    },
+    largeInputShell: {
+      minHeight: 240,
+    },
+    mediumInputShell: {
+      minHeight: 170,
+    },
+    inputHeader: {
+      width: "100%",
+      alignItems: "center",
+      gap: Spacing.sm,
+    },
+    inputHeaderIcon: {
+      width: 36,
+      height: 36,
+      flexShrink: 0,
+      borderRadius: Radius.md,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.surfaceSoft,
+    },
+    inputHeaderText: {
+      ...Typography.captionStyle,
+      flex: 1,
+      color:
+        KhedmatPalette.textSecondary,
+      lineHeight: 18,
+    },
+    multilineInput: {
+      width: "100%",
+      paddingHorizontal: 2,
+      paddingTop: Spacing.sm,
+      paddingBottom:
+        Spacing.sm,
+      color:
+        KhedmatPalette.textPrimary,
+      fontFamily: Fonts.regular,
+      fontSize:
+        Typography.body,
+      lineHeight: 23,
+    },
+    addressInput: {
+      minHeight: 104,
+    },
+    notesInput: {
+      minHeight: 150,
+    },
+    accessInput: {
+      minHeight: 96,
+    },
+    progressTrack: {
+      width: "100%",
+      height: 5,
+      overflow: "hidden",
+      borderRadius: Radius.pill,
+      backgroundColor:
+        KhedmatPalette.border,
+    },
+    progressFill: {
+      height: "100%",
+      borderRadius: Radius.pill,
+      backgroundColor:
+        KhedmatPalette.blue500,
+    },
+    progressFillValid: {
+      backgroundColor:
+        SUCCESS,
+    },
+    characterRow: {
+      width: "100%",
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+      gap: Spacing.md,
+    },
+    characterCount: {
+      ...Typography.captionStyle,
+      color:
+        KhedmatPalette.textMuted,
+    },
+    characterCountValid: {
+      color: SUCCESS,
+      fontFamily: Fonts.medium,
+    },
+    characterRequirement: {
+      ...Typography.captionStyle,
+      color:
+        KhedmatPalette.textMuted,
+    },
+    errorRow: {
+      width: "100%",
+      alignItems: "center",
+      gap: 5,
+    },
+    errorText: {
+      ...Typography.captionStyle,
+      flex: 1,
+      color: ERROR,
+      lineHeight: 18,
+    },
+    photoCard: {
+      width: "100%",
+      minHeight: 108,
+      marginTop:
+        Spacing.section,
+      padding: Spacing.lg,
+      alignItems: "center",
+      gap: Spacing.md,
+      borderWidth: 1,
+      borderColor:
+        KhedmatPalette.border,
+      borderRadius: Radius.xl,
+      backgroundColor:
+        KhedmatPalette.surface,
+    },
+    photoIcon: {
+      width: 48,
+      height: 48,
+      flexShrink: 0,
+      borderRadius: Radius.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.surfaceSoft,
+    },
+    photoCopy: {
+      flex: 1,
+      gap: 3,
+    },
+    photoTitle: {
+      ...Typography.label,
+      width: "100%",
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 15,
+    },
+    photoSubtitle: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textSecondary,
+      lineHeight: 19,
+    },
+    comingSoonBadge: {
+      flexShrink: 0,
+      paddingHorizontal:
+        Spacing.sm,
+      paddingVertical: 5,
+      borderRadius: Radius.pill,
+      backgroundColor:
+        KhedmatPalette.surfaceSoft,
+    },
+    comingSoonText: {
+      ...Typography.captionStyle,
+      color:
+        KhedmatPalette.textMuted,
+      fontFamily: Fonts.medium,
+      fontSize: 9,
+    },
+    privacyCard: {
+      width: "100%",
+      minHeight: 108,
+      marginTop: Spacing.md,
+      padding: Spacing.lg,
+      alignItems: "flex-start",
+      gap: Spacing.md,
+      borderWidth: 1,
+      borderColor:
+        "#A9D9BD",
+      borderRadius: Radius.xl,
+      backgroundColor:
+        "#F5FCF8",
+    },
+    privacyIcon: {
+      width: 46,
+      height: 46,
+      flexShrink: 0,
+      borderRadius: Radius.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        SUCCESS_SOFT,
+    },
+    privacyCopy: {
+      flex: 1,
+      gap: 3,
+    },
+    privacyTitle: {
+      ...Typography.label,
+      width: "100%",
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 15,
+    },
+    privacyText: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textSecondary,
+      lineHeight: 19,
+    },
+    footer: {
+      position: "absolute",
+      right: 0,
+      bottom: 0,
+      left: 0,
+      borderTopWidth:
+        StyleSheet.hairlineWidth,
+      borderTopColor:
+        KhedmatPalette.border,
+      backgroundColor:
+        KhedmatPalette.surface,
+    },
+    footerContent: {
+      width: "100%",
+      maxWidth:
+        Layout.contentMaxWidth,
+      alignSelf: "center",
+      paddingHorizontal:
+        Layout.screenPadding,
+      paddingTop: Spacing.md,
+      paddingBottom: Spacing.lg,
+      gap: Spacing.sm,
+    },
+    primaryButton: {
+      width: "100%",
+      minHeight:
+        Layout.controlHeight,
+      paddingHorizontal:
+        Spacing.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: Radius.lg,
+      backgroundColor:
+        KhedmatPalette.navy900,
+      ...Shadows.small,
+    },
+    primaryButtonPressed: {
+      opacity: 0.84,
+      transform: [
+        {
+          scale: 0.99,
+        },
+      ],
+    },
+    primaryButtonContent: {
+      alignItems: "center",
+      justifyContent: "center",
+      gap: Spacing.sm,
+    },
+    primaryButtonText: {
+      ...Typography.label,
+      color:
+        KhedmatPalette.white,
+      fontFamily: Fonts.medium,
+      fontSize: 16,
+      textAlign: "center",
+    },
+    footerHint: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textMuted,
+      textAlign: "center",
+    },
+    pressed: {
+      opacity: 0.76,
+      transform: [
+        {
+          scale: 0.97,
+        },
+      ],
+    },
+    cardPressed: {
+      opacity: 0.88,
+      transform: [
+        {
+          scale: 0.993,
+        },
+      ],
+    },
+  });
