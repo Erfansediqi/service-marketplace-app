@@ -1,10 +1,14 @@
+import { StorageService } from "@/services/storage";
 import {
-    PropsWithChildren,
-    createContext,
-    useContext,
-    useMemo,
-    useState,
+  PropsWithChildren,
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
 } from "react";
+
+const BOOKINGS_STORAGE_KEY = "@khedmat_bookings_record";
 
 export type BookingAddress = {
   id?: string;
@@ -39,10 +43,7 @@ export type BookingStatus =
   | "completed"
   | "cancelled";
 
-export type PaymentStatus =
-  | "unpaid"
-  | "paid"
-  | "refunded";
+export type PaymentStatus = "unpaid" | "paid" | "refunded";
 
 export type BookingRecord = {
   id: string;
@@ -91,50 +92,45 @@ const emptyBookingDraft: BookingDraft = {
   currency: "AFN",
 };
 
-const initialBookings: BookingRecord[] = [];
-
 type BookingContextValue = {
   bookingDraft: BookingDraft;
 
   bookings: BookingRecord[];
 
-  updateBookingDraft: (
-    values: Partial<BookingDraft>,
-  ) => void;
+  updateBookingDraft: (values: Partial<BookingDraft>) => void;
 
   resetBookingDraft: () => void;
 
-  addBooking: (
-    booking: BookingRecord,
-  ) => void;
+  addBooking: (booking: BookingRecord) => void;
 
-  updateBookingStatus: (
-    bookingId: string,
-    status: BookingStatus,
-  ) => void;
+  updateBookingStatus: (bookingId: string, status: BookingStatus) => void;
 
-  getBookingById: (
-    bookingId: string,
-  ) => BookingRecord | undefined;
+  getBookingById: (bookingId: string) => BookingRecord | undefined;
 
   bookingReadyForSummary: boolean;
 };
 
-const BookingContext =
-  createContext<BookingContextValue | null>(null);
+const BookingContext = createContext<BookingContextValue | null>(null);
 
-export function BookingProvider({
-  children,
-}: PropsWithChildren) {
+export function BookingProvider({ children }: PropsWithChildren) {
   const [bookingDraft, setBookingDraft] =
     useState<BookingDraft>(emptyBookingDraft);
 
-  const [bookings, setBookings] =
-    useState<BookingRecord[]>(initialBookings);
+  const [bookings, setBookings] = useState<BookingRecord[]>([]);
 
-  const updateBookingDraft = (
-    values: Partial<BookingDraft>,
-  ) => {
+  // Load saved bookings from device local storage on start
+  useEffect(() => {
+    async function loadStoredBookings() {
+      const savedBookings =
+        await StorageService.get<BookingRecord[]>(BOOKINGS_STORAGE_KEY);
+      if (savedBookings) {
+        setBookings(savedBookings);
+      }
+    }
+    loadStoredBookings();
+  }, []);
+
+  const updateBookingDraft = (values: Partial<BookingDraft>) => {
     setBookingDraft((current) => ({
       ...current,
       ...values,
@@ -145,37 +141,32 @@ export function BookingProvider({
     setBookingDraft(emptyBookingDraft);
   };
 
-  const addBooking = (
-    booking: BookingRecord,
-  ) => {
-    setBookings((current) => [
-      booking,
-      ...current,
-    ]);
+  // Add booking and save immediately to local storage
+  const addBooking = async (booking: BookingRecord) => {
+    const updated = [booking, ...bookings];
+    setBookings(updated);
+    await StorageService.save(BOOKINGS_STORAGE_KEY, updated);
   };
 
-  const updateBookingStatus = (
+  // Update status (e.g., Provider accepts/declines) and sync to local storage
+  const updateBookingStatus = async (
     bookingId: string,
     status: BookingStatus,
   ) => {
-    setBookings((current) =>
-      current.map((booking) =>
-        booking.id === bookingId
-          ? {
-              ...booking,
-              status,
-            }
-          : booking,
-      ),
+    const updated = bookings.map((booking) =>
+      booking.id === bookingId
+        ? {
+            ...booking,
+            status,
+          }
+        : booking,
     );
+    setBookings(updated);
+    await StorageService.save(BOOKINGS_STORAGE_KEY, updated);
   };
 
-  const getBookingById = (
-    bookingId: string,
-  ) =>
-    bookings.find(
-      (booking) => booking.id === bookingId,
-    );
+  const getBookingById = (bookingId: string) =>
+    bookings.find((booking) => booking.id === bookingId);
 
   const bookingReadyForSummary =
     Boolean(bookingDraft.providerId) &&
@@ -195,17 +186,11 @@ export function BookingProvider({
       getBookingById,
       bookingReadyForSummary,
     }),
-    [
-      bookingDraft,
-      bookings,
-      bookingReadyForSummary,
-    ],
+    [bookingDraft, bookings, bookingReadyForSummary],
   );
 
   return (
-    <BookingContext.Provider value={value}>
-      {children}
-    </BookingContext.Provider>
+    <BookingContext.Provider value={value}>{children}</BookingContext.Provider>
   );
 }
 
@@ -213,9 +198,7 @@ export function useBooking() {
   const context = useContext(BookingContext);
 
   if (!context) {
-    throw new Error(
-      "useBooking must be used inside BookingProvider.",
-    );
+    throw new Error("useBooking must be used inside BookingProvider.");
   }
 
   return context;
