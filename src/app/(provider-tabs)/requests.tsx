@@ -31,6 +31,7 @@ import {
   useBooking,
 } from "../../context/booking-context";
 import { useLanguage } from "../../context/languagecontext";
+import { useNotifications } from "../../context/notification-context";
 import { useSession } from "../../context/session-context";
 
 type IconName =
@@ -94,6 +95,11 @@ export default function ProviderRequestsScreen() {
     bookings,
     updateBookingStatus,
   } = useBooking();
+
+  const {
+    createCustomerBookingConfirmedNotification,
+    createCustomerBookingCompletedNotification,
+  } = useNotifications();
 
   const { activeProviderId } =
     useSession();
@@ -277,15 +283,47 @@ export default function ProviderRequestsScreen() {
         },
         {
           text: copy.accept,
-          onPress: () => {
-            updateBookingStatus(
-              booking.id,
-              "confirmed",
-            );
+          onPress: async () => {
+            try {
+              await updateBookingStatus(
+                booking.id,
+                "confirmed",
+              );
 
-            setExpandedBookingId(
-              null,
-            );
+              try {
+                await createCustomerBookingConfirmedNotification(
+                  {
+                    customerId:
+                      booking.customerId,
+                    bookingId:
+                      booking.id,
+                    providerName:
+                      booking.providerName,
+                  },
+                );
+              } catch (
+                notificationError
+              ) {
+                console.error(
+                  "Booking was confirmed, but the customer notification failed:",
+                  notificationError,
+                );
+              }
+
+              setExpandedBookingId(
+                null,
+              );
+            } catch (error) {
+              console.error(
+                "Failed to confirm booking:",
+                error,
+              );
+
+              Alert.alert(
+                "Unable to update booking",
+                "Please try again.",
+              );
+            }
           },
         },
       ],
@@ -306,15 +344,27 @@ export default function ProviderRequestsScreen() {
         {
           text: copy.reject,
           style: "destructive",
-          onPress: () => {
-            updateBookingStatus(
-              booking.id,
-              "cancelled",
-            );
+          onPress: async () => {
+            try {
+              await updateBookingStatus(
+                booking.id,
+                "cancelled",
+              );
 
-            setExpandedBookingId(
-              null,
-            );
+              setExpandedBookingId(
+                null,
+              );
+            } catch (error) {
+              console.error(
+                "Failed to cancel booking:",
+                error,
+              );
+
+              Alert.alert(
+                "Unable to update booking",
+                "Please try again.",
+              );
+            }
           },
         },
       ],
@@ -334,11 +384,23 @@ export default function ProviderRequestsScreen() {
         },
         {
           text: copy.startWork,
-          onPress: () => {
-            updateBookingStatus(
-              booking.id,
-              "in-progress",
-            );
+          onPress: async () => {
+            try {
+              await updateBookingStatus(
+                booking.id,
+                "in-progress",
+              );
+            } catch (error) {
+              console.error(
+                "Failed to start booking:",
+                error,
+              );
+
+              Alert.alert(
+                "Unable to update booking",
+                "Please try again.",
+              );
+            }
           },
         },
       ],
@@ -358,11 +420,43 @@ export default function ProviderRequestsScreen() {
         },
         {
           text: copy.completeWork,
-          onPress: () => {
-            updateBookingStatus(
-              booking.id,
-              "completed",
-            );
+          onPress: async () => {
+            try {
+              await updateBookingStatus(
+                booking.id,
+                "completed",
+              );
+
+              try {
+                await createCustomerBookingCompletedNotification(
+                  {
+                    customerId:
+                      booking.customerId,
+                    bookingId:
+                      booking.id,
+                    providerName:
+                      booking.providerName,
+                  },
+                );
+              } catch (
+                notificationError
+              ) {
+                console.error(
+                  "Booking was completed, but the customer notification failed:",
+                  notificationError,
+                );
+              }
+            } catch (error) {
+              console.error(
+                "Failed to complete booking:",
+                error,
+              );
+
+              Alert.alert(
+                "Unable to update booking",
+                "Please try again.",
+              );
+            }
           },
         },
       ],

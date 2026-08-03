@@ -8,6 +8,7 @@ import {
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import { NotificationProvider } from "../context/notification-context";
 
 import {
   BookingProvider,
@@ -127,13 +128,15 @@ export default function RootLayout() {
 
   return (
     <SessionProvider>
-      <BookingProvider>
-        <LanguageProvider>
-          <AppNavigator
-            fontsReady={fontsReady}
-          />
-        </LanguageProvider>
-      </BookingProvider>
-    </SessionProvider>
+  <BookingProvider>
+    <LanguageProvider>
+      <NotificationProvider>
+        <AppNavigator
+          fontsReady={fontsReady}
+        />
+      </NotificationProvider>
+    </LanguageProvider>
+  </BookingProvider>
+</SessionProvider>
   );
 }

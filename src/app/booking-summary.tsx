@@ -16,6 +16,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useNotifications } from "../context/notification-context";
 
 import {
   Fonts,
@@ -55,10 +56,14 @@ export default function BookingSummaryScreen() {
   const router = useRouter();
 
   const {
-    bookingDraft,
-    bookingReadyForSummary,
-    addBooking,
-  } = useBooking();
+  bookingDraft,
+  bookingReadyForSummary,
+  addBooking,
+} = useBooking();
+
+const {
+  createProviderBookingNotification,
+} = useNotifications();
 
   const { language } =
     useLanguage();
@@ -248,14 +253,25 @@ export default function BookingSummaryScreen() {
 
        await addBooking(booking);
 
-       router.replace({
-          pathname:
-            "/booking-success",
-          params: {
-            bookingId:
-              booking.id,
-          },
-        });
+try {
+  await createProviderBookingNotification({
+    providerId: booking.providerId,
+    bookingId: booking.id,
+    customerName: "Customer",
+  });
+} catch (notificationError) {
+  console.error(
+    "Booking was created, but the provider notification failed:",
+    notificationError,
+  );
+}
+
+router.replace({
+  pathname: "/booking-success",
+  params: {
+    bookingId: booking.id,
+  },
+});
       } catch (error) {
         console.error(
           "Booking submission failed:",
