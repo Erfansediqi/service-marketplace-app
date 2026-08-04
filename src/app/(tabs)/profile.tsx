@@ -1,11 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import {
-  ComponentProps,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { ComponentProps, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -31,19 +26,11 @@ import { useSession } from "../../context/session-context";
 import { getProviderById } from "../../services/provider-repository";
 import { getLocalProviders } from "../../services/provider-storage";
 
-type IconName =
-  ComponentProps<typeof Ionicons>["name"];
+type IconName = ComponentProps<typeof Ionicons>["name"];
 
-type LanguageName =
-  | "English"
-  | "Dari"
-  | "Pashto";
+type LanguageName = "English" | "Dari" | "Pashto";
 
-type ProviderStatus =
-  | "not-started"
-  | "pending"
-  | "approved"
-  | "rejected";
+type ProviderStatus = "not-started" | "pending" | "approved" | "rejected";
 
 type LocalizedText = {
   English: string;
@@ -65,121 +52,78 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { language } = useLanguage();
 
-  const {
-  activeProviderId,
-  enterProviderWorkspace,
-  resetSession,
-} = useSession();
+  const { activeProviderId, enterProviderWorkspace, resetSession } =
+    useSession();
 
-  const activeLanguage =
-    normalizeLanguage(language);
+  const activeLanguage = normalizeLanguage(language);
 
-  const isRtl =
-    activeLanguage === "Dari" ||
-    activeLanguage === "Pashto";
+  const isRtl = activeLanguage === "Dari" || activeLanguage === "Pashto";
 
-  const copy =
-    getProfileCopy(activeLanguage);
+  const copy = getProfileCopy(activeLanguage);
 
-  const [
-    notificationsEnabled,
-    setNotificationsEnabled,
-  ] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
-  const [
-    providerStatus,
-    setProviderStatus,
-  ] = useState<ProviderStatus | null>(
+  const [providerStatus, setProviderStatus] = useState<ProviderStatus | null>(
     null,
   );
 
-  const [
-    providerAccountId,
-    setProviderAccountId,
-  ] = useState<string | null>(
+  const [providerAccountId, setProviderAccountId] = useState<string | null>(
     null,
   );
 
-  const [
-    providerAccountError,
-    setProviderAccountError,
-  ] = useState<Error | null>(
-    null,
-  );
+  const [providerAccountError, setProviderAccountError] =
+    useState<Error | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    const resolveProviderAccount =
-      async (): Promise<void> => {
-        setProviderStatus(null);
-        setProviderAccountError(null);
+    const resolveProviderAccount = async (): Promise<void> => {
+      setProviderStatus(null);
+      setProviderAccountError(null);
 
-        try {
-          if (activeProviderId) {
-            const activeProvider =
-              await getProviderById(
-                activeProviderId,
-              );
+      try {
+        if (activeProviderId) {
+          const activeProvider = await getProviderById(activeProviderId);
 
-            if (
-              isMounted &&
-              activeProvider
-            ) {
-              setProviderAccountId(
-                activeProvider.id,
-              );
-              setProviderStatus(
-                "approved",
-              );
-
-              return;
-            }
-          }
-
-          const localProviders =
-            await getLocalProviders();
-
-          if (!isMounted) {
-            return;
-          }
-
-          const savedProvider =
-            localProviders[0];
-
-          if (savedProvider) {
-            setProviderAccountId(
-              savedProvider.id,
-            );
-            setProviderStatus(
-              "approved",
-            );
+          if (isMounted && activeProvider) {
+            setProviderAccountId(activeProvider.id);
+            setProviderStatus("approved");
 
             return;
           }
-
-          setProviderAccountId(null);
-          setProviderStatus(
-            "not-started",
-          );
-        } catch (error) {
-          if (!isMounted) {
-            return;
-          }
-
-          setProviderAccountId(null);
-          setProviderStatus(
-            "not-started",
-          );
-          setProviderAccountError(
-            error instanceof Error
-              ? error
-              : new Error(
-                  "Failed to resolve the provider account.",
-                ),
-          );
         }
-      };
+
+        const localProviders = await getLocalProviders();
+
+        if (!isMounted) {
+          return;
+        }
+
+        const savedProvider = localProviders[0];
+
+        if (savedProvider) {
+          setProviderAccountId(savedProvider.id);
+          setProviderStatus("approved");
+
+          return;
+        }
+
+        setProviderAccountId(null);
+        setProviderStatus("not-started");
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setProviderAccountId(null);
+        setProviderStatus("not-started");
+        setProviderAccountError(
+          error instanceof Error
+            ? error
+            : new Error("Failed to resolve the provider account."),
+        );
+      }
+    };
 
     void resolveProviderAccount();
 
@@ -188,156 +132,107 @@ export default function ProfileScreen() {
     };
   }, [activeProviderId]);
 
-  const accountItems =
-    useMemo<ProfileMenuItem[]>(
-      () => [
-        {
-          id: "personal-information",
-          title:
-            copy.personalInformation,
-          subtitle:
-            copy.personalInformationSubtitle,
-          icon: "person-outline",
-          onPress: () => {
-            console.log(
-              "Open personal information",
-            );
-          },
+  const accountItems = useMemo<ProfileMenuItem[]>(
+    () => [
+      {
+        id: "personal-information",
+        title: copy.personalInformation,
+        subtitle: copy.personalInformationSubtitle,
+        icon: "person-outline",
+        onPress: () => {
+          router.push("/account/personal-information");
         },
-        {
-          id: "saved-addresses",
-          title:
-            copy.savedAddresses,
-          subtitle:
-            copy.savedAddressesSubtitle,
-          icon: "location-outline",
-          badge: formatDigits(
-            "2",
-            activeLanguage !==
-              "English",
-          ),
-          onPress: () => {
-            console.log(
-              "Open saved addresses",
-            );
-          },
+      },
+      {
+        id: "saved-addresses",
+        title: copy.savedAddresses,
+        subtitle: copy.savedAddressesSubtitle,
+        icon: "location-outline",
+        badge: formatDigits("2", activeLanguage !== "English"),
+        onPress: () => {
+          router.push("/account/saved-addresses");
         },
-        {
-          id: "language",
-          title: copy.appLanguage,
-          subtitle:
-            getLanguageDisplayName(
-              activeLanguage,
-            ),
-          icon: "language-outline",
-          onPress: () => {
-            router.push("/language");
-          },
+      },
+      {
+        id: "language",
+        title: copy.appLanguage,
+        subtitle: getLanguageDisplayName(activeLanguage),
+        icon: "language-outline",
+        onPress: () => {
+          router.push("/language");
         },
-      ],
-      [
-        activeLanguage,
-        copy,
-        router,
-      ],
-    );
+      },
+    ],
+    [activeLanguage, copy, router],
+  );
 
-  const settingsItems =
-    useMemo<ProfileMenuItem[]>(
-      () => [
-        {
-          id: "notifications",
-          title: copy.notifications,
-          subtitle:
-            copy.notificationsSubtitle,
-          icon:
-            "notifications-outline",
-          onPress: () => {
-            setNotificationsEnabled(
-              (current) => !current,
-            );
-          },
+  const settingsItems = useMemo<ProfileMenuItem[]>(
+    () => [
+      {
+        id: "notifications",
+        title: copy.notifications,
+        subtitle: copy.notificationsSubtitle,
+        icon: "notifications-outline",
+        onPress: () => {
+          setNotificationsEnabled((current) => !current);
         },
-        {
-          id: "privacy",
-          title:
-            copy.privacyAndSecurity,
-          subtitle:
-            copy.privacyAndSecuritySubtitle,
-          icon:
-            "shield-checkmark-outline",
-          onPress: () => {
-            console.log(
-              "Open privacy and security",
-            );
-          },
+      },
+      {
+        id: "privacy",
+        title: copy.privacyAndSecurity,
+        subtitle: copy.privacyAndSecuritySubtitle,
+        icon: "shield-checkmark-outline",
+        onPress: () => {
+          router.push("/account/privacy-security");
         },
-        {
-          id: "payments",
-          title: copy.payments,
-          subtitle:
-            copy.paymentsSubtitle,
-          icon: "card-outline",
-          onPress: () => {
-            console.log(
-              "Open payments",
-            );
-          },
+      },
+      {
+        id: "payments",
+        title: copy.payments,
+        subtitle: copy.paymentsSubtitle,
+        icon: "card-outline",
+        onPress: () => {
+          router.push("/account/payments");
         },
-      ],
-      [copy],
-    );
+      },
+    ],
+    [copy, router],
+  );
 
-  const supportItems =
-    useMemo<ProfileMenuItem[]>(
-      () => [
-        {
-          id: "help",
-          title: copy.helpCenter,
-          subtitle:
-            copy.helpCenterSubtitle,
-          icon:
-            "help-circle-outline",
-          onPress: () => {
-            console.log(
-              "Open help center",
-            );
-          },
+  const supportItems = useMemo<ProfileMenuItem[]>(
+    () => [
+      {
+        id: "help",
+        title: copy.helpCenter,
+        subtitle: copy.helpCenterSubtitle,
+        icon: "help-circle-outline",
+        onPress: () => {
+          router.push("/account/help-center");
         },
-        {
-          id: "contact-support",
-          title:
-            copy.contactSupport,
-          subtitle:
-            copy.contactSupportSubtitle,
-          icon: "headset-outline",
-          onPress: () => {
-            router.push(
-              "/(tabs)/messages",
-            );
-          },
+      },
+      {
+        id: "contact-support",
+        title: copy.contactSupport,
+        subtitle: copy.contactSupportSubtitle,
+        icon: "headset-outline",
+        onPress: () => {
+          router.push("/(tabs)/messages");
         },
-        {
-          id: "terms",
-          title:
-            copy.termsAndPrivacy,
-          icon:
-            "document-text-outline",
-          onPress: () => {
-            console.log(
-              "Open legal documents",
-            );
-          },
+      },
+      {
+        id: "terms",
+        title: copy.termsAndPrivacy,
+        icon: "document-text-outline",
+        onPress: () => {
+          router.push("/account/terms-and-privacy");
         },
-      ],
-      [copy, router],
-    );
+      },
+    ],
+    [copy, router],
+  );
 
   const handleLogout = () => {
-  Alert.alert(
-    copy.logout,
-    copy.logoutConfirmation,
-    [
+    Alert.alert(copy.logout, copy.logoutConfirmation, [
       {
         text: copy.cancel,
         style: "cancel",
@@ -348,89 +243,50 @@ export default function ProfileScreen() {
         onPress: () => {
           resetSession();
 
-          router.replace(
-            "/language",
-          );
+          router.replace("/language");
         },
       },
-    ],
-  );
-};
+    ]);
+  };
 
   const openProviderStatus = () => {
     if (!providerStatus) {
       return;
     }
 
-    if (
-      providerStatus ===
-      "not-started"
-    ) {
-      router.push(
-        "/provider-welcome",
-      );
+    if (providerStatus === "not-started") {
+      router.push("/provider-welcome");
 
       return;
     }
 
-    if (
-      providerStatus ===
-        "approved" &&
-      providerAccountId
-    ) {
-      enterProviderWorkspace(
-        providerAccountId,
-      );
+    if (providerStatus === "approved" && providerAccountId) {
+      enterProviderWorkspace(providerAccountId);
 
-      router.push(
-        "/(provider-tabs)",
-      );
+      router.push("/(provider-tabs)");
 
       return;
     }
 
-    console.log(
-      "Open provider application status",
-    );
+    console.log("Open provider application status");
   };
 
   return (
-    <SafeAreaView
-      style={styles.safeArea}
-    >
+    <SafeAreaView style={styles.safeArea}>
       <ScrollView
-        showsVerticalScrollIndicator={
-          false
-        }
-        contentContainerStyle={
-          styles.scrollContent
-        }
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.header}>
-          <Text
-            style={[
-              styles.eyebrow,
-              directionStyle(isRtl),
-            ]}
-          >
+          <Text style={[styles.eyebrow, directionStyle(isRtl)]}>
             {copy.eyebrow}
           </Text>
 
-          <Text
-            style={[
-              styles.title,
-              directionStyle(isRtl),
-            ]}
-          >
+          <Text style={[styles.title, directionStyle(isRtl)]}>
             {copy.title}
           </Text>
 
-          <Text
-            style={[
-              styles.subtitle,
-              directionStyle(isRtl),
-            ]}
-          >
+          <Text style={[styles.subtitle, directionStyle(isRtl)]}>
             {copy.subtitle}
           </Text>
         </View>
@@ -439,50 +295,30 @@ export default function ProfileScreen() {
           style={[
             styles.profileCard,
             {
-              flexDirection: isRtl
-                ? "row-reverse"
-                : "row",
+              flexDirection: isRtl ? "row-reverse" : "row",
             },
           ]}
         >
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={
-              copy.changeProfilePhoto
-            }
+            accessibilityLabel={copy.changeProfilePhoto}
             onPress={() => {
-              console.log(
-                "Change profile photo",
-              );
+              console.log("Change profile photo");
             }}
             style={({ pressed }) => [
               styles.profileAvatar,
-              pressed &&
-                styles.pressed,
+              pressed && styles.pressed,
             ]}
           >
-            <Text
-              style={
-                styles.profileInitials
-              }
-            >
-              {activeLanguage ===
-              "English"
-                ? "A"
-                : "ا"}
+            <Text style={styles.profileInitials}>
+              {activeLanguage === "English" ? "A" : "ا"}
             </Text>
 
-            <View
-              style={
-                styles.editAvatarBadge
-              }
-            >
+            <View style={styles.editAvatarBadge}>
               <Ionicons
                 name="camera-outline"
                 size={13}
-                color={
-                  KhedmatPalette.white
-                }
+                color={KhedmatPalette.white}
               />
             </View>
           </Pressable>
@@ -491,30 +327,19 @@ export default function ProfileScreen() {
             style={[
               styles.profileCopy,
               {
-                alignItems: isRtl
-                  ? "flex-end"
-                  : "flex-start",
+                alignItems: isRtl ? "flex-end" : "flex-start",
               },
             ]}
           >
             <Text
               numberOfLines={1}
-              style={[
-                styles.profileName,
-                directionStyle(isRtl),
-              ]}
+              style={[styles.profileName, directionStyle(isRtl)]}
             >
               {copy.profileName}
             </Text>
 
-            <Text
-              style={[
-                styles.profilePhone,
-                directionStyle(isRtl),
-              ]}
-            >
-              {activeLanguage ===
-              "English"
+            <Text style={[styles.profilePhone, directionStyle(isRtl)]}>
+              {activeLanguage === "English"
                 ? "+93 70 123 4567"
                 : "+۹۳ ۷۰ ۱۲۳ ۴۵۶۷"}
             </Text>
@@ -523,28 +348,17 @@ export default function ProfileScreen() {
               style={[
                 styles.accountBadge,
                 {
-                  flexDirection: isRtl
-                    ? "row-reverse"
-                    : "row",
+                  flexDirection: isRtl ? "row-reverse" : "row",
                 },
               ]}
             >
               <Ionicons
                 name="shield-checkmark"
                 size={14}
-                color={
-                  KhedmatPalette.blue500
-                }
+                color={KhedmatPalette.blue500}
               />
 
-              <Text
-                style={[
-                  styles.accountBadgeText,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
+              <Text style={[styles.accountBadgeText, directionStyle(isRtl)]}>
                 {copy.verifiedAccount}
               </Text>
             </View>
@@ -552,26 +366,19 @@ export default function ProfileScreen() {
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={
-              copy.editProfile
-            }
+            accessibilityLabel={copy.editProfile}
             onPress={() => {
-              console.log(
-                "Edit profile",
-              );
+              console.log("Edit profile");
             }}
             style={({ pressed }) => [
               styles.editProfileButton,
-              pressed &&
-                styles.pressed,
+              pressed && styles.pressed,
             ]}
           >
             <Ionicons
               name="create-outline"
               size={20}
-              color={
-                KhedmatPalette.navy700
-              }
+              color={KhedmatPalette.navy700}
             />
           </Pressable>
         </View>
@@ -581,33 +388,21 @@ export default function ProfileScreen() {
             status={providerStatus}
             language={activeLanguage}
             isRtl={isRtl}
-            onPress={
-              openProviderStatus
-            }
+            onPress={openProviderStatus}
           />
         ) : (
           <View
             style={[
               styles.providerStatusLoading,
               {
-                flexDirection: isRtl
-                  ? "row-reverse"
-                  : "row",
+                flexDirection: isRtl ? "row-reverse" : "row",
               },
             ]}
           >
-            <ActivityIndicator
-              size="small"
-              color={
-                KhedmatPalette.blue500
-              }
-            />
+            <ActivityIndicator size="small" color={KhedmatPalette.blue500} />
 
             <Text
-              style={[
-                styles.providerStatusLoadingText,
-                directionStyle(isRtl),
-              ]}
+              style={[styles.providerStatusLoadingText, directionStyle(isRtl)]}
             >
               {activeLanguage === "Dari"
                 ? "در حال بررسی حساب ارائه‌دهنده..."
@@ -619,12 +414,7 @@ export default function ProfileScreen() {
         )}
 
         {providerAccountError ? (
-          <Text
-            style={[
-              styles.providerStatusError,
-              directionStyle(isRtl),
-            ]}
-          >
+          <Text style={[styles.providerStatusError, directionStyle(isRtl)]}>
             {activeLanguage === "Dari"
               ? "بارگذاری حساب ارائه‌دهنده ناموفق بود."
               : activeLanguage === "Pashto"
@@ -639,48 +429,28 @@ export default function ProfileScreen() {
           isRtl={isRtl}
         />
 
-        <View
-          style={styles.section}
-        >
-          <Text
-            style={[
-              styles.sectionTitle,
-              directionStyle(isRtl),
-            ]}
-          >
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
             {copy.settings}
           </Text>
 
-          <View
-            style={styles.menuList}
-          >
-            {settingsItems.map(
-              (item) => {
-                if (
-                  item.id ===
-                  "notifications"
-                ) {
-                  return (
-                    <ProfileToggleItem
-                      key={item.id}
-                      item={item}
-                      selected={
-                        notificationsEnabled
-                      }
-                      isRtl={isRtl}
-                    />
-                  );
-                }
-
+          <View style={styles.menuList}>
+            {settingsItems.map((item) => {
+              if (item.id === "notifications") {
                 return (
-                  <ProfileMenuItemCard
+                  <ProfileToggleItem
                     key={item.id}
                     item={item}
+                    selected={notificationsEnabled}
                     isRtl={isRtl}
                   />
                 );
-              },
-            )}
+              }
+
+              return (
+                <ProfileMenuItemCard key={item.id} item={item} isRtl={isRtl} />
+              );
+            })}
           </View>
         </View>
 
@@ -690,67 +460,42 @@ export default function ProfileScreen() {
           isRtl={isRtl}
         />
 
-        <View
-          style={styles.section}
-        >
-          <Text
-            style={[
-              styles.sectionTitle,
-              directionStyle(isRtl),
-            ]}
-          >
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
             {copy.accountActions}
           </Text>
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={
-              copy.logout
-            }
+            accessibilityLabel={copy.logout}
             onPress={handleLogout}
             style={({ pressed }) => [
               styles.logoutButton,
-              pressed &&
-                styles.logoutButtonPressed,
+              pressed && styles.logoutButtonPressed,
             ]}
           >
             <View
               style={[
                 styles.logoutButtonContent,
                 {
-                  flexDirection: isRtl
-                    ? "row-reverse"
-                    : "row",
+                  flexDirection: isRtl ? "row-reverse" : "row",
                 },
               ]}
             >
               <Ionicons
                 name="log-out-outline"
                 size={20}
-                color={
-                  KhedmatPalette.error
-                }
+                color={KhedmatPalette.error}
               />
 
-              <Text
-                style={[
-                  styles.logoutButtonText,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
+              <Text style={[styles.logoutButtonText, directionStyle(isRtl)]}>
                 {copy.logout}
               </Text>
             </View>
           </Pressable>
         </View>
 
-        <Text
-          style={styles.versionText}
-        >
-          {copy.version}
-        </Text>
+        <Text style={styles.versionText}>{copy.version}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -769,57 +514,39 @@ function ProviderStatusCard({
   isRtl,
   onPress,
 }: ProviderStatusCardProps) {
-  const config =
-    getProviderStatusConfig(
-      status,
-      language,
-    );
+  const config = getProviderStatusConfig(status, language);
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={
-        config.title
-      }
+      accessibilityLabel={config.title}
       onPress={onPress}
       style={({ pressed }) => [
         styles.providerStatusCard,
         {
-          borderColor:
-            config.borderColor,
-          backgroundColor:
-            config.backgroundColor,
-          flexDirection: isRtl
-            ? "row-reverse"
-            : "row",
+          borderColor: config.borderColor,
+          backgroundColor: config.backgroundColor,
+          flexDirection: isRtl ? "row-reverse" : "row",
         },
-        pressed &&
-          styles.cardPressed,
+        pressed && styles.cardPressed,
       ]}
     >
       <View
         style={[
           styles.providerStatusIcon,
           {
-            backgroundColor:
-              config.iconBackground,
+            backgroundColor: config.iconBackground,
           },
         ]}
       >
-        <Ionicons
-          name={config.icon}
-          size={24}
-          color={config.color}
-        />
+        <Ionicons name={config.icon} size={24} color={config.color} />
       </View>
 
       <View
         style={[
           styles.providerStatusCopy,
           {
-            alignItems: isRtl
-              ? "flex-end"
-              : "flex-start",
+            alignItems: isRtl ? "flex-end" : "flex-start",
           },
         ]}
       >
@@ -832,40 +559,22 @@ function ProviderStatusCard({
             directionStyle(isRtl),
           ]}
         >
-          {
-            config.providerAccountLabel
-          }
+          {config.providerAccountLabel}
         </Text>
 
-        <Text
-          style={[
-            styles.providerStatusTitle,
-            directionStyle(isRtl),
-          ]}
-        >
+        <Text style={[styles.providerStatusTitle, directionStyle(isRtl)]}>
           {config.title}
         </Text>
 
-        <Text
-          style={[
-            styles.providerStatusSubtitle,
-            directionStyle(isRtl),
-          ]}
-        >
+        <Text style={[styles.providerStatusSubtitle, directionStyle(isRtl)]}>
           {config.subtitle}
         </Text>
       </View>
 
       <Ionicons
-        name={
-          isRtl
-            ? "chevron-back"
-            : "chevron-forward"
-        }
+        name={isRtl ? "chevron-back" : "chevron-forward"}
         size={20}
-        color={
-          KhedmatPalette.textMuted
-        }
+        color={KhedmatPalette.textMuted}
       />
     </Pressable>
   );
@@ -877,31 +586,14 @@ type ProfileSectionProps = {
   isRtl: boolean;
 };
 
-function ProfileSection({
-  title,
-  items,
-  isRtl,
-}: ProfileSectionProps) {
+function ProfileSection({ title, items, isRtl }: ProfileSectionProps) {
   return (
     <View style={styles.section}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          directionStyle(isRtl),
-        ]}
-      >
-        {title}
-      </Text>
+      <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>{title}</Text>
 
-      <View
-        style={styles.menuList}
-      >
+      <View style={styles.menuList}>
         {items.map((item) => (
-          <ProfileMenuItemCard
-            key={item.id}
-            item={item}
-            isRtl={isRtl}
-          />
+          <ProfileMenuItemCard key={item.id} item={item} isRtl={isRtl} />
         ))}
       </View>
     </View>
@@ -913,48 +605,33 @@ type ProfileMenuItemCardProps = {
   isRtl: boolean;
 };
 
-function ProfileMenuItemCard({
-  item,
-  isRtl,
-}: ProfileMenuItemCardProps) {
+function ProfileMenuItemCard({ item, isRtl }: ProfileMenuItemCardProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={
-        item.title
-      }
+      accessibilityLabel={item.title}
       onPress={item.onPress}
-      style={({ pressed }) => [
-        styles.menuCard,
-        pressed &&
-          styles.cardPressed,
-      ]}
+      style={({ pressed }) => [styles.menuCard, pressed && styles.cardPressed]}
     >
       <View
         style={[
           styles.menuContent,
           {
-            flexDirection: isRtl
-              ? "row-reverse"
-              : "row",
+            flexDirection: isRtl ? "row-reverse" : "row",
           },
         ]}
       >
         <View
           style={[
             styles.menuIcon,
-            item.destructive &&
-              styles.destructiveMenuIcon,
+            item.destructive && styles.destructiveMenuIcon,
           ]}
         >
           <Ionicons
             name={item.icon}
             size={21}
             color={
-              item.destructive
-                ? KhedmatPalette.error
-                : KhedmatPalette
-                    .blue500
+              item.destructive ? KhedmatPalette.error : KhedmatPalette.blue500
             }
           />
         </View>
@@ -963,17 +640,14 @@ function ProfileMenuItemCard({
           style={[
             styles.menuCopy,
             {
-              alignItems: isRtl
-                ? "flex-end"
-                : "flex-start",
+              alignItems: isRtl ? "flex-end" : "flex-start",
             },
           ]}
         >
           <Text
             style={[
               styles.menuTitle,
-              item.destructive &&
-                styles.destructiveMenuTitle,
+              item.destructive && styles.destructiveMenuTitle,
               directionStyle(isRtl),
             ]}
           >
@@ -981,43 +655,22 @@ function ProfileMenuItemCard({
           </Text>
 
           {item.subtitle ? (
-            <Text
-              style={[
-                styles.menuSubtitle,
-                directionStyle(
-                  isRtl,
-                ),
-              ]}
-            >
+            <Text style={[styles.menuSubtitle, directionStyle(isRtl)]}>
               {item.subtitle}
             </Text>
           ) : null}
         </View>
 
         {item.badge ? (
-          <View
-            style={styles.menuBadge}
-          >
-            <Text
-              style={
-                styles.menuBadgeText
-              }
-            >
-              {item.badge}
-            </Text>
+          <View style={styles.menuBadge}>
+            <Text style={styles.menuBadgeText}>{item.badge}</Text>
           </View>
         ) : null}
 
         <Ionicons
-          name={
-            isRtl
-              ? "chevron-back"
-              : "chevron-forward"
-          }
+          name={isRtl ? "chevron-back" : "chevron-forward"}
           size={18}
-          color={
-            KhedmatPalette.textMuted
-          }
+          color={KhedmatPalette.textMuted}
         />
       </View>
     </Pressable>
@@ -1030,55 +683,34 @@ type ProfileToggleItemProps = {
   isRtl: boolean;
 };
 
-function ProfileToggleItem({
-  item,
-  selected,
-  isRtl,
-}: ProfileToggleItemProps) {
+function ProfileToggleItem({ item, selected, isRtl }: ProfileToggleItemProps) {
   return (
     <Pressable
       accessibilityRole="switch"
-      accessibilityLabel={
-        item.title
-      }
+      accessibilityLabel={item.title}
       accessibilityState={{
         checked: selected,
       }}
       onPress={item.onPress}
       style={({ pressed }) => [
         styles.menuCard,
-        selected &&
-          styles.selectedToggleCard,
-        pressed &&
-          styles.cardPressed,
+        selected && styles.selectedToggleCard,
+        pressed && styles.cardPressed,
       ]}
     >
       <View
         style={[
           styles.menuContent,
           {
-            flexDirection: isRtl
-              ? "row-reverse"
-              : "row",
+            flexDirection: isRtl ? "row-reverse" : "row",
           },
         ]}
       >
-        <View
-          style={[
-            styles.menuIcon,
-            selected &&
-              styles.selectedMenuIcon,
-          ]}
-        >
+        <View style={[styles.menuIcon, selected && styles.selectedMenuIcon]}>
           <Ionicons
             name={item.icon}
             size={21}
-            color={
-              selected
-                ? KhedmatPalette.white
-                : KhedmatPalette
-                    .blue500
-            }
+            color={selected ? KhedmatPalette.white : KhedmatPalette.blue500}
           />
         </View>
 
@@ -1086,49 +718,29 @@ function ProfileToggleItem({
           style={[
             styles.menuCopy,
             {
-              alignItems: isRtl
-                ? "flex-end"
-                : "flex-start",
+              alignItems: isRtl ? "flex-end" : "flex-start",
             },
           ]}
         >
-          <Text
-            style={[
-              styles.menuTitle,
-              directionStyle(isRtl),
-            ]}
-          >
+          <Text style={[styles.menuTitle, directionStyle(isRtl)]}>
             {item.title}
           </Text>
 
           {item.subtitle ? (
-            <Text
-              style={[
-                styles.menuSubtitle,
-                directionStyle(
-                  isRtl,
-                ),
-              ]}
-            >
+            <Text style={[styles.menuSubtitle, directionStyle(isRtl)]}>
               {item.subtitle}
             </Text>
           ) : null}
         </View>
 
         <View
-          style={[
-            styles.switchTrack,
-            selected &&
-              styles.switchTrackSelected,
-          ]}
+          style={[styles.switchTrack, selected && styles.switchTrackSelected]}
         >
           <View
             style={[
               styles.switchThumb,
               selected && {
-                alignSelf: isRtl
-                  ? "flex-start"
-                  : "flex-end",
+                alignSelf: isRtl ? "flex-start" : "flex-end",
               },
             ]}
           />
@@ -1142,145 +754,105 @@ function getProviderStatusConfig(
   status: ProviderStatus,
   language: LanguageName,
 ) {
-  const copy =
-    getProviderStatusCopy(
-      language,
-    );
+  const copy = getProviderStatusCopy(language);
 
   if (status === "pending") {
     return {
-      providerAccountLabel:
-        copy.providerAccount,
+      providerAccountLabel: copy.providerAccount,
 
       title: copy.pendingTitle,
 
-      subtitle:
-        copy.pendingSubtitle,
+      subtitle: copy.pendingSubtitle,
 
-      icon:
-        "time-outline" as const,
+      icon: "time-outline" as const,
 
       color: "#8A5A00",
 
-      backgroundColor:
-        "#FFF9E9",
+      backgroundColor: "#FFF9E9",
 
-      borderColor:
-        "#E5C875",
+      borderColor: "#E5C875",
 
-      iconBackground:
-        "#FFF0C2",
+      iconBackground: "#FFF0C2",
     };
   }
 
   if (status === "approved") {
     return {
-      providerAccountLabel:
-        copy.providerAccount,
+      providerAccountLabel: copy.providerAccount,
 
       title: copy.approvedTitle,
 
-      subtitle:
-        copy.approvedSubtitle,
+      subtitle: copy.approvedSubtitle,
 
-      icon:
-        "checkmark-circle-outline" as const,
+      icon: "checkmark-circle-outline" as const,
 
-      color:
-        KhedmatPalette.success,
+      color: KhedmatPalette.success,
 
-      backgroundColor:
-        "#F2FBF6",
+      backgroundColor: "#F2FBF6",
 
-      borderColor:
-        "#9ED9B6",
+      borderColor: "#9ED9B6",
 
-      iconBackground:
-        KhedmatPalette.successSoft,
+      iconBackground: KhedmatPalette.successSoft,
     };
   }
 
   if (status === "rejected") {
     return {
-      providerAccountLabel:
-        copy.providerAccount,
+      providerAccountLabel: copy.providerAccount,
 
       title: copy.rejectedTitle,
 
-      subtitle:
-        copy.rejectedSubtitle,
+      subtitle: copy.rejectedSubtitle,
 
-      icon:
-        "alert-circle-outline" as const,
+      icon: "alert-circle-outline" as const,
 
-      color:
-        KhedmatPalette.error,
+      color: KhedmatPalette.error,
 
-      backgroundColor:
-        "#FFF5F4",
+      backgroundColor: "#FFF5F4",
 
-      borderColor:
-        "#E8AAA5",
+      borderColor: "#E8AAA5",
 
-      iconBackground:
-        KhedmatPalette.errorSoft,
+      iconBackground: KhedmatPalette.errorSoft,
     };
   }
 
   return {
-    providerAccountLabel:
-      copy.providerAccount,
+    providerAccountLabel: copy.providerAccount,
 
     title: copy.notStartedTitle,
 
-    subtitle:
-      copy.notStartedSubtitle,
+    subtitle: copy.notStartedSubtitle,
 
-    icon:
-      "briefcase-outline" as const,
+    icon: "briefcase-outline" as const,
 
-    color:
-      KhedmatPalette.blue500,
+    color: KhedmatPalette.blue500,
 
-    backgroundColor:
-      "#F4FBFC",
+    backgroundColor: "#F4FBFC",
 
-    borderColor:
-      KhedmatPalette.blue200,
+    borderColor: KhedmatPalette.blue200,
 
-    iconBackground:
-      KhedmatPalette.surfaceSoft,
+    iconBackground: KhedmatPalette.surfaceSoft,
   };
 }
 
-function getProviderStatusCopy(
-  language: LanguageName,
-) {
+function getProviderStatusCopy(language: LanguageName) {
   if (language === "Dari") {
     return {
-      providerAccount:
-        "حساب ارائه‌دهنده",
+      providerAccount: "حساب ارائه‌دهنده",
 
-      pendingTitle:
-        "درخواست شما در حال بررسی است",
+      pendingTitle: "درخواست شما در حال بررسی است",
 
-      pendingSubtitle:
-        "پس از تأیید، حساب حرفه‌ای شما فعال می‌شود.",
+      pendingSubtitle: "پس از تأیید، حساب حرفه‌ای شما فعال می‌شود.",
 
-      approvedTitle:
-        "حساب ارائه‌دهنده فعال است",
+      approvedTitle: "حساب ارائه‌دهنده فعال است",
 
-      approvedSubtitle:
-        "درخواست‌های مشتریان را مشاهده و مدیریت کنید.",
+      approvedSubtitle: "درخواست‌های مشتریان را مشاهده و مدیریت کنید.",
 
-      rejectedTitle:
-        "درخواست نیاز به اصلاح دارد",
+      rejectedTitle: "درخواست نیاز به اصلاح دارد",
 
-      rejectedSubtitle:
-        "جزئیات درخواست را مشاهده و اطلاعات را تکمیل کنید.",
+      rejectedSubtitle: "جزئیات درخواست را مشاهده و اطلاعات را تکمیل کنید.",
 
-      notStartedTitle:
-        "به‌عنوان ارائه‌دهنده ثبت‌نام کنید",
+      notStartedTitle: "به‌عنوان ارائه‌دهنده ثبت‌نام کنید",
 
       notStartedSubtitle:
         "مهارت‌های خود را معرفی کنید و درخواست‌های کاری دریافت نمایید.",
@@ -1289,68 +861,49 @@ function getProviderStatusCopy(
 
   if (language === "Pashto") {
     return {
-      providerAccount:
-        "د خدمت وړاندې کوونکي حساب",
+      providerAccount: "د خدمت وړاندې کوونکي حساب",
 
-      pendingTitle:
-        "ستاسو غوښتنه تر کتنې لاندې ده",
+      pendingTitle: "ستاسو غوښتنه تر کتنې لاندې ده",
 
-      pendingSubtitle:
-        "له تایید وروسته به ستاسو مسلکي حساب فعال شي.",
+      pendingSubtitle: "له تایید وروسته به ستاسو مسلکي حساب فعال شي.",
 
-      approvedTitle:
-        "د خدمت وړاندې کوونکي حساب فعال دی",
+      approvedTitle: "د خدمت وړاندې کوونکي حساب فعال دی",
 
-      approvedSubtitle:
-        "د پیرودونکو غوښتنې وګورئ او مدیریت یې کړئ.",
+      approvedSubtitle: "د پیرودونکو غوښتنې وګورئ او مدیریت یې کړئ.",
 
-      rejectedTitle:
-        "غوښتنه سمون ته اړتیا لري",
+      rejectedTitle: "غوښتنه سمون ته اړتیا لري",
 
-      rejectedSubtitle:
-        "د غوښتنې تفصیل وګورئ او معلومات بشپړ کړئ.",
+      rejectedSubtitle: "د غوښتنې تفصیل وګورئ او معلومات بشپړ کړئ.",
 
-      notStartedTitle:
-        "د خدمت وړاندې کوونکي په توګه نوم‌لیکنه وکړئ",
+      notStartedTitle: "د خدمت وړاندې کوونکي په توګه نوم‌لیکنه وکړئ",
 
-      notStartedSubtitle:
-        "خپل مهارتونه معرفي کړئ او کاري غوښتنې ترلاسه کړئ.",
+      notStartedSubtitle: "خپل مهارتونه معرفي کړئ او کاري غوښتنې ترلاسه کړئ.",
     };
   }
 
   return {
-    providerAccount:
-      "Provider account",
+    providerAccount: "Provider account",
 
-    pendingTitle:
-      "Your application is under review",
+    pendingTitle: "Your application is under review",
 
-    pendingSubtitle:
-      "Your professional account will activate after approval.",
+    pendingSubtitle: "Your professional account will activate after approval.",
 
-    approvedTitle:
-      "Your provider account is active",
+    approvedTitle: "Your provider account is active",
 
-    approvedSubtitle:
-      "View and manage customer service requests.",
+    approvedSubtitle: "View and manage customer service requests.",
 
-    rejectedTitle:
-      "Your application needs changes",
+    rejectedTitle: "Your application needs changes",
 
     rejectedSubtitle:
       "Review the application and complete the required information.",
 
-    notStartedTitle:
-      "Register as a provider",
+    notStartedTitle: "Register as a provider",
 
-    notStartedSubtitle:
-      "Present your skills and receive service requests.",
+    notStartedSubtitle: "Present your skills and receive service requests.",
   };
 }
 
-function normalizeLanguage(
-  language: string,
-): LanguageName {
+function normalizeLanguage(language: string): LanguageName {
   if (language === "Dari") {
     return "Dari";
   }
@@ -1362,32 +915,20 @@ function normalizeLanguage(
   return "English";
 }
 
-function directionStyle(
-  isRtl: boolean,
-) {
+function directionStyle(isRtl: boolean) {
   return {
-    textAlign: isRtl
-      ? ("right" as const)
-      : ("left" as const),
+    textAlign: isRtl ? ("right" as const) : ("left" as const),
 
-    writingDirection: isRtl
-      ? ("rtl" as const)
-      : ("ltr" as const),
+    writingDirection: isRtl ? ("rtl" as const) : ("ltr" as const),
   };
 }
 
-function formatDigits(
-  value: string,
-  localized: boolean,
-): string {
+function formatDigits(value: string, localized: boolean): string {
   if (!localized) {
     return value;
   }
 
-  const digits: Record<
-    string,
-    string
-  > = {
+  const digits: Record<string, string> = {
     "0": "۰",
     "1": "۱",
     "2": "۲",
@@ -1400,16 +941,10 @@ function formatDigits(
     "9": "۹",
   };
 
-  return value.replace(
-    /\d/g,
-    (digit) =>
-      digits[digit] ?? digit,
-  );
+  return value.replace(/\d/g, (digit) => digits[digit] ?? digit);
 }
 
-function getLanguageDisplayName(
-  language: LanguageName,
-): string {
+function getLanguageDisplayName(language: LanguageName): string {
   if (language === "Dari") {
     return "دری";
   }
@@ -1421,9 +956,7 @@ function getLanguageDisplayName(
   return "English";
 }
 
-function getProfileCopy(
-  language: LanguageName,
-) {
+function getProfileCopy(language: LanguageName) {
   if (language === "Dari") {
     return {
       eyebrow: "حساب کاربری",
@@ -1434,169 +967,124 @@ function getProfileCopy(
 
       profileName: "احمد ظاهر",
 
-      verifiedAccount:
-        "حساب تأییدشده",
+      verifiedAccount: "حساب تأییدشده",
 
-      editProfile:
-        "ویرایش پروفایل",
+      editProfile: "ویرایش پروفایل",
 
-      changeProfilePhoto:
-        "تغییر عکس پروفایل",
+      changeProfilePhoto: "تغییر عکس پروفایل",
 
       account: "حساب",
 
-      personalInformation:
-        "اطلاعات شخصی",
+      personalInformation: "اطلاعات شخصی",
 
-      personalInformationSubtitle:
-        "نام، شماره تلفن و عکس پروفایل",
+      personalInformationSubtitle: "نام، شماره تلفن و عکس پروفایل",
 
-      savedAddresses:
-        "آدرس‌های ذخیره‌شده",
+      savedAddresses: "آدرس‌های ذخیره‌شده",
 
-      savedAddressesSubtitle:
-        "خانه، محل کار و آدرس‌های دیگر",
+      savedAddressesSubtitle: "خانه، محل کار و آدرس‌های دیگر",
 
-      appLanguage:
-        "زبان برنامه",
+      appLanguage: "زبان برنامه",
 
       settings: "تنظیمات",
 
       notifications: "اعلان‌ها",
 
-      notificationsSubtitle:
-        "رزروها، پیام‌ها و تغییرات حساب",
+      notificationsSubtitle: "رزروها، پیام‌ها و تغییرات حساب",
 
-      privacyAndSecurity:
-        "حریم خصوصی و امنیت",
+      privacyAndSecurity: "حریم خصوصی و امنیت",
 
-      privacyAndSecuritySubtitle:
-        "رمز، دسترسی‌ها و مدیریت اطلاعات",
+      privacyAndSecuritySubtitle: "رمز، دسترسی‌ها و مدیریت اطلاعات",
 
       payments: "پرداخت‌ها",
 
-      paymentsSubtitle:
-        "روش‌های پرداخت و تاریخچه",
+      paymentsSubtitle: "روش‌های پرداخت و تاریخچه",
 
       support: "پشتیبانی",
 
-      helpCenter:
-        "مرکز راهنما",
+      helpCenter: "مرکز راهنما",
 
-      helpCenterSubtitle:
-        "پرسش‌های رایج و راهنمای استفاده",
+      helpCenterSubtitle: "پرسش‌های رایج و راهنمای استفاده",
 
-      contactSupport:
-        "تماس با پشتیبانی",
+      contactSupport: "تماس با پشتیبانی",
 
-      contactSupportSubtitle:
-        "گزارش مشکل یا درخواست کمک",
+      contactSupportSubtitle: "گزارش مشکل یا درخواست کمک",
 
-      termsAndPrivacy:
-        "شرایط استفاده و حریم خصوصی",
+      termsAndPrivacy: "شرایط استفاده و حریم خصوصی",
 
-      accountActions:
-        "مدیریت حساب",
+      accountActions: "مدیریت حساب",
 
       logout: "خروج از حساب",
 
-      logoutConfirmation:
-        "آیا مطمئن هستید که می‌خواهید از حساب خود خارج شوید؟",
+      logoutConfirmation: "آیا مطمئن هستید که می‌خواهید از حساب خود خارج شوید؟",
 
       cancel: "لغو",
 
-      version:
-        "خدمت، نسخهٔ ۱.۰.۰",
+      version: "خدمت، نسخهٔ ۱.۰.۰",
     };
   }
 
   if (language === "Pashto") {
     return {
-      eyebrow:
-        "کارن حساب",
+      eyebrow: "کارن حساب",
       title: "پروفایل",
 
-      subtitle:
-        "د خپل حساب معلومات، تنظیمات او د ملاتړ انتخابونه مدیریت کړئ.",
+      subtitle: "د خپل حساب معلومات، تنظیمات او د ملاتړ انتخابونه مدیریت کړئ.",
 
-      profileName:
-        "احمد ظاهر",
+      profileName: "احمد ظاهر",
 
-      verifiedAccount:
-        "تایید شوی حساب",
+      verifiedAccount: "تایید شوی حساب",
 
-      editProfile:
-        "پروفایل سمول",
+      editProfile: "پروفایل سمول",
 
-      changeProfilePhoto:
-        "د پروفایل عکس بدلول",
+      changeProfilePhoto: "د پروفایل عکس بدلول",
 
       account: "حساب",
 
-      personalInformation:
-        "شخصي معلومات",
+      personalInformation: "شخصي معلومات",
 
-      personalInformationSubtitle:
-        "نوم، د ټیلیفون شمېره او د پروفایل عکس",
+      personalInformationSubtitle: "نوم، د ټیلیفون شمېره او د پروفایل عکس",
 
-      savedAddresses:
-        "خوندي شوې پتې",
+      savedAddresses: "خوندي شوې پتې",
 
-      savedAddressesSubtitle:
-        "کور، د کار ځای او نورې پتې",
+      savedAddressesSubtitle: "کور، د کار ځای او نورې پتې",
 
-      appLanguage:
-        "د اپلېکېشن ژبه",
+      appLanguage: "د اپلېکېشن ژبه",
 
       settings: "تنظیمات",
 
-      notifications:
-        "خبرتیاوې",
+      notifications: "خبرتیاوې",
 
-      notificationsSubtitle:
-        "رزرفونه، پیغامونه او د حساب بدلونونه",
+      notificationsSubtitle: "رزرفونه، پیغامونه او د حساب بدلونونه",
 
-      privacyAndSecurity:
-        "محرمیت او امنیت",
+      privacyAndSecurity: "محرمیت او امنیت",
 
-      privacyAndSecuritySubtitle:
-        "پټنوم، اجازې او د معلوماتو مدیریت",
+      privacyAndSecuritySubtitle: "پټنوم، اجازې او د معلوماتو مدیریت",
 
       payments: "تادیات",
 
-      paymentsSubtitle:
-        "د تادیې لارې او تاریخچه",
+      paymentsSubtitle: "د تادیې لارې او تاریخچه",
 
       support: "ملاتړ",
 
-      helpCenter:
-        "د مرستې مرکز",
+      helpCenter: "د مرستې مرکز",
 
-      helpCenterSubtitle:
-        "عامې پوښتنې او د کارونې لارښود",
+      helpCenterSubtitle: "عامې پوښتنې او د کارونې لارښود",
 
-      contactSupport:
-        "له ملاتړ سره اړیکه",
+      contactSupport: "له ملاتړ سره اړیکه",
 
-      contactSupportSubtitle:
-        "ستونزه راپور کړئ یا مرسته وغواړئ",
+      contactSupportSubtitle: "ستونزه راپور کړئ یا مرسته وغواړئ",
 
-      termsAndPrivacy:
-        "د کارونې شرایط او محرمیت",
+      termsAndPrivacy: "د کارونې شرایط او محرمیت",
 
-      accountActions:
-        "د حساب مدیریت",
+      accountActions: "د حساب مدیریت",
 
-      logout:
-        "له حسابه وتل",
+      logout: "له حسابه وتل",
 
-      logoutConfirmation:
-        "ایا ډاډه یاست چې غواړئ له خپل حسابه ووځئ؟",
+      logoutConfirmation: "ایا ډاډه یاست چې غواړئ له خپل حسابه ووځئ؟",
 
       cancel: "لغوه",
 
-      version:
-        "خدمت، نسخه ۱.۰.۰",
+      version: "خدمت، نسخه ۱.۰.۰",
     };
   }
 
@@ -1604,100 +1092,77 @@ function getProfileCopy(
     eyebrow: "User account",
     title: "Profile",
 
-    subtitle:
-      "Manage your account information, settings and support options.",
+    subtitle: "Manage your account information, settings and support options.",
 
     profileName: "Ahmad Zahir",
 
-    verifiedAccount:
-      "Verified account",
+    verifiedAccount: "Verified account",
 
     editProfile: "Edit profile",
 
-    changeProfilePhoto:
-      "Change profile photo",
+    changeProfilePhoto: "Change profile photo",
 
     account: "Account",
 
-    personalInformation:
-      "Personal information",
+    personalInformation: "Personal information",
 
-    personalInformationSubtitle:
-      "Name, phone number and profile photo",
+    personalInformationSubtitle: "Name, phone number and profile photo",
 
-    savedAddresses:
-      "Saved addresses",
+    savedAddresses: "Saved addresses",
 
-    savedAddressesSubtitle:
-      "Home, work and other addresses",
+    savedAddressesSubtitle: "Home, work and other addresses",
 
-    appLanguage:
-      "App language",
+    appLanguage: "App language",
 
     settings: "Settings",
 
-    notifications:
-      "Notifications",
+    notifications: "Notifications",
 
-    notificationsSubtitle:
-      "Bookings, messages and account updates",
+    notificationsSubtitle: "Bookings, messages and account updates",
 
-    privacyAndSecurity:
-      "Privacy and security",
+    privacyAndSecurity: "Privacy and security",
 
-    privacyAndSecuritySubtitle:
-      "Password, permissions and data management",
+    privacyAndSecuritySubtitle: "Password, permissions and data management",
 
     payments: "Payments",
 
-    paymentsSubtitle:
-      "Payment methods and history",
+    paymentsSubtitle: "Payment methods and history",
 
     support: "Support",
 
     helpCenter: "Help center",
 
-    helpCenterSubtitle:
-      "Frequently asked questions and usage guides",
+    helpCenterSubtitle: "Frequently asked questions and usage guides",
 
-    contactSupport:
-      "Contact support",
+    contactSupport: "Contact support",
 
-    contactSupportSubtitle:
-      "Report a problem or request help",
+    contactSupportSubtitle: "Report a problem or request help",
 
-    termsAndPrivacy:
-      "Terms of use and privacy",
+    termsAndPrivacy: "Terms of use and privacy",
 
-    accountActions:
-      "Account management",
+    accountActions: "Account management",
 
     logout: "Log out",
 
-    logoutConfirmation:
-      "Are you sure you want to log out of your account?",
+    logoutConfirmation: "Are you sure you want to log out of your account?",
 
     cancel: "Cancel",
 
-    version:
-      "Khedmat, version 1.0.0",
+    version: "Khedmat, version 1.0.0",
   };
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor:
-      KhedmatPalette.blue050,
+    backgroundColor: KhedmatPalette.blue050,
   },
 
   scrollContent: {
     width: "100%",
-    maxWidth:
-      Layout.contentMaxWidth,
+    maxWidth: Layout.contentMaxWidth,
     alignSelf: "center",
-    paddingHorizontal:
-      Layout.screenPadding,
+    paddingHorizontal: Layout.screenPadding,
     paddingTop: Spacing.lg,
     paddingBottom: 130,
   },
@@ -1710,16 +1175,14 @@ const styles = StyleSheet.create({
   eyebrow: {
     ...Typography.captionStyle,
     width: "100%",
-    color:
-      KhedmatPalette.blue500,
+    color: KhedmatPalette.blue500,
     fontFamily: Fonts.medium,
   },
 
   title: {
     ...Typography.screenTitle,
     width: "100%",
-    color:
-      KhedmatPalette.textPrimary,
+    color: KhedmatPalette.textPrimary,
     fontSize: 27,
     lineHeight: 34,
   },
@@ -1727,10 +1190,8 @@ const styles = StyleSheet.create({
   subtitle: {
     ...Typography.bodyStyle,
     width: "100%",
-    maxWidth:
-      Layout.readableTextMaxWidth,
-    color:
-      KhedmatPalette.textSecondary,
+    maxWidth: Layout.readableTextMaxWidth,
+    color: KhedmatPalette.textSecondary,
   },
 
   profileCard: {
@@ -1741,11 +1202,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: Spacing.md,
     borderWidth: 1,
-    borderColor:
-      KhedmatPalette.border,
+    borderColor: KhedmatPalette.border,
     borderRadius: Radius.xl,
-    backgroundColor:
-      KhedmatPalette.surface,
+    backgroundColor: KhedmatPalette.surface,
     ...Shadows.small,
   },
 
@@ -1756,14 +1215,12 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.navy900,
+    backgroundColor: KhedmatPalette.navy900,
   },
 
   profileInitials: {
     fontFamily: Fonts.bold,
-    color:
-      KhedmatPalette.white,
+    color: KhedmatPalette.white,
     fontSize: 24,
   },
 
@@ -1776,11 +1233,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.blue500,
+    backgroundColor: KhedmatPalette.blue500,
     borderWidth: 2,
-    borderColor:
-      KhedmatPalette.surface,
+    borderColor: KhedmatPalette.surface,
   },
 
   profileCopy: {
@@ -1791,8 +1246,7 @@ const styles = StyleSheet.create({
   profileName: {
     ...Typography.sectionTitle,
     width: "100%",
-    color:
-      KhedmatPalette.textPrimary,
+    color: KhedmatPalette.textPrimary,
     fontSize: 21,
     lineHeight: 28,
   },
@@ -1800,8 +1254,7 @@ const styles = StyleSheet.create({
   profilePhone: {
     ...Typography.bodyStyle,
     width: "100%",
-    color:
-      KhedmatPalette.textSecondary,
+    color: KhedmatPalette.textSecondary,
   },
 
   accountBadge: {
@@ -1812,8 +1265,7 @@ const styles = StyleSheet.create({
 
   accountBadgeText: {
     ...Typography.captionStyle,
-    color:
-      KhedmatPalette.blue500,
+    color: KhedmatPalette.blue500,
     fontFamily: Fonts.medium,
   },
 
@@ -1824,8 +1276,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.surfaceSoft,
+    backgroundColor: KhedmatPalette.surfaceSoft,
   },
 
   providerStatusLoading: {
@@ -1837,26 +1288,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: Spacing.md,
     borderWidth: 1,
-    borderColor:
-      KhedmatPalette.border,
+    borderColor: KhedmatPalette.border,
     borderRadius: Radius.xl,
-    backgroundColor:
-      KhedmatPalette.surface,
+    backgroundColor: KhedmatPalette.surface,
   },
 
   providerStatusLoadingText: {
     ...Typography.label,
     flex: 1,
-    color:
-      KhedmatPalette.textSecondary,
+    color: KhedmatPalette.textSecondary,
   },
 
   providerStatusError: {
     ...Typography.captionStyle,
     width: "100%",
     marginTop: Spacing.sm,
-    color:
-      KhedmatPalette.error,
+    color: KhedmatPalette.error,
   },
 
   providerStatusCard: {
@@ -1893,8 +1340,7 @@ const styles = StyleSheet.create({
   providerStatusTitle: {
     ...Typography.label,
     width: "100%",
-    color:
-      KhedmatPalette.textPrimary,
+    color: KhedmatPalette.textPrimary,
     fontSize: 17,
     lineHeight: 23,
   },
@@ -1902,8 +1348,7 @@ const styles = StyleSheet.create({
   providerStatusSubtitle: {
     ...Typography.captionStyle,
     width: "100%",
-    color:
-      KhedmatPalette.textSecondary,
+    color: KhedmatPalette.textSecondary,
     lineHeight: 19,
   },
 
@@ -1916,8 +1361,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...Typography.sectionTitle,
     width: "100%",
-    color:
-      KhedmatPalette.textPrimary,
+    color: KhedmatPalette.textPrimary,
     fontSize: 20,
     lineHeight: 27,
   },
@@ -1931,17 +1375,13 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor:
-      KhedmatPalette.border,
-    backgroundColor:
-      KhedmatPalette.surface,
+    borderColor: KhedmatPalette.border,
+    backgroundColor: KhedmatPalette.surface,
   },
 
   selectedToggleCard: {
-    borderColor:
-      KhedmatPalette.blue500,
-    backgroundColor:
-      "#F4FBFC",
+    borderColor: KhedmatPalette.blue500,
+    backgroundColor: "#F4FBFC",
   },
 
   menuContent: {
@@ -1960,18 +1400,15 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.surfaceSoft,
+    backgroundColor: KhedmatPalette.surfaceSoft,
   },
 
   selectedMenuIcon: {
-    backgroundColor:
-      KhedmatPalette.blue500,
+    backgroundColor: KhedmatPalette.blue500,
   },
 
   destructiveMenuIcon: {
-    backgroundColor:
-      KhedmatPalette.errorSoft,
+    backgroundColor: KhedmatPalette.errorSoft,
   },
 
   menuCopy: {
@@ -1982,22 +1419,19 @@ const styles = StyleSheet.create({
   menuTitle: {
     ...Typography.label,
     width: "100%",
-    color:
-      KhedmatPalette.textPrimary,
+    color: KhedmatPalette.textPrimary,
     fontSize: 16,
     lineHeight: 22,
   },
 
   destructiveMenuTitle: {
-    color:
-      KhedmatPalette.error,
+    color: KhedmatPalette.error,
   },
 
   menuSubtitle: {
     ...Typography.captionStyle,
     width: "100%",
-    color:
-      KhedmatPalette.textMuted,
+    color: KhedmatPalette.textMuted,
   },
 
   menuBadge: {
@@ -2007,14 +1441,12 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.surfaceSoft,
+    backgroundColor: KhedmatPalette.surfaceSoft,
   },
 
   menuBadgeText: {
     ...Typography.captionStyle,
-    color:
-      KhedmatPalette.blue500,
+    color: KhedmatPalette.blue500,
     fontFamily: Fonts.bold,
   },
 
@@ -2025,21 +1457,18 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     justifyContent: "center",
     paddingHorizontal: 3,
-    backgroundColor:
-      KhedmatPalette.border,
+    backgroundColor: KhedmatPalette.border,
   },
 
   switchTrackSelected: {
-    backgroundColor:
-      KhedmatPalette.blue500,
+    backgroundColor: KhedmatPalette.blue500,
   },
 
   switchThumb: {
     width: 22,
     height: 22,
     borderRadius: Radius.pill,
-    backgroundColor:
-      KhedmatPalette.white,
+    backgroundColor: KhedmatPalette.white,
   },
 
   logoutButton: {
@@ -2050,8 +1479,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "#E7B1AD",
-    backgroundColor:
-      KhedmatPalette.errorSoft,
+    backgroundColor: KhedmatPalette.errorSoft,
   },
 
   logoutButtonPressed: {
@@ -2071,8 +1499,7 @@ const styles = StyleSheet.create({
 
   logoutButtonText: {
     ...Typography.label,
-    color:
-      KhedmatPalette.error,
+    color: KhedmatPalette.error,
     fontFamily: Fonts.medium,
   },
 
@@ -2080,8 +1507,7 @@ const styles = StyleSheet.create({
     ...Typography.captionStyle,
     width: "100%",
     marginTop: Spacing.section,
-    color:
-      KhedmatPalette.textMuted,
+    color: KhedmatPalette.textMuted,
     textAlign: "center",
   },
 
