@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
   ComponentProps,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -25,7 +26,8 @@ import {
 } from "../constants/theme";
 import { useBooking } from "../context/booking-context";
 import { useLanguage } from "../context/languagecontext";
-import { getProviderById } from "../data/providers";
+import type { ProviderProfile } from "../data/providers";
+import { getProviderById } from "../services/provider-repository";
 
 type IconName =
   ComponentProps<typeof Ionicons>["name"];
@@ -73,6 +75,238 @@ export default function BookingScheduleScreen() {
 
   const {
     bookingDraft,
+  } = useBooking();
+
+  const { language } =
+    useLanguage();
+
+  const activeLanguage =
+    normalizeLanguage(language);
+
+  const isRtl =
+    activeLanguage === "Dari" ||
+    activeLanguage === "Pashto";
+
+  const copy =
+    getScheduleCopy(
+      activeLanguage,
+    );
+
+  const [
+    provider,
+    setProvider,
+  ] = useState<ProviderProfile | null>(
+    null,
+  );
+
+  const [
+    providerIsLoading,
+    setProviderIsLoading,
+  ] = useState(true);
+
+  const [
+    providerLoadError,
+    setProviderLoadError,
+  ] = useState<Error | null>(
+    null,
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadProvider =
+      async (): Promise<void> => {
+        const providerId =
+          bookingDraft.providerId?.trim();
+
+        if (!providerId) {
+          if (isMounted) {
+            setProvider(null);
+            setProviderLoadError(
+              new Error(
+                "The booking draft does not contain a provider ID.",
+              ),
+            );
+            setProviderIsLoading(
+              false,
+            );
+          }
+
+          return;
+        }
+
+        setProviderIsLoading(true);
+        setProviderLoadError(null);
+
+        try {
+          const resolvedProvider =
+            await getProviderById(
+              providerId,
+            );
+
+          if (!isMounted) {
+            return;
+          }
+
+          if (!resolvedProvider) {
+            setProvider(null);
+            setProviderLoadError(
+              new Error(
+                `Provider "${providerId}" was not found.`,
+              ),
+            );
+
+            return;
+          }
+
+          setProvider(
+            resolvedProvider,
+          );
+        } catch (error) {
+          if (!isMounted) {
+            return;
+          }
+
+          setProvider(null);
+          setProviderLoadError(
+            error instanceof Error
+              ? error
+              : new Error(
+                  "Failed to load the provider.",
+                ),
+          );
+        } finally {
+          if (isMounted) {
+            setProviderIsLoading(
+              false,
+            );
+          }
+        }
+      };
+
+    void loadProvider();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [bookingDraft.providerId]);
+
+  if (providerIsLoading) {
+    return (
+      <SafeAreaView
+        style={styles.safeArea}
+      >
+        <View
+          style={styles.providerState}
+        >
+          <Ionicons
+            name="calendar-outline"
+            size={52}
+            color={
+              KhedmatPalette.textMuted
+            }
+          />
+
+          <Text
+            style={[
+              styles.providerStateTitle,
+              directionStyle(isRtl),
+            ]}
+          >
+            {activeLanguage === "Dari"
+              ? "برنامه ارائه‌دهنده در حال بارگذاری است..."
+              : activeLanguage === "Pashto"
+                ? "د خدمت چمتو کوونکي مهالویش بارېږي..."
+                : "Loading provider schedule..."}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!provider || providerLoadError) {
+    return (
+      <SafeAreaView
+        style={styles.safeArea}
+      >
+        <View
+          style={styles.providerState}
+        >
+          <Ionicons
+            name="calendar-clear-outline"
+            size={52}
+            color={
+              KhedmatPalette.textMuted
+            }
+          />
+
+          <Text
+            style={[
+              styles.providerStateTitle,
+              directionStyle(isRtl),
+            ]}
+          >
+            {activeLanguage === "Dari"
+              ? "ارائه‌دهنده پیدا نشد"
+              : activeLanguage === "Pashto"
+                ? "د خدمت چمتو کوونکی ونه موندل شو"
+                : "Provider not found"}
+          </Text>
+
+          <Text
+            style={[
+              styles.providerStateBody,
+              directionStyle(isRtl),
+            ]}
+          >
+            {activeLanguage === "Dari"
+              ? "به صفحه قبلی برگردید و دوباره ارائه‌دهنده را انتخاب کنید."
+              : activeLanguage === "Pashto"
+                ? "مخکنۍ پاڼې ته ستانه شئ او خدمت چمتو کوونکی بیا وټاکئ."
+                : "Go back and select the provider again."}
+          </Text>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              router.back()
+            }
+            style={({ pressed }) => [
+              styles.providerStateButton,
+              pressed &&
+                styles.pressed,
+            ]}
+          >
+            <Text
+              style={
+                styles.providerStateButtonText
+              }
+            >
+              {copy.back}
+            </Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <BookingScheduleContent
+      key={provider.id}
+      provider={provider}
+    />
+  );
+}
+
+function BookingScheduleContent({
+  provider,
+}: {
+  provider: ProviderProfile;
+}) {
+  const router = useRouter();
+
+  const {
+    bookingDraft,
     updateBookingDraft,
   } = useBooking();
 
@@ -93,17 +327,6 @@ export default function BookingScheduleScreen() {
     getScheduleCopy(
       activeLanguage,
     );
-
-  const provider = useMemo(
-    () =>
-      getProviderById(
-        bookingDraft.providerId,
-      ) ??
-      getProviderById(
-        "provider-1",
-      )!,
-    [bookingDraft.providerId],
-  );
 
   const dateOptions =
     useMemo(
@@ -2089,6 +2312,54 @@ function getScheduleCopy(
 
 const styles =
   StyleSheet.create({
+    providerState: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: Spacing.md,
+      paddingHorizontal:
+        Layout.screenPadding,
+    },
+
+    providerStateTitle: {
+      ...Typography.sectionTitle,
+      width: "100%",
+      maxWidth:
+        Layout.readableTextMaxWidth,
+      color:
+        KhedmatPalette.textPrimary,
+      textAlign: "center",
+    },
+
+    providerStateBody: {
+      ...Typography.bodyStyle,
+      width: "100%",
+      maxWidth:
+        Layout.readableTextMaxWidth,
+      color:
+        KhedmatPalette.textMuted,
+      textAlign: "center",
+    },
+
+    providerStateButton: {
+      minHeight:
+        Layout.minimumTouchTarget,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: Spacing.sm,
+      paddingHorizontal:
+        Spacing.xl,
+      borderRadius: Radius.lg,
+      backgroundColor:
+        KhedmatPalette.navy900,
+    },
+
+    providerStateButtonText: {
+      ...Typography.buttonLabel,
+      color:
+        KhedmatPalette.white,
+    },
+
     safeArea: {
       flex: 1,
       backgroundColor:

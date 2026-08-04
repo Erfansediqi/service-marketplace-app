@@ -1,10 +1,19 @@
 export type ProviderCategoryId =
   | "electrician"
   | "plumber"
-  | "cleaner"
-  | "construction"
   | "carpenter"
-  | "computer-repair";
+  | "construction"
+  | "painter"
+  | "cleaner"
+  | "ac-technician"
+  | "driver"
+  | "phone-repair"
+  | "computer-repair"
+  | "tailor"
+  | "barber"
+  | "tutor"
+  | "photographer"
+  | "other";
 
 export type ProviderService = {
   id: string;

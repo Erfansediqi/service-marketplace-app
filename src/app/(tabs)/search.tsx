@@ -29,11 +29,11 @@ import {
   Typography,
 } from "../../constants/theme";
 import { useLanguage } from "../../context/languagecontext";
-import {
+import type {
   ProviderCategoryId,
   ProviderProfile,
-  providers,
 } from "../../data/providers";
+import { useProviders } from "../../hooks/use-providers";
 
 type IconName =
   ComponentProps<typeof Ionicons>["name"];
@@ -193,6 +193,13 @@ const INITIAL_FILTERS: FilterState = {
 export default function SearchScreen() {
   const router = useRouter();
   const { language } = useLanguage();
+
+  const {
+    providers,
+    isLoading: providersAreLoading,
+    error: providersError,
+    refreshProviders,
+  } = useProviders();
 
   const activeLanguage =
     normalizeLanguage(language);
@@ -411,11 +418,12 @@ export default function SearchScreen() {
         },
       );
     }, [
-      filters,
-      query,
-      selectedCategoryId,
-      selectedSort,
-    ]);
+  filters,
+  providers,
+  query,
+  selectedCategoryId,
+  selectedSort,
+]);
 
   const activeFilterCount =
     Number(
@@ -996,33 +1004,120 @@ export default function SearchScreen() {
         </View>
 
         <View style={styles.results}>
-          {filteredProviders.map(
-            (provider) => (
-              <ProviderResultCard
-                key={provider.id}
-                provider={provider}
-                language={
-                  activeLanguage
-                }
-                isRtl={isRtl}
-                copy={copy}
-                onPress={() =>
-                  openProvider(
-                    provider.id,
-                  )
+          {providersAreLoading ? (
+            <View style={styles.providerState}>
+              <Ionicons
+                name="people-outline"
+                size={44}
+                color={
+                  KhedmatPalette.textMuted
                 }
               />
-            ),
-          )}
 
-          {filteredProviders.length ===
-          0 ? (
-            <EmptyResults
-              copy={copy}
-              isRtl={isRtl}
-              onClear={clearFilters}
-            />
-          ) : null}
+              <Text
+                style={[
+                  styles.providerStateTitle,
+                  directionStyle(isRtl),
+                ]}
+              >
+                {activeLanguage === "Dari"
+                  ? "ارائه‌دهندگان در حال بارگذاری است..."
+                  : activeLanguage === "Pashto"
+                    ? "د خدمت چمتو کوونکي بارېږي..."
+                    : "Loading providers..."}
+              </Text>
+            </View>
+          ) : providersError ? (
+            <View style={styles.providerState}>
+              <Ionicons
+                name="cloud-offline-outline"
+                size={44}
+                color={
+                  KhedmatPalette.textMuted
+                }
+              />
+
+              <Text
+                style={[
+                  styles.providerStateTitle,
+                  directionStyle(isRtl),
+                ]}
+              >
+                {activeLanguage === "Dari"
+                  ? "بارگذاری ارائه‌دهندگان ناموفق بود"
+                  : activeLanguage === "Pashto"
+                    ? "د خدمت چمتو کوونکو بارول ناکام شول"
+                    : "Unable to load providers"}
+              </Text>
+
+              <Text
+                style={[
+                  styles.providerStateBody,
+                  directionStyle(isRtl),
+                ]}
+              >
+                {activeLanguage === "Dari"
+                  ? "لطفاً دوباره تلاش کنید."
+                  : activeLanguage === "Pashto"
+                    ? "مهرباني وکړئ بیا هڅه وکړئ."
+                    : "Please try again."}
+              </Text>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  void refreshProviders();
+                }}
+                style={({ pressed }) => [
+                  styles.retryButton,
+                  pressed &&
+                    styles.pressed,
+                ]}
+              >
+                <Text
+                  style={
+                    styles.retryButtonText
+                  }
+                >
+                  {activeLanguage === "Dari"
+                    ? "تلاش دوباره"
+                    : activeLanguage === "Pashto"
+                      ? "بیا هڅه"
+                      : "Try again"}
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
+            <>
+              {filteredProviders.map(
+                (provider) => (
+                  <ProviderResultCard
+                    key={provider.id}
+                    provider={provider}
+                    language={
+                      activeLanguage
+                    }
+                    isRtl={isRtl}
+                    copy={copy}
+                    onPress={() =>
+                      openProvider(
+                        provider.id,
+                      )
+                    }
+                  />
+                ),
+              )}
+
+              {filteredProviders.length ===
+              0 ? (
+                <EmptyResults
+                  copy={copy}
+                  isRtl={isRtl}
+                  onClear={clearFilters}
+                />
+              ) : null}
+            </>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -1930,6 +2025,44 @@ function getSearchCopy(
 }
 
 const styles = StyleSheet.create({
+  providerState: {
+    minHeight: 280,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+  },
+
+  providerStateTitle: {
+    ...Typography.sectionTitle,
+    width: "100%",
+    maxWidth: Layout.readableTextMaxWidth,
+    color: KhedmatPalette.textPrimary,
+    textAlign: "center",
+  },
+
+  providerStateBody: {
+    ...Typography.bodyStyle,
+    width: "100%",
+    maxWidth: Layout.readableTextMaxWidth,
+    color: KhedmatPalette.textMuted,
+    textAlign: "center",
+  },
+
+  retryButton: {
+    minHeight: Layout.minimumTouchTarget,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.md,
+    backgroundColor: KhedmatPalette.navy900,
+  },
+
+  retryButtonText: {
+    ...Typography.buttonLabel,
+    color: KhedmatPalette.white,
+  },
+
   safeArea: {
     flex: 1,
     backgroundColor:

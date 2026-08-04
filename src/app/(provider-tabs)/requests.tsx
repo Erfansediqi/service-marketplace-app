@@ -32,7 +32,7 @@ import {
 } from "../../context/booking-context";
 import { useLanguage } from "../../context/languagecontext";
 import { useNotifications } from "../../context/notification-context";
-import { useSession } from "../../context/session-context";
+import { useActiveProvider } from "../../hooks/use-active-provider";
 
 type IconName =
   ComponentProps<typeof Ionicons>["name"];
@@ -101,8 +101,11 @@ export default function ProviderRequestsScreen() {
     createCustomerBookingCompletedNotification,
   } = useNotifications();
 
-  const { activeProviderId } =
-    useSession();
+  const {
+    provider,
+    isLoading: providerIsLoading,
+    error: providerError,
+  } = useActiveProvider();
 
   const { language } =
     useLanguage();
@@ -123,8 +126,7 @@ export default function ProviderRequestsScreen() {
     );
 
   const providerId =
-    activeProviderId ??
-    "provider-1";
+    provider?.id ?? null;
 
   const [
     selectedFilter,
@@ -144,15 +146,17 @@ export default function ProviderRequestsScreen() {
     width < 370;
 
   const providerBookings =
-    useMemo(
-      () =>
-        bookings.filter(
-          (booking) =>
-            booking.providerId ===
-            providerId,
-        ),
-      [bookings, providerId],
-    );
+    useMemo(() => {
+      if (!providerId) {
+        return [];
+      }
+
+      return bookings.filter(
+        (booking) =>
+          booking.providerId ===
+          providerId,
+      );
+    }, [bookings, providerId]);
 
   const counts = useMemo(
     () => ({
@@ -267,6 +271,67 @@ export default function ProviderRequestsScreen() {
       providerBookings,
       selectedFilter,
     ]);
+
+  if (providerIsLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.providerState}>
+          <Text
+            style={[
+              styles.providerStateTitle,
+              directionStyle(isRtl),
+            ]}
+          >
+            {activeLanguage === "Dari"
+              ? "در حال بارگذاری حساب ارائه‌دهنده..."
+              : activeLanguage === "Pashto"
+                ? "د خدمت چمتو کوونکي حساب بارېږي..."
+                : "Loading provider account..."}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!provider || providerError) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.providerState}>
+          <Ionicons
+            name="person-circle-outline"
+            size={52}
+            color={KhedmatPalette.textMuted}
+          />
+
+          <Text
+            style={[
+              styles.providerStateTitle,
+              directionStyle(isRtl),
+            ]}
+          >
+            {activeLanguage === "Dari"
+              ? "حساب فعال ارائه‌دهنده پیدا نشد"
+              : activeLanguage === "Pashto"
+                ? "فعال د خدمت چمتو کوونکي حساب ونه موندل شو"
+                : "No active provider account"}
+          </Text>
+
+          <Text
+            style={[
+              styles.providerStateBody,
+              directionStyle(isRtl),
+            ]}
+          >
+            {activeLanguage === "Dari"
+              ? "ثبت‌نام ارائه‌دهنده را تکمیل کنید و دوباره تلاش کنید."
+              : activeLanguage === "Pashto"
+                ? "د خدمت چمتو کوونکي نوم‌لیکنه بشپړه کړئ او بیا هڅه وکړئ."
+                : "Complete provider registration and try again."}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const handleAccept = (
     booking: BookingRecord,
@@ -2807,6 +2872,30 @@ function getRequestCopy(
 }
 
 const styles = StyleSheet.create({
+  providerState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.md,
+    paddingHorizontal: Layout.screenPadding,
+  },
+
+  providerStateTitle: {
+    ...Typography.sectionTitle,
+    width: "100%",
+    maxWidth: Layout.readableTextMaxWidth,
+    color: KhedmatPalette.textPrimary,
+    textAlign: "center",
+  },
+
+  providerStateBody: {
+    ...Typography.bodyStyle,
+    width: "100%",
+    maxWidth: Layout.readableTextMaxWidth,
+    color: KhedmatPalette.textMuted,
+    textAlign: "center",
+  },
+
   safeArea: {
     flex: 1,
     backgroundColor:

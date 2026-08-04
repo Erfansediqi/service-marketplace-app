@@ -2,21 +2,22 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useMemo } from "react";
 import {
-    Platform,
-    StyleSheet,
-    Text,
-    View,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import {
-    Fonts,
-    KhedmatPalette,
-    Radius,
-    Shadows,
+  Fonts,
+  KhedmatPalette,
+  Radius,
+  Shadows,
 } from "../../constants/theme";
 import { useBooking } from "../../context/booking-context";
 import { useLanguage } from "../../context/languagecontext";
-import { useSession } from "../../context/session-context";
+import { useNotifications } from "../../context/notification-context";
+import { useActiveProvider } from "../../hooks/use-active-provider";
 
 type LanguageName =
   | "English"
@@ -27,6 +28,7 @@ type TabName =
   | "dashboard"
   | "requests"
   | "calendar"
+  | "notifications"
   | "messages"
   | "profile";
 
@@ -44,8 +46,15 @@ type TabIconProps = {
 export default function ProviderTabsLayout() {
   const { language } = useLanguage();
   const { bookings } = useBooking();
-  const { activeProviderId } =
-    useSession();
+
+  const {
+    notifications,
+    getUnreadCount,
+  } = useNotifications();
+
+  const {
+  provider,
+} = useActiveProvider();
 
   const activeLanguage =
     normalizeLanguage(language);
@@ -57,9 +66,13 @@ export default function ProviderTabsLayout() {
   const copy =
     getTabCopy(activeLanguage);
 
-  const providerId =
-    activeProviderId ??
-    "provider-1";
+  /*
+   * Preserve the existing prototype fallback until
+   * local provider registration creates real IDs.
+   */
+  
+
+const providerId = provider?.id;
 
   const providerBookings =
     useMemo(
@@ -96,6 +109,22 @@ export default function ProviderTabsLayout() {
       ).length;
     }, [providerBookings]);
 
+  const unreadNotificationsCount =
+  useMemo(() => {
+    if (!providerId) {
+      return 0;
+    }
+
+    return getUnreadCount(
+      "provider",
+      providerId,
+    );
+  }, [
+    getUnreadCount,
+    notifications,
+    providerId,
+  ]);
+
   const renderLabel = (
     tab: TabName,
     color: string,
@@ -125,7 +154,6 @@ export default function ProviderTabsLayout() {
       initialRouteName="index"
       screenOptions={{
         headerShown: false,
-
         tabBarShowLabel: true,
         tabBarHideOnKeyboard: true,
 
@@ -136,7 +164,6 @@ export default function ProviderTabsLayout() {
           KhedmatPalette.textMuted,
 
         tabBarStyle: styles.tabBar,
-
         tabBarItemStyle:
           styles.tabItem,
 
@@ -243,6 +270,39 @@ export default function ProviderTabsLayout() {
       />
 
       <Tabs.Screen
+        name="notifications"
+        options={{
+          title:
+            copy.notifications,
+
+          tabBarLabel: ({
+            color,
+            focused,
+          }) =>
+            renderLabel(
+              "notifications",
+              color,
+              focused,
+            ),
+
+          tabBarIcon: ({
+            color,
+            focused,
+          }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              activeIcon="notifications"
+              inactiveIcon="notifications-outline"
+              badgeCount={
+                unreadNotificationsCount
+              }
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="messages"
         options={{
           title: copy.messages,
@@ -325,7 +385,7 @@ function TabIcon({
               ? activeIcon
               : inactiveIcon
           }
-          size={21}
+          size={20}
           color={
             focused
               ? KhedmatPalette.white
@@ -399,6 +459,7 @@ function getTabCopy(
       dashboard: "داشبورد",
       requests: "درخواست‌ها",
       calendar: "تقویم",
+      notifications: "اعلان‌ها",
       messages: "پیام‌ها",
       profile: "پروفایل",
     };
@@ -409,6 +470,7 @@ function getTabCopy(
       dashboard: "ډشبورډ",
       requests: "غوښتنې",
       calendar: "کلیز",
+      notifications: "خبرتیاوې",
       messages: "پیغامونه",
       profile: "پروفایل",
     };
@@ -418,6 +480,7 @@ function getTabCopy(
     dashboard: "Dashboard",
     requests: "Requests",
     calendar: "Calendar",
+    notifications: "Alerts",
     messages: "Messages",
     profile: "Profile",
   };
@@ -427,8 +490,8 @@ const styles = StyleSheet.create({
   tabBar: {
     position: "absolute",
 
-    left: 12,
-    right: 12,
+    left: 8,
+    right: 8,
 
     bottom:
       Platform.OS === "ios"
@@ -448,7 +511,6 @@ const styles = StyleSheet.create({
         : 8,
 
     borderTopWidth: 0,
-
     borderWidth: 1,
 
     borderColor:
@@ -473,49 +535,44 @@ const styles = StyleSheet.create({
 
   tabItem: {
     minHeight: 56,
-
-    paddingHorizontal: 1,
-
+    paddingHorizontal: 0,
     borderRadius: Radius.lg,
   },
 
   label: {
-    maxWidth: 72,
+    maxWidth: 56,
 
     marginTop: 1,
 
     fontFamily: Fonts.medium,
 
-    fontSize: 10,
+    fontSize: 9,
 
-    lineHeight: 14,
+    lineHeight: 12,
 
     fontWeight: "500",
   },
 
   labelFocused: {
     fontFamily: Fonts.bold,
-
     fontWeight: "700",
   },
 
   iconWrapper: {
-    width: 44,
+    width: 38,
     height: 34,
 
     alignItems: "center",
-
     justifyContent: "center",
   },
 
   iconContainer: {
-    width: 40,
+    width: 36,
     height: 32,
 
     borderRadius: Radius.pill,
 
     alignItems: "center",
-
     justifyContent: "center",
   },
 
@@ -528,7 +585,7 @@ const styles = StyleSheet.create({
     position: "absolute",
 
     top: -3,
-    right: -4,
+    right: -5,
 
     minWidth: 18,
     height: 18,
@@ -538,7 +595,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
 
     alignItems: "center",
-
     justifyContent: "center",
 
     borderWidth: 2,

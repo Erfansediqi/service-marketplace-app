@@ -5,6 +5,7 @@ import {
 } from "expo-router";
 import {
   ComponentProps,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -28,10 +29,11 @@ import {
 } from "../constants/theme";
 import { useBooking } from "../context/booking-context";
 import { useLanguage } from "../context/languagecontext";
-import {
-  getProviderById,
+import type {
+  ProviderProfile,
   ProviderService,
 } from "../data/providers";
+import { getProviderById } from "../services/provider-repository";
 
 type IconName =
   ComponentProps<typeof Ionicons>["name"];
@@ -58,6 +60,238 @@ const TOTAL_STEPS = 4;
 export default function BookingCreateScreen() {
   const router = useRouter();
 
+  const params =
+    useLocalSearchParams<{
+      providerId?:
+        | string
+        | string[];
+    }>();
+
+  const { language } =
+    useLanguage();
+
+  const activeLanguage =
+    normalizeLanguage(language);
+
+  const isRtl =
+    activeLanguage === "Dari" ||
+    activeLanguage === "Pashto";
+
+  const copy =
+    getBookingCreateCopy(
+      activeLanguage,
+    );
+
+  const providerId =
+    getSingleParam(
+      params.providerId,
+    );
+
+  const [
+    provider,
+    setProvider,
+  ] = useState<ProviderProfile | null>(
+    null,
+  );
+
+  const [
+    providerIsLoading,
+    setProviderIsLoading,
+  ] = useState(true);
+
+  const [
+    providerLoadError,
+    setProviderLoadError,
+  ] = useState<Error | null>(
+    null,
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadProvider =
+      async (): Promise<void> => {
+        if (!providerId) {
+          if (isMounted) {
+            setProvider(null);
+            setProviderLoadError(
+              new Error(
+                "Missing provider ID.",
+              ),
+            );
+            setProviderIsLoading(
+              false,
+            );
+          }
+
+          return;
+        }
+
+        setProviderIsLoading(true);
+        setProviderLoadError(null);
+
+        try {
+          const resolvedProvider =
+            await getProviderById(
+              providerId,
+            );
+
+          if (!isMounted) {
+            return;
+          }
+
+          if (!resolvedProvider) {
+            setProvider(null);
+            setProviderLoadError(
+              new Error(
+                `Provider "${providerId}" was not found.`,
+              ),
+            );
+
+            return;
+          }
+
+          setProvider(
+            resolvedProvider,
+          );
+        } catch (error) {
+          if (!isMounted) {
+            return;
+          }
+
+          setProvider(null);
+          setProviderLoadError(
+            error instanceof Error
+              ? error
+              : new Error(
+                  "Failed to load provider.",
+                ),
+          );
+        } finally {
+          if (isMounted) {
+            setProviderIsLoading(
+              false,
+            );
+          }
+        }
+      };
+
+    void loadProvider();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [providerId]);
+
+  if (providerIsLoading) {
+    return (
+      <SafeAreaView
+        style={styles.safeArea}
+      >
+        <View
+          style={
+            styles.providerState
+          }
+        >
+          <Text
+            style={[
+              styles.providerStateTitle,
+              directionStyle(isRtl),
+            ]}
+          >
+            {activeLanguage === "Dari"
+              ? "ارائه‌دهنده در حال بارگذاری است..."
+              : activeLanguage === "Pashto"
+                ? "د خدمت چمتو کوونکی بارېږي..."
+                : "Loading provider..."}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!provider || providerLoadError) {
+    return (
+      <SafeAreaView
+        style={styles.safeArea}
+      >
+        <View
+          style={
+            styles.providerState
+          }
+        >
+          <Ionicons
+            name="person-remove-outline"
+            size={52}
+            color={
+              KhedmatPalette.textMuted
+            }
+          />
+
+          <Text
+            style={[
+              styles.providerStateTitle,
+              directionStyle(isRtl),
+            ]}
+          >
+            {activeLanguage === "Dari"
+              ? "ارائه‌دهنده پیدا نشد"
+              : activeLanguage === "Pashto"
+                ? "د خدمت چمتو کوونکی ونه موندل شو"
+                : "Provider not found"}
+          </Text>
+
+          <Text
+            style={[
+              styles.providerStateBody,
+              directionStyle(isRtl),
+            ]}
+          >
+            {activeLanguage === "Dari"
+              ? "به صفحه قبلی برگردید و یک ارائه‌دهنده دیگر را انتخاب کنید."
+              : activeLanguage === "Pashto"
+                ? "مخکنۍ پاڼې ته ستانه شئ او بل خدمت چمتو کوونکی وټاکئ."
+                : "Go back and select another provider."}
+          </Text>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              router.back()
+            }
+            style={({ pressed }) => [
+              styles.providerStateButton,
+              pressed &&
+                styles.pressed,
+            ]}
+          >
+            <Text
+              style={
+                styles.providerStateButtonText
+              }
+            >
+              {copy.back}
+            </Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <BookingCreateContent
+      provider={provider}
+    />
+  );
+}
+
+function BookingCreateContent({
+  provider,
+}: {
+  provider: ProviderProfile;
+}) {
+  const router = useRouter();
+
   const {
     bookingDraft,
     updateBookingDraft,
@@ -80,29 +314,6 @@ export default function BookingCreateScreen() {
     getBookingCreateCopy(
       activeLanguage,
     );
-
-  const params =
-    useLocalSearchParams<{
-      providerId?:
-        | string
-        | string[];
-    }>();
-
-  const providerId =
-    getSingleParam(
-      params.providerId,
-    );
-
-  const provider = useMemo(
-    () =>
-      getProviderById(
-        providerId,
-      ) ??
-      getProviderById(
-        "provider-1",
-      )!,
-    [providerId],
-  );
 
   const initialServiceId =
     bookingDraft.providerId ===
@@ -1553,6 +1764,53 @@ function getBookingCreateCopy(
 }
 
 const styles = StyleSheet.create({
+  providerState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.md,
+    paddingHorizontal:
+      Layout.screenPadding,
+  },
+
+  providerStateTitle: {
+    ...Typography.sectionTitle,
+    width: "100%",
+    maxWidth:
+      Layout.readableTextMaxWidth,
+    color:
+      KhedmatPalette.textPrimary,
+    textAlign: "center",
+  },
+
+  providerStateBody: {
+    ...Typography.bodyStyle,
+    width: "100%",
+    maxWidth:
+      Layout.readableTextMaxWidth,
+    color:
+      KhedmatPalette.textMuted,
+    textAlign: "center",
+  },
+
+  providerStateButton: {
+    minHeight:
+      Layout.minimumTouchTarget,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal:
+      Spacing.lg,
+    borderRadius: Radius.md,
+    backgroundColor:
+      KhedmatPalette.navy900,
+  },
+
+  providerStateButtonText: {
+    ...Typography.buttonLabel,
+    color:
+      KhedmatPalette.white,
+  },
+
   safeArea: {
     flex: 1,
     backgroundColor:

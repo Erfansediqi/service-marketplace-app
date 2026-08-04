@@ -16,6 +16,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { LOCAL_CUSTOMER_ID } from "../constants/identity";
 import { useNotifications } from "../context/notification-context";
 
 import {
@@ -216,8 +217,7 @@ const {
 
         const booking = {
           id: bookingId,
-          customerId:
-            "current-user",
+          customerId: LOCAL_CUSTOMER_ID,
           providerId:
             bookingDraft.providerId,
           providerName:

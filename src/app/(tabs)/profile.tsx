@@ -2,10 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
   ComponentProps,
+  useEffect,
   useMemo,
   useState,
 } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   SafeAreaView,
@@ -25,6 +27,9 @@ import {
   Typography,
 } from "../../constants/theme";
 import { useLanguage } from "../../context/languagecontext";
+import { useSession } from "../../context/session-context";
+import { getProviderById } from "../../services/provider-repository";
+import { getLocalProviders } from "../../services/provider-storage";
 
 type IconName =
   ComponentProps<typeof Ionicons>["name"];
@@ -60,6 +65,12 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { language } = useLanguage();
 
+  const {
+  activeProviderId,
+  enterProviderWorkspace,
+  resetSession,
+} = useSession();
+
   const activeLanguage =
     normalizeLanguage(language);
 
@@ -75,14 +86,107 @@ export default function ProfileScreen() {
     setNotificationsEnabled,
   ] = useState(true);
 
-  /*
-   * This retains the status used by the
-   * uploaded profile screen.
-   */
-  const [providerStatus] =
-    useState<ProviderStatus>(
-      "pending",
-    );
+  const [
+    providerStatus,
+    setProviderStatus,
+  ] = useState<ProviderStatus | null>(
+    null,
+  );
+
+  const [
+    providerAccountId,
+    setProviderAccountId,
+  ] = useState<string | null>(
+    null,
+  );
+
+  const [
+    providerAccountError,
+    setProviderAccountError,
+  ] = useState<Error | null>(
+    null,
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const resolveProviderAccount =
+      async (): Promise<void> => {
+        setProviderStatus(null);
+        setProviderAccountError(null);
+
+        try {
+          if (activeProviderId) {
+            const activeProvider =
+              await getProviderById(
+                activeProviderId,
+              );
+
+            if (
+              isMounted &&
+              activeProvider
+            ) {
+              setProviderAccountId(
+                activeProvider.id,
+              );
+              setProviderStatus(
+                "approved",
+              );
+
+              return;
+            }
+          }
+
+          const localProviders =
+            await getLocalProviders();
+
+          if (!isMounted) {
+            return;
+          }
+
+          const savedProvider =
+            localProviders[0];
+
+          if (savedProvider) {
+            setProviderAccountId(
+              savedProvider.id,
+            );
+            setProviderStatus(
+              "approved",
+            );
+
+            return;
+          }
+
+          setProviderAccountId(null);
+          setProviderStatus(
+            "not-started",
+          );
+        } catch (error) {
+          if (!isMounted) {
+            return;
+          }
+
+          setProviderAccountId(null);
+          setProviderStatus(
+            "not-started",
+          );
+          setProviderAccountError(
+            error instanceof Error
+              ? error
+              : new Error(
+                  "Failed to resolve the provider account.",
+                ),
+          );
+        }
+      };
+
+    void resolveProviderAccount();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeProviderId]);
 
   const accountItems =
     useMemo<ProfileMenuItem[]>(
@@ -230,28 +334,34 @@ export default function ProfileScreen() {
     );
 
   const handleLogout = () => {
-    Alert.alert(
-      copy.logout,
-      copy.logoutConfirmation,
-      [
-        {
-          text: copy.cancel,
-          style: "cancel",
+  Alert.alert(
+    copy.logout,
+    copy.logoutConfirmation,
+    [
+      {
+        text: copy.cancel,
+        style: "cancel",
+      },
+      {
+        text: copy.logout,
+        style: "destructive",
+        onPress: () => {
+          resetSession();
+
+          router.replace(
+            "/language",
+          );
         },
-        {
-          text: copy.logout,
-          style: "destructive",
-          onPress: () => {
-            router.replace(
-              "/language",
-            );
-          },
-        },
-      ],
-    );
-  };
+      },
+    ],
+  );
+};
 
   const openProviderStatus = () => {
+    if (!providerStatus) {
+      return;
+    }
+
     if (
       providerStatus ===
       "not-started"
@@ -265,8 +375,13 @@ export default function ProfileScreen() {
 
     if (
       providerStatus ===
-      "approved"
+        "approved" &&
+      providerAccountId
     ) {
+      enterProviderWorkspace(
+        providerAccountId,
+      );
+
       router.push(
         "/(provider-tabs)",
       );
@@ -461,14 +576,62 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
-        <ProviderStatusCard
-          status={providerStatus}
-          language={activeLanguage}
-          isRtl={isRtl}
-          onPress={
-            openProviderStatus
-          }
-        />
+        {providerStatus ? (
+          <ProviderStatusCard
+            status={providerStatus}
+            language={activeLanguage}
+            isRtl={isRtl}
+            onPress={
+              openProviderStatus
+            }
+          />
+        ) : (
+          <View
+            style={[
+              styles.providerStatusLoading,
+              {
+                flexDirection: isRtl
+                  ? "row-reverse"
+                  : "row",
+              },
+            ]}
+          >
+            <ActivityIndicator
+              size="small"
+              color={
+                KhedmatPalette.blue500
+              }
+            />
+
+            <Text
+              style={[
+                styles.providerStatusLoadingText,
+                directionStyle(isRtl),
+              ]}
+            >
+              {activeLanguage === "Dari"
+                ? "در حال بررسی حساب ارائه‌دهنده..."
+                : activeLanguage === "Pashto"
+                  ? "د خدمت چمتو کوونکي حساب کتل کېږي..."
+                  : "Checking provider account..."}
+            </Text>
+          </View>
+        )}
+
+        {providerAccountError ? (
+          <Text
+            style={[
+              styles.providerStatusError,
+              directionStyle(isRtl),
+            ]}
+          >
+            {activeLanguage === "Dari"
+              ? "بارگذاری حساب ارائه‌دهنده ناموفق بود."
+              : activeLanguage === "Pashto"
+                ? "د خدمت چمتو کوونکي حساب بارول ناکام شول."
+                : "Unable to load the provider account."}
+          </Text>
+        ) : null}
 
         <ProfileSection
           title={copy.account}
@@ -1663,6 +1826,37 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor:
       KhedmatPalette.surfaceSoft,
+  },
+
+  providerStatusLoading: {
+    width: "100%",
+    minHeight: 88,
+    marginTop: Spacing.lg,
+    padding: Spacing.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.md,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    borderRadius: Radius.xl,
+    backgroundColor:
+      KhedmatPalette.surface,
+  },
+
+  providerStatusLoadingText: {
+    ...Typography.label,
+    flex: 1,
+    color:
+      KhedmatPalette.textSecondary,
+  },
+
+  providerStatusError: {
+    ...Typography.captionStyle,
+    width: "100%",
+    marginTop: Spacing.sm,
+    color:
+      KhedmatPalette.error,
   },
 
   providerStatusCard: {

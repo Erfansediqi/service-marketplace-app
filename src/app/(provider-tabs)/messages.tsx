@@ -32,7 +32,7 @@ import {
   useBooking,
 } from "../../context/booking-context";
 import { useLanguage } from "../../context/languagecontext";
-import { useSession } from "../../context/session-context";
+import { useActiveProvider } from "../../hooks/use-active-provider";
 
 type IconName =
   ComponentProps<typeof Ionicons>["name"];
@@ -154,9 +154,6 @@ export default function ProviderMessagesScreen() {
   const { bookings } =
     useBooking();
 
-  const { activeProviderId } =
-    useSession();
-
   const { language } =
     useLanguage();
 
@@ -175,9 +172,11 @@ export default function ProviderMessagesScreen() {
       activeLanguage,
     );
 
-  const providerId =
-    activeProviderId ??
-    "provider-1";
+  const { provider } =
+  useActiveProvider();
+
+ const providerId =
+  provider?.id ?? null;
 
   const generatedConversations =
     useMemo(

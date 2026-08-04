@@ -117,6 +117,26 @@ const en = {
   providerSubtitle:
     "Showcase your skills and services, receive client requests, and grow your business.",
   roleHelperText: "You can change your account type later from settings.", // Fixed uppercase 'H'
+    // Notifications
+  notificationsTitle: "Notifications",
+  notificationsEmptyTitle: "No notifications yet",
+  customerNotificationsEmptyBody:
+    "Booking updates from providers will appear here.",
+  providerNotificationsEmptyBody:
+    "New booking requests and customer updates will appear here.",
+  markAllAsRead: "Mark all as read",
+
+  notificationBookingCreatedTitle: "New booking request",
+  notificationBookingCreatedBody:
+    "{{customerName}} requested your service.",
+
+  notificationBookingConfirmedTitle: "Booking confirmed",
+  notificationBookingConfirmedBody:
+    "{{providerName}} accepted your booking.",
+
+  notificationBookingCompletedTitle: "Booking completed",
+  notificationBookingCompletedBody:
+    "{{providerName}} marked your booking as completed.",
 };
 
 export default en;

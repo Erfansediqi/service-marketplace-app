@@ -1,23 +1,23 @@
 import { Ionicons } from "@expo/vector-icons";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import {
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import {
-    KhedmatPalette,
-    Radius,
-    Shadows,
-    Spacing,
-    Typography,
+  KhedmatPalette,
+  Radius,
+  Shadows,
+  Spacing,
+  Typography,
 } from "../../constants/theme";
 import { useLanguage } from "../../context/languagecontext";
-import {
-    NotificationRecord,
-    NotificationType,
+import type {
+  NotificationRecord,
+  NotificationType,
 } from "../../types/notifications";
 
 interface NotificationCardProps {
@@ -26,7 +26,7 @@ interface NotificationCardProps {
 }
 
 function getIcon(
-  type: NotificationType
+  type: NotificationType,
 ): keyof typeof Ionicons.glyphMap {
   switch (type) {
     case "booking-created":
@@ -56,20 +56,103 @@ function getIcon(
   }
 }
 
+function interpolate(
+  template: string,
+  params?: Record<string, string>,
+): string {
+  if (!params) {
+    return template;
+  }
+
+  return Object.entries(params).reduce(
+    (result, [key, value]) =>
+      result.replace(
+        new RegExp(`{{${key}}}`, "g"),
+        value,
+      ),
+    template,
+  );
+}
+
 function NotificationCard({
   notification,
   onPress,
 }: NotificationCardProps) {
-  const { isRTL } = useLanguage();
+  const {
+    language,
+    isRTL,
+    t,
+  } = useLanguage();
+
+  const title = useMemo(() => {
+    if (notification.titleKey) {
+      return t(notification.titleKey);
+    }
+
+    return notification.title ?? "";
+  }, [
+    notification.title,
+    notification.titleKey,
+    t,
+  ]);
+
+  const body = useMemo(() => {
+    const template = notification.bodyKey
+      ? t(notification.bodyKey)
+      : notification.body ?? "";
+
+    return interpolate(
+      template,
+      notification.bodyParams,
+    );
+  }, [
+    notification.body,
+    notification.bodyKey,
+    notification.bodyParams,
+    t,
+  ]);
+
+  const formattedTime = useMemo(() => {
+    const date = new Date(
+      notification.createdAt,
+    );
+
+    if (
+      Number.isNaN(date.getTime())
+    ) {
+      return "";
+    }
+
+    const locale =
+      language === "Dari"
+        ? "fa-AF"
+        : language === "Pashto"
+          ? "ps-AF"
+          : "en-US";
+
+    return date.toLocaleString(locale, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  }, [
+    language,
+    notification.createdAt,
+  ]);
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityLabel={`${title}. ${body}`}
+      accessibilityState={{
+        selected: !notification.read,
+      }}
       style={({ pressed }) => [
         styles.card,
         !notification.read &&
-          styles.unreadCard,
+          (isRTL
+            ? styles.unreadCardRTL
+            : styles.unreadCardLTR),
         pressed && styles.pressed,
       ]}
     >
@@ -82,7 +165,7 @@ function NotificationCard({
         <View style={styles.iconContainer}>
           <Ionicons
             name={getIcon(
-              notification.type
+              notification.type,
             )}
             size={24}
             color={
@@ -95,38 +178,43 @@ function NotificationCard({
           <Text
             style={[
               styles.title,
-              isRTL &&
-                styles.textRight,
+              isRTL
+                ? styles.textRight
+                : styles.textLeft,
             ]}
           >
-            {notification.title}
+            {title}
           </Text>
 
           <Text
             style={[
               styles.body,
-              isRTL &&
-                styles.textRight,
+              isRTL
+                ? styles.textRight
+                : styles.textLeft,
             ]}
           >
-            {notification.body}
+            {body}
           </Text>
 
-          <Text
-            style={[
-              styles.time,
-              isRTL &&
-                styles.textRight,
-            ]}
-          >
-            {new Date(
-              notification.createdAt
-            ).toLocaleString()}
-          </Text>
+          {formattedTime.length > 0 && (
+            <Text
+              style={[
+                styles.time,
+                isRTL
+                  ? styles.textRight
+                  : styles.textLeft,
+              ]}
+            >
+              {formattedTime}
+            </Text>
+          )}
         </View>
 
         {!notification.read && (
           <View
+            accessibilityElementsHidden
+            importantForAccessibility="no"
             style={styles.unreadDot}
           />
         )}
@@ -136,7 +224,7 @@ function NotificationCard({
 }
 
 export default memo(
-  NotificationCard
+  NotificationCard,
 );
 
 const styles = StyleSheet.create({
@@ -152,9 +240,15 @@ const styles = StyleSheet.create({
     ...Shadows.medium,
   },
 
-  unreadCard: {
+  unreadCardLTR: {
     borderLeftWidth: 4,
     borderLeftColor:
+      KhedmatPalette.blue500,
+  },
+
+  unreadCardRTL: {
+    borderRightWidth: 4,
+    borderRightColor:
       KhedmatPalette.blue500,
   },
 
@@ -188,14 +282,14 @@ const styles = StyleSheet.create({
     ...Typography.sectionTitle,
     color:
       KhedmatPalette.textPrimary,
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
 
   body: {
     ...Typography.bodyStyle,
     color:
       KhedmatPalette.textSecondary,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
 
   time: {
@@ -207,10 +301,14 @@ const styles = StyleSheet.create({
   unreadDot: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: Radius.pill,
     backgroundColor:
       KhedmatPalette.blue500,
     alignSelf: "center",
+  },
+
+  textLeft: {
+    textAlign: "left",
   },
 
   textRight: {

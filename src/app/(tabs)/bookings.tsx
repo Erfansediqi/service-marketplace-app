@@ -29,7 +29,6 @@ import {
   useBooking,
 } from "../../context/booking-context";
 import { useLanguage } from "../../context/languagecontext";
-
 type IconName =
   ComponentProps<typeof Ionicons>["name"];
 
@@ -319,8 +318,7 @@ export default function BookingsScreen() {
           >
             {copy.subtitle}
           </Text>
-        </View>
-
+                </View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={
@@ -1599,6 +1597,7 @@ function getBookingsCopy(
     message: "Message",
     bookAgain: "Book again",
   };
+  
 }
 
 const styles = StyleSheet.create({
@@ -1607,6 +1606,7 @@ const styles = StyleSheet.create({
     backgroundColor:
       KhedmatPalette.blue050,
   },
+  
 
   scrollContent: {
     width: "100%",

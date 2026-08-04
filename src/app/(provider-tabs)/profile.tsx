@@ -26,10 +26,8 @@ import {
 } from "../../constants/theme";
 import { useLanguage } from "../../context/languagecontext";
 import { useSession } from "../../context/session-context";
-import {
-  getProviderById,
-  ProviderProfile,
-} from "../../data/providers";
+import type { ProviderProfile } from "../../data/providers";
+import { useActiveProvider } from "../../hooks/use-active-provider";
 
 type IconName =
   ComponentProps<typeof Ionicons>["name"];
@@ -65,11 +63,56 @@ const ERROR_SOFT = "#FCE8E6";
 const INFO_SOFT = "#E5F4F8";
 
 export default function ProviderAccountScreen() {
+  const {
+    provider,
+    isLoading,
+    error,
+  } = useActiveProvider();
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.providerState}>
+          <Text style={styles.providerStateTitle}>
+            Loading provider...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!provider || error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.providerState}>
+          <Text style={styles.providerStateTitle}>
+            No active provider session.
+          </Text>
+
+          <Text style={styles.providerStateBody}>
+            Complete provider registration or select a valid provider account.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <ProviderAccountContent
+      provider={provider}
+    />
+  );
+}
+
+function ProviderAccountContent({
+  provider,
+}: {
+  provider: ProviderProfile;
+}) {
   const router = useRouter();
 
-  const { activeProviderId } =
+  const { resetSession } =
     useSession();
-
   const { language } =
     useLanguage();
 
@@ -88,10 +131,6 @@ export default function ProviderAccountScreen() {
       activeLanguage,
     );
 
-  const providerId =
-    activeProviderId ??
-    "provider-1";
-
   const [
     notificationsEnabled,
     setNotificationsEnabled,
@@ -102,19 +141,11 @@ export default function ProviderAccountScreen() {
     setAvailableForUrgentWork,
   ] = useState(true);
 
-  const provider = useMemo(
-    () =>
-      getProviderById(providerId) ??
-      getProviderById(
-        "provider-1",
-      )!,
-    [providerId],
-  );
-
   const profileCompletion =
     calculateProfileCompletion(
       provider,
     );
+
 
   const accountItems =
     useMemo<ProfileMenuItem[]>(
@@ -378,25 +409,29 @@ export default function ProviderAccountScreen() {
       ],
     );
 
-  const handleLogout = () => {
-    Alert.alert(
-      copy.logout,
-      copy.logoutConfirmation,
-      [
-        {
-          text: copy.cancel,
-          style: "cancel",
+const handleLogout = () => {
+  Alert.alert(
+    copy.logout,
+    copy.logoutConfirmation,
+    [
+      {
+        text: copy.cancel,
+        style: "cancel",
+      },
+      {
+        text: copy.logout,
+        style: "destructive",
+        onPress: () => {
+          resetSession();
+
+          router.replace(
+            "/language",
+          );
         },
-        {
-          text: copy.logout,
-          style: "destructive",
-          onPress: () => {
-            router.replace("/");
-          },
-        },
-      ],
-    );
-  };
+      },
+    ],
+  );
+};
 
   return (
     <SafeAreaView
@@ -1796,6 +1831,32 @@ function getProfileCopy(
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: KhedmatPalette.blue050,
+  },
+
+  providerState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: Layout.screenPadding,
+  },
+
+  providerStateTitle: {
+    ...Typography.sectionTitle,
+    color: KhedmatPalette.textPrimary,
+    textAlign: "center",
+  },
+
+  providerStateBody: {
+    ...Typography.bodyStyle,
+    color: KhedmatPalette.textMuted,
+    marginTop: Spacing.sm,
+    maxWidth: Layout.readableTextMaxWidth,
+    textAlign: "center",
+  },
+
   safeArea: {
     flex: 1,
     backgroundColor:

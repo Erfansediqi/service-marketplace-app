@@ -28,12 +28,11 @@ import {
   Typography,
 } from "../constants/theme";
 import { useLanguage } from "../context/languagecontext";
-import {
-  getProviderById,
+import type {
   ProviderProfile,
   ProviderReview,
-  providers,
 } from "../data/providers";
+import { useProviders } from "../hooks/use-providers";
 
 type IconName =
   ComponentProps<typeof Ionicons>["name"];
@@ -68,6 +67,189 @@ export default function ProviderProfileScreen() {
   const { language } =
     useLanguage();
 
+  const {
+    providers,
+    isLoading,
+    error,
+    refreshProviders,
+  } = useProviders();
+
+  const activeLanguage =
+    normalizeLanguage(language);
+
+  const isRtl =
+    activeLanguage === "Dari" ||
+    activeLanguage === "Pashto";
+
+  const copy =
+    getProfileCopy(
+      activeLanguage,
+    );
+
+  const providerId =
+    getSingleParam(
+      params.providerId,
+    );
+
+  const provider =
+    useMemo(
+      () =>
+        providers.find(
+          (item) =>
+            item.id === providerId,
+        ) ?? null,
+      [providerId, providers],
+    );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView
+        style={styles.safeArea}
+      >
+        <View
+          style={
+            styles.providerState
+          }
+        >
+          <Ionicons
+            name="person-circle-outline"
+            size={54}
+            color={
+              KhedmatPalette.textMuted
+            }
+          />
+
+          <Text
+            style={[
+              styles.providerStateTitle,
+              directionStyle(isRtl),
+            ]}
+          >
+            {activeLanguage === "Dari"
+              ? "پروفایل ارائه‌دهنده در حال بارگذاری است..."
+              : activeLanguage === "Pashto"
+                ? "د خدمت چمتو کوونکي پروفایل بارېږي..."
+                : "Loading provider profile..."}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!provider || error) {
+    return (
+      <SafeAreaView
+        style={styles.safeArea}
+      >
+        <View
+          style={
+            styles.providerState
+          }
+        >
+          <Ionicons
+            name="person-remove-outline"
+            size={54}
+            color={
+              KhedmatPalette.textMuted
+            }
+          />
+
+          <Text
+            style={[
+              styles.providerStateTitle,
+              directionStyle(isRtl),
+            ]}
+          >
+            {activeLanguage === "Dari"
+              ? "ارائه‌دهنده پیدا نشد"
+              : activeLanguage === "Pashto"
+                ? "د خدمت چمتو کوونکی ونه موندل شو"
+                : "Provider not found"}
+          </Text>
+
+          <Text
+            style={[
+              styles.providerStateBody,
+              directionStyle(isRtl),
+            ]}
+          >
+            {activeLanguage === "Dari"
+              ? "ممکن است این حساب حذف شده باشد یا هنوز در دسترس نباشد."
+              : activeLanguage === "Pashto"
+                ? "کېدای شي دا حساب لرې شوی وي یا لا تر اوسه موجود نه وي."
+                : "This provider account may have been removed or is not available yet."}
+          </Text>
+
+          {error ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                void refreshProviders();
+              }}
+              style={({ pressed }) => [
+                styles.retryButton,
+                pressed &&
+                  styles.pressed,
+              ]}
+            >
+              <Text
+                style={
+                  styles.retryButtonText
+                }
+              >
+                {activeLanguage === "Dari"
+                  ? "تلاش دوباره"
+                  : activeLanguage === "Pashto"
+                    ? "بیا هڅه"
+                    : "Try again"}
+              </Text>
+            </Pressable>
+          ) : null}
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              router.back()
+            }
+            style={({ pressed }) => [
+              styles.backStateButton,
+              pressed &&
+                styles.pressed,
+            ]}
+          >
+            <Text
+              style={
+                styles.backStateButtonText
+              }
+            >
+              {copy.back}
+            </Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <ProviderProfileContent
+      provider={provider}
+      providers={providers}
+    />
+  );
+}
+
+function ProviderProfileContent({
+  provider,
+  providers,
+}: {
+  provider: ProviderProfile;
+  providers: ProviderProfile[];
+}) {
+  const router = useRouter();
+
+  const { language } =
+    useLanguage();
+
   const activeLanguage =
     normalizeLanguage(language);
 
@@ -81,23 +263,6 @@ export default function ProviderProfileScreen() {
   const copy =
     getProfileCopy(
       activeLanguage,
-    );
-
-  const providerId =
-    getSingleParam(
-      params.providerId,
-    );
-
-  const provider =
-    useMemo<ProviderProfile>(
-      () =>
-        getProviderById(
-          providerId,
-        ) ??
-        getProviderById(
-          "provider-1",
-        )!,
-      [providerId],
     );
 
   const relatedProviders =
@@ -123,6 +288,7 @@ export default function ProviderProfileScreen() {
       [
         provider.categoryId,
         provider.id,
+        providers,
       ],
     );
 
@@ -2350,6 +2516,74 @@ function getProfileCopy(
 }
 
 const styles = StyleSheet.create({
+  providerState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.md,
+    paddingHorizontal:
+      Layout.screenPadding,
+  },
+
+  providerStateTitle: {
+    ...Typography.sectionTitle,
+    width: "100%",
+    maxWidth:
+      Layout.readableTextMaxWidth,
+    color:
+      KhedmatPalette.textPrimary,
+    textAlign: "center",
+  },
+
+  providerStateBody: {
+    ...Typography.bodyStyle,
+    width: "100%",
+    maxWidth:
+      Layout.readableTextMaxWidth,
+    color:
+      KhedmatPalette.textMuted,
+    textAlign: "center",
+  },
+
+  retryButton: {
+    minHeight:
+      Layout.minimumTouchTarget,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal:
+      Spacing.lg,
+    borderRadius: Radius.md,
+    backgroundColor:
+      KhedmatPalette.navy900,
+  },
+
+  retryButtonText: {
+    ...Typography.buttonLabel,
+    color:
+      KhedmatPalette.white,
+  },
+
+  backStateButton: {
+    minHeight:
+      Layout.minimumTouchTarget,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal:
+      Spacing.lg,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor:
+      KhedmatPalette.border,
+    backgroundColor:
+      KhedmatPalette.surface,
+  },
+
+  backStateButtonText: {
+    ...Typography.label,
+    color:
+      KhedmatPalette.navy700,
+  },
+
   safeArea: {
     flex: 1,
     backgroundColor:

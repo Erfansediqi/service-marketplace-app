@@ -1,26 +1,25 @@
 import React, {
-    PropsWithChildren,
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  PropsWithChildren,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 
-import { mockNotifications } from "../data/notifications";
 import {
-    createBookingCompletedNotification,
-    createBookingConfirmedNotification,
-    createBookingCreatedNotification,
+  createBookingCompletedNotification,
+  createBookingConfirmedNotification,
+  createBookingCreatedNotification,
 } from "../services/notification-service";
 
 import { StorageService } from "../services/storage";
 
 import {
-    NotificationRecipient,
-    NotificationRecord,
+  NotificationRecipient,
+  NotificationRecord,
 } from "../types/notifications";
 
 const STORAGE_KEY = "@khedmat_notifications";
@@ -113,7 +112,7 @@ export function NotificationProvider({
         }
 
         const hydrated =
-          stored ?? mockNotifications;
+  stored ?? [];
 
         notificationsRef.current =
           hydrated;
@@ -126,12 +125,11 @@ export function NotificationProvider({
         );
 
         if (mounted) {
-          notificationsRef.current =
-            mockNotifications;
+          notificationsRef.current = [];
+setNotifications([]);
 
-          setNotifications(
-            mockNotifications
-          );
+          notificationsRef.current = [];
+setNotifications([]);
         }
       } finally {
         if (mounted) {

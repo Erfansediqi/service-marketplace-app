@@ -20,6 +20,11 @@ import {
   TextInput,
   View,
 } from "react-native";
+import {
+  createLocalProviderProfile,
+  type ProviderRegistrationData,
+} from "../services/provider-profile-factory";
+import { addLocalProvider } from "../services/provider-storage";
 
 import {
   Fonts,
@@ -268,6 +273,13 @@ export default function ProviderVerificationScreen() {
       setSubmitted(false);
     }
   };
+  function getParam(
+  value: string | string[] | undefined,
+): string {
+  return Array.isArray(value)
+    ? value[0] ?? ""
+    : value ?? "";
+}
 
   const removeImage = (
     type: UploadType,
@@ -324,63 +336,105 @@ export default function ProviderVerificationScreen() {
     }
   };
 
-  const handleSubmit =
-    async () => {
-      setSubmitted(true);
+  const handleSubmit = async () => {
+  setSubmitted(true);
 
-      if (!formIsValid) {
-        return;
-      }
+  if (!formIsValid || isSubmitting) {
+    return;
+  }
 
-      setIsSubmitting(true);
+  setIsSubmitting(true);
 
-      try {
-        const providerApplication = {
-          ...params,
-          identityNumber:
-            trimmedIdentityNumber,
-          profilePhoto:
-            images.profilePhoto,
-          identityFront:
-            images.identityFront,
-          identityBack:
-            images.identityBack,
-          declarationAccepted:
-            acceptedDeclaration,
-          status:
-            "pending-review" as const,
-        };
+  try {
+    const registration: ProviderRegistrationData = {
+      category: getParam(
+        params.category,
+      ),
+      services: getParam(
+        params.services,
+      ),
+      experience: getParam(
+        params.experience,
+      ),
 
-        console.log(
-          "Provider application:",
-          providerApplication,
-        );
+      businessName: getParam(
+        params.businessName,
+      ),
+      description: getParam(
+        params.description,
+      ),
 
-        /*
-         * Later:
-         * 1. Upload images to secure cloud storage.
-         * 2. Save the provider application in the backend.
-         * 3. Encrypt or restrict access to identity documents.
-         * 4. Return a real application ID.
-         */
+      province: getParam(
+        params.province,
+      ),
+      provinceName: getParam(
+        params.provinceName,
+      ),
 
-        router.replace(
-          "/provider-submitted",
-        );
-      } catch (error) {
-        console.error(
-          "Provider application submission failed:",
-          error,
-        );
+      district: getParam(
+        params.district,
+      ),
+      districtName: getParam(
+        params.districtName,
+      ),
 
-        Alert.alert(
-          copy.submissionFailedTitle,
-          copy.submissionFailedMessage,
-        );
-      } finally {
-        setIsSubmitting(false);
-      }
+      radius: getParam(
+        params.radius,
+      ),
+      serviceModes: getParam(
+        params.serviceModes,
+      ),
+
+      workingDays: getParam(
+        params.workingDays,
+      ),
+      startTime: getParam(
+        params.startTime,
+      ),
+      endTime: getParam(
+        params.endTime,
+      ),
+
+      urgentRequests: getParam(
+        params.urgentRequests,
+      ),
+      availableToday: getParam(
+        params.availableToday,
+      ),
     };
+
+    const provider =
+      createLocalProviderProfile(
+        registration,
+      );
+
+    await addLocalProvider(provider);
+
+    /*
+     * Identity numbers and document image URIs are
+     * intentionally not persisted in AsyncStorage.
+     */
+    router.replace({
+      pathname:
+        "/provider-submitted",
+      params: {
+        providerId: provider.id,
+      },
+    } as never);
+  } catch (error) {
+    console.error(
+      "Provider application submission failed:",
+      error,
+    );
+
+    Alert.alert(
+      copy.submissionFailedTitle,
+      copy.submissionFailedMessage,
+    );
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <SafeAreaView

@@ -52,6 +52,11 @@ export default function RoleSelectionScreen() {
     null,
   );
 
+  const [
+    isContinuing,
+    setIsContinuing,
+  ] = useState(false);
+
   const isRtl =
     language === "Dari" ||
     language === "Pashto";
@@ -75,25 +80,34 @@ export default function RoleSelectionScreen() {
     },
   ];
 
-  const handleContinue = () => {
-    if (!selectedRole) {
-      return;
-    }
+  const handleContinue =
+    (): void => {
+      if (
+        !selectedRole ||
+        isContinuing
+      ) {
+        return;
+      }
 
-    if (
-      selectedRole === "provider"
-    ) {
-      router.replace(
-        "/provider-welcome",
+      setIsContinuing(true);
+
+      if (
+        selectedRole ===
+        "customer"
+      ) {
+        enterCustomerWorkspace();
+
+        router.replace(
+          "/(tabs)",
+        );
+
+        return;
+      }
+
+      router.push(
+        "/provider-account-selection",
       );
-
-      return;
-    }
-
-    enterCustomerWorkspace();
-
-    router.replace("/(tabs)");
-  };
+    };
 
   return (
     <KhedmatScreen
@@ -105,8 +119,13 @@ export default function RoleSelectionScreen() {
         <View style={styles.footer}>
           <KhedmatButton
             label={t("continue")}
-            disabled={!selectedRole}
-            onPress={handleContinue}
+            disabled={
+              !selectedRole ||
+              isContinuing
+            }
+            onPress={
+              handleContinue
+            }
           />
 
           <Text

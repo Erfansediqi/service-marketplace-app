@@ -21,7 +21,8 @@ import {
   Typography,
 } from "../../constants/theme";
 import { useLanguage } from "../../context/languagecontext";
-import { ProviderProfile, providers } from "../../data/providers";
+import type { ProviderProfile } from "../../data/providers";
+import { useProviders } from "../../hooks/use-providers";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -169,24 +170,17 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
   },
 ];
 
-const FEATURED_PROVIDERS = [...providers]
-  .sort((first, second) => {
-    if (first.availableToday !== second.availableToday) {
-      return first.availableToday ? -1 : 1;
-    }
-
-    if (first.rating !== second.rating) {
-      return second.rating - first.rating;
-    }
-
-    return first.distanceKm - second.distanceKm;
-  })
-  .slice(0, 4);
-
 export default function HomeScreen() {
   const router = useRouter();
   const { language } = useLanguage();
   const { width } = useWindowDimensions();
+
+  const {
+    providers,
+    isLoading: providersAreLoading,
+    error: providersError,
+    refreshProviders,
+  } = useProviders();
 
   const activeLanguage = normalizeLanguage(language);
 
@@ -204,6 +198,38 @@ export default function HomeScreen() {
         localizedSubtitle: category.subtitle[activeLanguage],
       })),
     [activeLanguage],
+  );
+
+  const featuredProviders = useMemo(
+    () =>
+      [...providers]
+        .sort((first, second) => {
+          if (
+            first.availableToday !==
+            second.availableToday
+          ) {
+            return first.availableToday
+              ? -1
+              : 1;
+          }
+
+          if (
+            first.rating !==
+            second.rating
+          ) {
+            return (
+              second.rating -
+              first.rating
+            );
+          }
+
+          return (
+            first.distanceKm -
+            second.distanceKm
+          );
+        })
+        .slice(0, 4),
+    [providers],
   );
 
   const openSearch = () => {
@@ -377,28 +403,87 @@ export default function HomeScreen() {
             onPress={openSearch}
           />
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.providersRow}
-            style={[
-              styles.providersScroll,
-              {
-                direction: isRtl ? "rtl" : "ltr",
-              },
-            ]}
-          >
-            {FEATURED_PROVIDERS.map((provider) => (
-              <ProviderCard
-                key={provider.id}
-                provider={provider}
-                language={activeLanguage}
-                isRtl={isRtl}
-                copy={copy}
-                onPress={() => openProvider(provider.id)}
-              />
-            ))}
-          </ScrollView>
+          {providersAreLoading ? (
+            <View style={styles.providersState}>
+              <Text
+                style={[
+                  styles.providersStateText,
+                  directionStyle(isRtl),
+                ]}
+              >
+                {activeLanguage === "Dari"
+                  ? "ارائه‌دهندگان در حال بارگذاری است..."
+                  : activeLanguage === "Pashto"
+                    ? "د خدمت چمتو کوونکي بارېږي..."
+                    : "Loading providers..."}
+              </Text>
+            </View>
+          ) : providersError ? (
+            <View style={styles.providersState}>
+              <Text
+                style={[
+                  styles.providersStateText,
+                  directionStyle(isRtl),
+                ]}
+              >
+                {activeLanguage === "Dari"
+                  ? "بارگذاری ارائه‌دهندگان ناموفق بود."
+                  : activeLanguage === "Pashto"
+                    ? "د خدمت چمتو کوونکو بارول ناکام شول."
+                    : "Unable to load providers."}
+              </Text>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  void refreshProviders();
+                }}
+                style={({ pressed }) => [
+                  styles.retryButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.retryButtonText}>
+                  {activeLanguage === "Dari"
+                    ? "تلاش دوباره"
+                    : activeLanguage === "Pashto"
+                      ? "بیا هڅه"
+                      : "Try again"}
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.providersRow}
+              style={[
+                styles.providersScroll,
+                {
+                  direction: isRtl
+                    ? "rtl"
+                    : "ltr",
+                },
+              ]}
+            >
+              {featuredProviders.map(
+                (provider) => (
+                  <ProviderCard
+                    key={provider.id}
+                    provider={provider}
+                    language={activeLanguage}
+                    isRtl={isRtl}
+                    copy={copy}
+                    onPress={() =>
+                      openProvider(
+                        provider.id,
+                      )
+                    }
+                  />
+                ),
+              )}
+            </ScrollView>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -741,6 +826,36 @@ function getHomeCopy(language: LanguageName) {
 }
 
 const styles = StyleSheet.create({
+  providersState: {
+    minHeight: 170,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+  },
+
+  providersStateText: {
+    ...Typography.bodyStyle,
+    width: "100%",
+    maxWidth: Layout.readableTextMaxWidth,
+    color: KhedmatPalette.textMuted,
+    textAlign: "center",
+  },
+
+  retryButton: {
+    minHeight: Layout.minimumTouchTarget,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.md,
+    backgroundColor: KhedmatPalette.navy900,
+  },
+
+  retryButtonText: {
+    ...Typography.buttonLabel,
+    color: KhedmatPalette.white,
+  },
+
   safeArea: {
     flex: 1,
     backgroundColor: KhedmatPalette.blue050,

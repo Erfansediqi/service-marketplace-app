@@ -29,8 +29,7 @@ import {
   useBooking,
 } from "../../context/booking-context";
 import { useLanguage } from "../../context/languagecontext";
-import { useSession } from "../../context/session-context";
-import { getProviderById } from "../../data/providers";
+import { useActiveProvider } from "../../hooks/use-active-provider";
 
 type IconName =
   ComponentProps<typeof Ionicons>["name"];
@@ -84,9 +83,6 @@ export default function ProviderDashboardScreen() {
   const { bookings } =
     useBooking();
 
-  const { activeProviderId } =
-    useSession();
-
   const { language } =
     useLanguage();
 
@@ -102,23 +98,19 @@ export default function ProviderDashboardScreen() {
       activeLanguage,
     );
 
+  const {
+    provider,
+    isLoading: providerIsLoading,
+    error: providerError,
+  } = useActiveProvider();
+
   const providerId =
-    activeProviderId ??
-    "provider-1";
+    provider?.id ?? "";
 
   const [
     availableNow,
     setAvailableNow,
   ] = useState(true);
-
-  const provider = useMemo(
-    () =>
-      getProviderById(providerId) ??
-      getProviderById(
-        "provider-1",
-      )!,
-    [providerId],
-  );
 
   const providerBookings =
     useMemo(
@@ -126,9 +118,9 @@ export default function ProviderDashboardScreen() {
         bookings.filter(
           (booking) =>
             booking.providerId ===
-            provider.id,
+            providerId,
         ),
-      [bookings, provider.id],
+      [bookings, providerId],
     );
 
   const pendingBookings =
@@ -320,6 +312,104 @@ export default function ProviderDashboardScreen() {
 
     return 0;
   };
+
+  if (
+    providerIsLoading
+  ) {
+    return (
+      <SafeAreaView
+        style={styles.safeArea}
+      >
+        <View
+          style={
+            styles.stateContainer
+          }
+        >
+          <Text
+            style={[
+              styles.stateTitle,
+              {
+                textAlign: isRtl
+                  ? "right"
+                  : "left",
+              },
+            ]}
+          >
+            {activeLanguage ===
+            "Dari"
+              ? "در حال بارگذاری پروفایل..."
+              : activeLanguage ===
+                  "Pashto"
+                ? "پروفایل پورته کېږي..."
+                : "Loading provider profile..."}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (
+    !provider ||
+    providerError
+  ) {
+    return (
+      <SafeAreaView
+        style={styles.safeArea}
+      >
+        <View
+          style={
+            styles.stateContainer
+          }
+        >
+          <Ionicons
+            name="alert-circle-outline"
+            size={34}
+            color={
+              KhedmatPalette.error
+            }
+          />
+
+          <Text
+            style={[
+              styles.stateTitle,
+              {
+                textAlign: isRtl
+                  ? "right"
+                  : "left",
+              },
+            ]}
+          >
+            {activeLanguage ===
+            "Dari"
+              ? "پروفایل ارائه‌دهنده پیدا نشد"
+              : activeLanguage ===
+                  "Pashto"
+                ? "د خدمت چمتو کوونکي پروفایل ونه موندل شو"
+                : "Provider profile not found"}
+          </Text>
+
+          <Text
+            style={[
+              styles.stateBody,
+              {
+                textAlign: isRtl
+                  ? "right"
+                  : "left",
+              },
+            ]}
+          >
+            {activeLanguage ===
+            "Dari"
+              ? "لطفاً دوباره وارد فضای کاری ارائه‌دهنده شوید."
+              : activeLanguage ===
+                  "Pashto"
+                ? "مهرباني وکړئ د خدمت چمتو کوونکي کاري ځای ته بیا ننوځئ."
+                : "Please enter the provider workspace again."}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView
@@ -2680,6 +2770,44 @@ const styles =
 
       backgroundColor:
         KhedmatPalette.blue050,
+    },
+
+    stateContainer: {
+      flex: 1,
+
+      width: "100%",
+
+      maxWidth:
+        Layout.contentMaxWidth,
+
+      alignSelf: "center",
+
+      justifyContent: "center",
+
+      alignItems: "center",
+
+      gap: Spacing.md,
+
+      paddingHorizontal:
+        Layout.screenPadding,
+    },
+
+    stateTitle: {
+      ...Typography.sectionTitle,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette.textPrimary,
+    },
+
+    stateBody: {
+      ...Typography.bodyStyle,
+
+      width: "100%",
+
+      color:
+        KhedmatPalette.textSecondary,
     },
 
     scrollContent: {

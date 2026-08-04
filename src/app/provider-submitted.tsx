@@ -1,5 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import {
+  useLocalSearchParams,
+  useRouter,
+} from "expo-router";
 import { ComponentProps } from "react";
 import {
   Pressable,
@@ -66,6 +69,10 @@ const REVIEW_STEPS: ReviewStep[] = [
 
 export default function ProviderSubmittedScreen() {
   const router = useRouter();
+  const params =
+  useLocalSearchParams<{
+    providerId?: string;
+  }>();
 
   const {
     enterProviderWorkspace,
@@ -90,20 +97,22 @@ export default function ProviderSubmittedScreen() {
     );
 
   const handleContinue = () => {
-    /*
-     * Temporary local provider identity.
-     *
-     * Replace this fixed ID with the provider ID returned by the backend
-     * after provider registration or approval is connected.
-     */
-    enterProviderWorkspace(
-      "provider-1",
+  if (!params.providerId) {
+    console.error(
+      "Missing providerId.",
     );
 
-    router.replace(
-      "/(provider-tabs)",
-    );
-  };
+    return;
+  }
+
+  enterProviderWorkspace(
+    params.providerId,
+  );
+
+  router.replace(
+    "/(provider-tabs)",
+  );
+};
 
   const handleCustomerHome = () => {
     router.replace("/(tabs)");
@@ -473,6 +482,7 @@ export default function ProviderSubmittedScreen() {
               accessibilityLabel={
                 copy.openProviderPanel
               }
+              
               onPress={
                 handleContinue
               }

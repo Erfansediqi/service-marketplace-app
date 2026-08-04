@@ -1,4 +1,4 @@
-import { NotificationRecord } from "../types/notifications";
+import type { NotificationRecord } from "../types/notifications";
 
 function createNotificationId(): string {
   return `notification-${Date.now()}-${Math.random()
@@ -18,25 +18,25 @@ export function createBookingCreatedNotification(options: {
     recipientId: options.providerId,
 
     type: "booking-created",
-
-    title: "New booking request",
-
-    body: `${options.customerName} requested your service.`,
-
     priority: "high",
+
+    titleKey: "notificationBookingCreatedTitle",
+    bodyKey: "notificationBookingCreatedBody",
+    bodyParams: {
+      customerName: options.customerName,
+    },
 
     bookingId: options.bookingId,
 
     read: false,
-
     createdAt: new Date().toISOString(),
 
     action: {
-  route: "/(provider-tabs)/requests",
-  params: {
-    bookingId: options.bookingId,
-  },
-},
+      route: "/(provider-tabs)/requests",
+      params: {
+        bookingId: options.bookingId,
+      },
+    },
   };
 }
 
@@ -52,17 +52,17 @@ export function createBookingConfirmedNotification(options: {
     recipientId: options.customerId,
 
     type: "booking-confirmed",
-
-    title: "Booking confirmed",
-
-    body: `${options.providerName} accepted your booking.`,
-
     priority: "high",
+
+    titleKey: "notificationBookingConfirmedTitle",
+    bodyKey: "notificationBookingConfirmedBody",
+    bodyParams: {
+      providerName: options.providerName,
+    },
 
     bookingId: options.bookingId,
 
     read: false,
-
     createdAt: new Date().toISOString(),
 
     action: {
@@ -86,17 +86,17 @@ export function createBookingCompletedNotification(options: {
     recipientId: options.customerId,
 
     type: "booking-completed",
-
-    title: "Booking completed",
-
-    body: `${options.providerName} marked your booking as completed.`,
-
     priority: "normal",
+
+    titleKey: "notificationBookingCompletedTitle",
+    bodyKey: "notificationBookingCompletedBody",
+    bodyParams: {
+      providerName: options.providerName,
+    },
 
     bookingId: options.bookingId,
 
     read: false,
-
     createdAt: new Date().toISOString(),
 
     action: {

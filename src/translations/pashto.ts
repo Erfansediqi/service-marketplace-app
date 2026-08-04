@@ -118,6 +118,26 @@ const pashto = {
   providerSubtitle:
     "خپل مهارتونه او خدمتونه معرفي کړئ، د پیرودونکو غوښتنې ترلاسه کړئ او خپل کار پراخ کړئ.",
   roleHelperText: "وروسته بیا کولی شئ خپل د حساب ډول له تنظیماتو څخه بدل کړئ.",
+    // Notifications
+  notificationsTitle: "خبرتیاوې",
+  notificationsEmptyTitle: "تر اوسه کومه خبرتیا نشته",
+  customerNotificationsEmptyBody:
+    "د خدمت چمتو کوونکو د بکینګ تازه معلومات به دلته ښکاره شي.",
+  providerNotificationsEmptyBody:
+    "د بکینګ نوې غوښتنې او د پیرودونکو تازه معلومات به دلته ښکاره شي.",
+  markAllAsRead: "ټولې لوستل شوې وښایئ",
+
+  notificationBookingCreatedTitle: "د بکینګ نوې غوښتنه",
+  notificationBookingCreatedBody:
+    "{{customerName}} ستاسو خدمت غوښتنه کړې ده.",
+
+  notificationBookingConfirmedTitle: "بکینګ تایید شو",
+  notificationBookingConfirmedBody:
+    "{{providerName}} ستاسو بکینګ ومانه.",
+
+  notificationBookingCompletedTitle: "بکینګ بشپړ شو",
+  notificationBookingCompletedBody:
+    "{{providerName}} ستاسو بکینګ بشپړ شوی وښود.",
 };
 
 export default pashto;

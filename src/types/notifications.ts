@@ -1,3 +1,5 @@
+import type { TranslationKeys } from "../translations";
+
 export type NotificationRecipient =
   | "customer"
   | "provider";
@@ -26,24 +28,29 @@ export interface NotificationRecord {
   id: string;
 
   recipient: NotificationRecipient;
-
   recipientId: string;
 
   type: NotificationType;
-
-  title: string;
-
-  body: string;
-
   priority: NotificationPriority;
 
-  bookingId?: string;
+  /**
+   * New localized notification content.
+   */
+  titleKey?: TranslationKeys;
+  bodyKey?: TranslationKeys;
+  bodyParams?: Record<string, string>;
 
+  /**
+   * Legacy content retained so notifications already stored
+   * in AsyncStorage continue rendering after this migration.
+   */
+  title?: string;
+  body?: string;
+
+  bookingId?: string;
   action?: NotificationAction;
 
   read: boolean;
-
   createdAt: string;
-
   readAt?: string;
 }

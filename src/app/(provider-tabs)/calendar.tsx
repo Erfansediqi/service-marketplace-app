@@ -10,8 +10,8 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View,
   useWindowDimensions,
+  View,
 } from "react-native";
 
 import {
@@ -29,8 +29,8 @@ import {
   useBooking,
 } from "../../context/booking-context";
 import { useLanguage } from "../../context/languagecontext";
-import { useSession } from "../../context/session-context";
-import { getProviderById } from "../../data/providers";
+import type { ProviderProfile } from "../../data/providers";
+import { useActiveProvider } from "../../hooks/use-active-provider";
 
 type IconName =
   ComponentProps<typeof Ionicons>["name"];
@@ -84,17 +84,70 @@ const ERROR_SOFT = "#FCE8E6";
 const INFO_SOFT = "#E5F4F8";
 
 export default function ProviderCalendarScreen() {
+  const {
+    provider,
+    isLoading,
+    error,
+  } = useActiveProvider();
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.providerState}>
+          <Text style={styles.providerStateTitle}>
+            Loading provider calendar...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!provider || error) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.providerState}>
+          <Ionicons
+            name="calendar-outline"
+            size={52}
+            color={KhedmatPalette.textMuted}
+          />
+
+          <Text style={styles.providerStateTitle}>
+            No active provider account
+          </Text>
+
+          <Text style={styles.providerStateBody}>
+            Complete provider registration and try again.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <ProviderCalendarContent
+      provider={provider}
+    />
+  );
+}
+
+function ProviderCalendarContent({
+  provider,
+}: {
+  provider: ProviderProfile;
+}) {
   const { width } =
     useWindowDimensions();
 
-  const { bookings } =
-    useBooking();
-
-  const { activeProviderId } =
-    useSession();
-
   const { language } =
     useLanguage();
+
+  const {
+    bookings,
+  } = useBooking();
+
+  const providerId =
+    provider.id;
 
   const activeLanguage =
     normalizeLanguage(language);
@@ -111,18 +164,7 @@ export default function ProviderCalendarScreen() {
       activeLanguage,
     );
 
-  const providerId =
-    activeProviderId ??
-    "provider-1";
 
-  const provider = useMemo(
-    () =>
-      getProviderById(providerId) ??
-      getProviderById(
-        "provider-1",
-      )!,
-    [providerId],
-  );
 
   const dateOptions = useMemo(
     () =>
@@ -147,13 +189,13 @@ export default function ProviderCalendarScreen() {
         bookings.filter(
           (booking) =>
             booking.providerId ===
-              provider.id &&
+              providerId &&
             booking.status !==
               "cancelled" &&
             booking.status !==
               "completed",
         ),
-      [bookings, provider.id],
+      [bookings, providerId],
     );
 
   const selectedDate =
@@ -3088,6 +3130,30 @@ function getCalendarCopy(
 }
 
 const styles = StyleSheet.create({
+  providerState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.md,
+    paddingHorizontal: Layout.screenPadding,
+  },
+
+  providerStateTitle: {
+    ...Typography.sectionTitle,
+    width: "100%",
+    maxWidth: Layout.readableTextMaxWidth,
+    color: KhedmatPalette.textPrimary,
+    textAlign: "center",
+  },
+
+  providerStateBody: {
+    ...Typography.bodyStyle,
+    width: "100%",
+    maxWidth: Layout.readableTextMaxWidth,
+    color: KhedmatPalette.textMuted,
+    textAlign: "center",
+  },
+
   safeArea: {
     flex: 1,
     backgroundColor:

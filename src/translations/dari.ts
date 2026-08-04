@@ -118,6 +118,26 @@ const dari = {
   providerSubtitle:
     "مهارت‌ها و خدمات خود را معرفی کنید، درخواست‌های مشتریان را دریافت کنید و کار خود را گسترش دهید.",
   roleHelperText: "بعداً می‌توانید نوع حساب خود را از تنظیمات تغییر دهید.",
+    // Notifications
+  notificationsTitle: "اعلان‌ها",
+  notificationsEmptyTitle: "هنوز اعلانی وجود ندارد",
+  customerNotificationsEmptyBody:
+    "تغییرات رزرو از سوی ارائه‌دهندگان خدمات در اینجا نمایش داده می‌شود.",
+  providerNotificationsEmptyBody:
+    "درخواست‌های جدید رزرو و تغییرات مشتریان در اینجا نمایش داده می‌شود.",
+  markAllAsRead: "همه را خوانده‌شده علامت بزن",
+
+  notificationBookingCreatedTitle: "درخواست جدید رزرو",
+  notificationBookingCreatedBody:
+    "{{customerName}} خدمت شما را درخواست کرده است.",
+
+  notificationBookingConfirmedTitle: "رزرو تایید شد",
+  notificationBookingConfirmedBody:
+    "{{providerName}} رزرو شما را پذیرفت.",
+
+  notificationBookingCompletedTitle: "رزرو تکمیل شد",
+  notificationBookingCompletedBody:
+    "{{providerName}} رزرو شما را تکمیل‌شده علامت زد.",
 };
 
 export default dari;
