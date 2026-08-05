@@ -191,14 +191,13 @@ export default function HomeScreen() {
   const compactGrid = width < 370;
 
   const categories = useMemo(
-    () =>
-      SERVICE_CATEGORIES.map((category) => ({
-        ...category,
-        localizedTitle: category.title[activeLanguage],
-        localizedSubtitle: category.subtitle[activeLanguage],
-      })),
-    [activeLanguage],
-  );
+  () =>
+    SERVICE_CATEGORIES.map((category) => ({
+      ...category,
+      localizedTitle: category.title[activeLanguage],
+    })),
+  [activeLanguage],
+);
 
   const featuredProviders = useMemo(
     () =>
@@ -260,55 +259,11 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View
-          style={[
-            styles.topBar,
-            {
-              flexDirection: isRtl ? "row" : "row-reverse",
-            },
-          ]}
-        >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={copy.profileAccessibility}
-            onPress={() => router.push("/(tabs)/profile")}
-            style={({ pressed }) => [
-              styles.avatarButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.avatarText}>
-              {activeLanguage === "English" ? "A" : "ا"}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={copy.notificationsAccessibility}
-            style={({ pressed }) => [
-              styles.notificationButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Ionicons
-              name="notifications-outline"
-              size={22}
-              color={KhedmatPalette.navy900}
-            />
-
-            <View style={styles.notificationDot} />
-          </Pressable>
-        </View>
-
         <View style={styles.hero}>
-          <Text style={[styles.greeting, directionStyle(isRtl)]}>
-            {copy.greeting}
-          </Text>
-
-          <Text style={[styles.heroTitle, directionStyle(isRtl)]}>
-            {copy.heroTitle}
-          </Text>
-        </View>
+  <Text style={[styles.greeting, directionStyle(isRtl)]}>
+    {copy.greeting}
+  </Text>
+</View>
 
         <Pressable
           accessibilityRole="search"
@@ -367,29 +322,26 @@ export default function HomeScreen() {
                   pressed && styles.cardPressed,
                 ]}
               >
-                <View style={styles.categoryIcon}>
-                  <Ionicons
-                    name={category.icon}
-                    size={compactGrid ? 24 : 27}
-                    color={KhedmatPalette.blue500}
-                  />
-                </View>
+                <View style={styles.categoryContent}>
+  <View style={styles.categoryIcon}>
+    <Ionicons
+      name={category.icon}
+      size={compactGrid ? 27 : 30}
+      color={KhedmatPalette.blue500}
+    />
+  </View>
 
-                <Text
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.82}
-                  style={[styles.categoryTitle, directionStyle(isRtl)]}
-                >
-                  {category.localizedTitle}
-                </Text>
+  <Text
+    numberOfLines={2}
+    adjustsFontSizeToFit
+    minimumFontScale={0.78}
+    style={styles.categoryTitle}
+  >
+    {category.localizedTitle}
+  </Text>
+</View>
 
-                <Text
-                  numberOfLines={2}
-                  style={[styles.categorySubtitle, directionStyle(isRtl)]}
-                >
-                  {category.localizedSubtitle}
-                </Text>
+    
               </Pressable>
             ))}
           </View>
@@ -862,13 +814,13 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    width: "100%",
-    maxWidth: Layout.contentMaxWidth,
-    alignSelf: "center",
-    paddingHorizontal: Layout.screenPadding,
-    paddingTop: Spacing.md,
-    paddingBottom: 125,
-  },
+  width: "100%",
+  maxWidth: Layout.contentMaxWidth,
+  alignSelf: "center",
+  paddingHorizontal: Layout.screenPadding,
+  paddingTop: Spacing.xs,
+  paddingBottom: 125,
+},
 
   topBar: {
     width: "100%",
@@ -918,10 +870,9 @@ const styles = StyleSheet.create({
   },
 
   hero: {
-    width: "100%",
-    marginTop: Spacing.xl,
-    gap: Spacing.xs,
-  },
+  width: "100%",
+  marginTop: Spacing.sm,
+},
 
   greeting: {
     ...Typography.label,
@@ -939,9 +890,9 @@ const styles = StyleSheet.create({
   },
 
   searchBox: {
-    width: "100%",
-    minHeight: 58,
-    marginTop: Spacing.xl,
+  width: "100%",
+  minHeight: 58,
+  marginTop: Spacing.md,
     paddingHorizontal: Spacing.md,
     alignItems: "center",
     gap: Spacing.md,
@@ -1010,59 +961,58 @@ const styles = StyleSheet.create({
   },
 
   categoriesGrid: {
-    width: "100%",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: Spacing.md,
-  },
+  width: "100%",
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "space-between",
+  rowGap: Spacing.md,
+},
 
-  categoryCard: {
-    width: "31.5%",
-    minHeight: 154,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.md,
-    alignItems: "center",
-    justifyContent: "flex-start",
-    borderRadius: Radius.xl,
-    backgroundColor: KhedmatPalette.surface,
-    borderWidth: 1,
-    borderColor: KhedmatPalette.border,
-    ...Shadows.small,
-  },
+categoryCard: {
+  width: "23.5%",
+  minHeight: 118,
+  paddingHorizontal: 4,
+  paddingVertical: Spacing.sm,
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: Radius.lg,
+  backgroundColor: KhedmatPalette.surface,
+  borderWidth: 1,
+  borderColor: KhedmatPalette.border,
+  ...Shadows.small,
+},
 
-  categoryCardCompact: {
-    minHeight: 144,
-  },
+categoryCardCompact: {
+  minHeight: 110,
+},
 
-  categoryIcon: {
-    width: 54,
-    height: 54,
-    marginBottom: Spacing.md,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: KhedmatPalette.surfaceSoft,
-  },
+categoryContent: {
+  width: "100%",
+  alignItems: "center",
+  justifyContent: "center",
+},
 
-  categoryTitle: {
-    ...Typography.label,
-    width: "100%",
-    color: KhedmatPalette.textPrimary,
-    textAlign: "center",
-    fontSize: 14,
-    lineHeight: 19,
-  },
+categoryIcon: {
+  width: 52,
+  height: 52,
+  marginBottom: Spacing.sm,
+  borderRadius: Radius.md,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: KhedmatPalette.surfaceSoft,
+},
 
-  categorySubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    marginTop: Spacing.xs,
-    color: KhedmatPalette.textMuted,
-    textAlign: "center",
-    fontSize: 11,
-    lineHeight: 15,
-  },
+categoryTitle: {
+  ...Typography.label,
+  width: "100%",
+  minHeight: 32,
+  paddingHorizontal: 2,
+  color: KhedmatPalette.textPrimary,
+  textAlign: "center",
+  fontSize: 12,
+  lineHeight: 16,
+  includeFontPadding: false,
+},
 
   providersScroll: {
     overflow: "visible",
