@@ -112,6 +112,7 @@ export default function SignupScreen() {
     router.push({
       pathname: "/verify-code",
       params: {
+        fullName: fullName.trim(),
         phone: `+93 ${digits}`,
       },
     });

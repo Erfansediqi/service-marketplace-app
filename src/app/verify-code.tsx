@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import {
+  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -29,6 +30,7 @@ import {
   Spacing,
   Typography,
 } from "../constants/theme";
+import { useCustomerProfile } from "../context/customer-profile-context";
 import { useLanguage } from "../context/languagecontext";
 
 const CODE_LENGTH = 4;
@@ -39,8 +41,12 @@ export default function VerifyCodeScreen() {
 
   const params =
     useLocalSearchParams<{
+      fullName?: string;
       phone?: string;
     }>();
+
+  const { saveSignupProfile } =
+    useCustomerProfile();
 
   const {
     language,
@@ -66,11 +72,15 @@ export default function VerifyCodeScreen() {
     setSecondsRemaining,
   ] = useState(RESEND_SECONDS);
 
+  const fullName =
+    typeof params.fullName === "string"
+      ? params.fullName.trim()
+      : "";
+
   const phone =
-    typeof params.phone === "string" &&
-    params.phone.trim()
-      ? params.phone
-      : "+93 70 123 4567";
+    typeof params.phone === "string"
+      ? params.phone.trim()
+      : "";
 
   const validCode = useMemo(
     () => code.length === CODE_LENGTH,
@@ -116,16 +126,41 @@ export default function VerifyCodeScreen() {
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async (): Promise<void> => {
     setSubmitted(true);
 
     if (!validCode) {
       return;
     }
 
-    router.replace(
-      "/location-permission",
-    );
+    if (!fullName || !phone) {
+      Alert.alert(
+        "Signup information missing",
+        "Please return to signup and enter your name and phone number again.",
+      );
+      return;
+    }
+
+    try {
+      await saveSignupProfile({
+        fullName,
+        phoneNumber: phone,
+      });
+
+      router.replace(
+        "/location-permission",
+      );
+    } catch (error) {
+      console.error(
+        "Failed to save the customer profile:",
+        error,
+      );
+
+      Alert.alert(
+        "Unable to create account",
+        "Your profile could not be saved on this device. Please try again.",
+      );
+    }
   };
 
   const handleResend = () => {
@@ -146,8 +181,8 @@ export default function VerifyCodeScreen() {
 
   const formattedPhone =
     isRtl
-      ? toLocalizedDigits(phone)
-      : phone;
+      ? toLocalizedDigits(phone || "—")
+      : phone || "—";
 
   const formattedSeconds =
     isRtl

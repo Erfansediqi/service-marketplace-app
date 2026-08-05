@@ -9,6 +9,10 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { NotificationProvider } from "../context/notification-context";
+import {
+  CustomerProfileProvider,
+  useCustomerProfile,
+} from "../context/customer-profile-context";
 
 import {
   BookingProvider,
@@ -43,6 +47,10 @@ function AppNavigator({
   } = useSession();
 
   const {
+    isHydrated: customerProfileIsHydrated,
+  } = useCustomerProfile();
+
+  const {
     isHydrated: bookingIsHydrated,
   } = useBooking();
 
@@ -50,6 +58,7 @@ function AppNavigator({
     fontsReady &&
     languageIsHydrated &&
     sessionIsHydrated &&
+    customerProfileIsHydrated &&
     bookingIsHydrated;
 
   useEffect(() => {
@@ -128,15 +137,17 @@ export default function RootLayout() {
 
   return (
     <SessionProvider>
-  <BookingProvider>
-    <LanguageProvider>
-      <NotificationProvider>
-        <AppNavigator
-          fontsReady={fontsReady}
-        />
-      </NotificationProvider>
-    </LanguageProvider>
-  </BookingProvider>
-</SessionProvider>
+      <CustomerProfileProvider>
+        <BookingProvider>
+          <LanguageProvider>
+            <NotificationProvider>
+              <AppNavigator
+                fontsReady={fontsReady}
+              />
+            </NotificationProvider>
+          </LanguageProvider>
+        </BookingProvider>
+      </CustomerProfileProvider>
+    </SessionProvider>
   );
 }

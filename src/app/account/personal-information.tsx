@@ -1,127 +1,172 @@
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
-import {
-    Fonts,
-    KhedmatPalette,
-    Radius,
-    Spacing,
-    Typography,
-} from "../../constants/theme";
 
-// We define a unique key to save and retrieve the data
-const PROFILE_STORAGE_KEY = "@user_profile_data";
+import {
+  Fonts,
+  KhedmatPalette,
+  Radius,
+  Spacing,
+  Typography,
+} from "../../constants/theme";
+import { useCustomerProfile } from "../../context/customer-profile-context";
 
 export default function PersonalInformationScreen() {
   const router = useRouter();
+  const { profile, updateProfile } = useCustomerProfile();
 
-  // Set default values, but these will be overwritten if saved data exists
-  const [firstName, setFirstName] = useState("Ahmad");
-  const [lastName, setLastName] = useState("Zahir");
-  const [email, setEmail] = useState("ahmad.zahir@example.com");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Load saved data when the screen mounts
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const jsonValue = await AsyncStorage.getItem(PROFILE_STORAGE_KEY);
-        if (jsonValue !== null) {
-          const savedData = JSON.parse(jsonValue);
-          setFirstName(savedData.firstName);
-          setLastName(savedData.lastName);
-          setEmail(savedData.email);
-          setImageUri(savedData.imageUri);
-        }
-      } catch (error) {
-        console.error("Failed to load profile data:", error);
+    const name = splitFullName(profile?.fullName ?? "");
+
+    setFirstName(name.firstName);
+    setLastName(name.lastName);
+    setEmail(profile?.email ?? "");
+    setImageUri(profile?.avatarUri ?? null);
+  }, [profile]);
+
+  const fullName = useMemo(
+    () => [firstName.trim(), lastName.trim()].filter(Boolean).join(" "),
+    [firstName, lastName],
+  );
+
+  const initials = useMemo(() => getInitials(fullName), [fullName]);
+
+  const pickImage = async (): Promise<void> => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (result.canceled) {
+        return;
       }
-    };
 
-    loadData();
-  }, []);
+      const asset = result.assets[0];
 
-  // Function to open the image gallery
-  const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
+      if (!asset) {
+        return;
+      }
 
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      const persistentAvatarUri = asset.base64
+        ? `data:image/jpeg;base64,${asset.base64}`
+        : asset.uri;
+
+      setImageUri(persistentAvatarUri);
+    } catch (error) {
+      console.error("Failed to select a profile photo:", error);
+
+      Alert.alert(
+        "Photo unavailable",
+        "The selected photo could not be loaded. Please try another image.",
+      );
     }
   };
 
-  // Function to save data locally and navigate back
-  const saveProfile = async () => {
+  const saveProfile = async (): Promise<void> => {
+    if (fullName.length < 2) {
+      Alert.alert("Name required", "Please enter your full name.");
+      return;
+    }
+
+    const normalizedEmail = email.trim();
+
+    if (normalizedEmail && !isValidEmail(normalizedEmail)) {
+      Alert.alert("Invalid email", "Please enter a valid email address.");
+      return;
+    }
+
+    setIsSaving(true);
+
     try {
-      const profileData = {
-        firstName,
-        lastName,
-        email,
-        imageUri,
-      };
+      await updateProfile({
+        fullName,
+        email: normalizedEmail,
+        avatarUri: imageUri,
+      });
 
-      await AsyncStorage.setItem(
-        PROFILE_STORAGE_KEY,
-        JSON.stringify(profileData),
-      );
-
-      // Optional: Show a quick success alert before navigating away
-      Alert.alert("Success", "Your profile information has been saved.", [
-        { text: "OK", onPress: () => router.back() },
+      Alert.alert("Saved", "Your profile information has been updated.", [
+        {
+          text: "OK",
+          onPress: () => router.back(),
+        },
       ]);
     } catch (error) {
       console.error("Failed to save profile data:", error);
-      Alert.alert("Error", "Could not save your changes. Please try again.");
+
+      Alert.alert(
+        "Unable to save",
+        "Your changes could not be saved on this device. Please try again.",
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
             <Ionicons
               name="arrow-back"
               size={24}
               color={KhedmatPalette.textPrimary}
             />
           </Pressable>
+
           <Text style={styles.title}>Personal Information</Text>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scrollContent}
+        >
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
               {imageUri ? (
                 <Image source={{ uri: imageUri }} style={styles.avatarImage} />
               ) : (
-                <Text style={styles.avatarText}>{firstName.charAt(0)}</Text>
+                <Text style={styles.avatarText}>{initials}</Text>
               )}
             </View>
-            <Pressable onPress={pickImage}>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Change profile photo"
+              onPress={pickImage}
+            >
               <Text style={styles.changePhotoText}>Change Photo</Text>
             </Pressable>
           </View>
@@ -132,6 +177,9 @@ export default function PersonalInformationScreen() {
               style={styles.input}
               value={firstName}
               onChangeText={setFirstName}
+              autoCapitalize="words"
+              autoComplete="given-name"
+              textContentType="givenName"
               placeholder="Enter first name"
               placeholderTextColor={KhedmatPalette.textMuted}
             />
@@ -143,6 +191,9 @@ export default function PersonalInformationScreen() {
               style={styles.input}
               value={lastName}
               onChangeText={setLastName}
+              autoCapitalize="words"
+              autoComplete="family-name"
+              textContentType="familyName"
               placeholder="Enter last name"
               placeholderTextColor={KhedmatPalette.textMuted}
             />
@@ -156,6 +207,8 @@ export default function PersonalInformationScreen() {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
               placeholder="Enter email address"
               placeholderTextColor={KhedmatPalette.textMuted}
             />
@@ -165,18 +218,29 @@ export default function PersonalInformationScreen() {
             <Text style={styles.label}>Phone Number</Text>
             <TextInput
               style={[styles.input, styles.disabledInput]}
-              value="+93 70 123 4567"
+              value={profile?.phoneNumber || "—"}
               editable={false}
             />
             <Text style={styles.helperText}>
-              Phone number cannot be changed.
+              Phone number is linked to the verified account and cannot be
+              changed here.
             </Text>
           </View>
         </ScrollView>
 
         <View style={styles.footer}>
-          <Pressable style={styles.saveButton} onPress={saveProfile}>
-            <Text style={styles.saveButtonText}>Save Changes</Text>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isSaving}
+            style={({ pressed }) => [
+              styles.saveButton,
+              (pressed || isSaving) && styles.saveButtonPressed,
+            ]}
+            onPress={saveProfile}
+          >
+            <Text style={styles.saveButtonText}>
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -184,8 +248,45 @@ export default function PersonalInformationScreen() {
   );
 }
 
+function splitFullName(fullName: string): {
+  firstName: string;
+  lastName: string;
+} {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  const [firstName = "", ...lastNameParts] = parts;
+
+  return {
+    firstName,
+    lastName: lastNameParts.join(" "),
+  };
+}
+
+function getInitials(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) {
+    return "K";
+  }
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join("")
+    .toUpperCase();
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: KhedmatPalette.blue050 },
+  flex: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: KhedmatPalette.blue050,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -193,14 +294,23 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
   },
-  backButton: { marginRight: Spacing.md, padding: Spacing.xs },
+  backButton: {
+    marginRight: Spacing.md,
+    padding: Spacing.xs,
+  },
   title: {
     ...Typography.screenTitle,
     color: KhedmatPalette.textPrimary,
     fontSize: 22,
   },
-  scrollContent: { padding: Spacing.lg, paddingBottom: Spacing.xxl },
-  avatarContainer: { alignItems: "center", marginBottom: Spacing.xl },
+  scrollContent: {
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xxl,
+  },
+  avatarContainer: {
+    alignItems: "center",
+    marginBottom: Spacing.xl,
+  },
   avatar: {
     width: 80,
     height: 80,
@@ -211,10 +321,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     overflow: "hidden",
   },
-  avatarImage: { width: "100%", height: "100%" },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+  },
   avatarText: {
     color: KhedmatPalette.white,
-    fontSize: 32,
+    fontSize: 30,
     fontFamily: Fonts.bold,
   },
   changePhotoText: {
@@ -222,7 +335,9 @@ const styles = StyleSheet.create({
     ...Typography.label,
     padding: Spacing.xs,
   },
-  formGroup: { marginBottom: Spacing.lg },
+  formGroup: {
+    marginBottom: Spacing.lg,
+  },
   label: {
     ...Typography.label,
     color: KhedmatPalette.textPrimary,
@@ -260,5 +375,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  saveButtonText: { ...Typography.label, color: KhedmatPalette.white },
+  saveButtonPressed: {
+    opacity: 0.7,
+  },
+  saveButtonText: {
+    ...Typography.label,
+    color: KhedmatPalette.white,
+  },
 });

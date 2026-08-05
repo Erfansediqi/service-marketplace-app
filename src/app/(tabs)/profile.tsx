@@ -4,6 +4,7 @@ import { ComponentProps, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -22,6 +23,7 @@ import {
   Typography,
 } from "../../constants/theme";
 import { useLanguage } from "../../context/languagecontext";
+import { useCustomerProfile } from "../../context/customer-profile-context";
 import { useSession } from "../../context/session-context";
 import { getProviderById } from "../../services/provider-repository";
 import { getLocalProviders } from "../../services/provider-storage";
@@ -51,6 +53,7 @@ type ProfileMenuItem = {
 export default function ProfileScreen() {
   const router = useRouter();
   const { language } = useLanguage();
+  const { profile } = useCustomerProfile();
 
   const { activeProviderId, enterProviderWorkspace, resetSession } =
     useSession();
@@ -60,6 +63,22 @@ export default function ProfileScreen() {
   const isRtl = activeLanguage === "Dari" || activeLanguage === "Pashto";
 
   const copy = getProfileCopy(activeLanguage);
+
+  const profileName =
+    profile?.fullName || copy.profileName;
+
+  const profilePhone = profile?.phoneNumber
+    ? activeLanguage === "English"
+      ? profile.phoneNumber
+      : formatDigits(
+          profile.phoneNumber,
+          true,
+        )
+    : copy.phoneNotAvailable;
+
+  const profileInitials = getInitials(
+    profileName,
+  );
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
@@ -216,7 +235,7 @@ export default function ProfileScreen() {
         subtitle: copy.contactSupportSubtitle,
         icon: "headset-outline",
         onPress: () => {
-          router.push("/(tabs)/messages");
+          router.push("/account/contact-support");
         },
       },
       {
@@ -303,16 +322,23 @@ export default function ProfileScreen() {
             accessibilityRole="button"
             accessibilityLabel={copy.changeProfilePhoto}
             onPress={() => {
-              console.log("Change profile photo");
+              router.push("/account/personal-information");
             }}
             style={({ pressed }) => [
               styles.profileAvatar,
               pressed && styles.pressed,
             ]}
           >
-            <Text style={styles.profileInitials}>
-              {activeLanguage === "English" ? "A" : "ا"}
-            </Text>
+            {profile?.avatarUri ? (
+              <Image
+                source={{ uri: profile.avatarUri }}
+                style={styles.profileAvatarImage}
+              />
+            ) : (
+              <Text style={styles.profileInitials}>
+                {profileInitials}
+              </Text>
+            )}
 
             <View style={styles.editAvatarBadge}>
               <Ionicons
@@ -335,13 +361,11 @@ export default function ProfileScreen() {
               numberOfLines={1}
               style={[styles.profileName, directionStyle(isRtl)]}
             >
-              {copy.profileName}
+              {profileName}
             </Text>
 
             <Text style={[styles.profilePhone, directionStyle(isRtl)]}>
-              {activeLanguage === "English"
-                ? "+93 70 123 4567"
-                : "+۹۳ ۷۰ ۱۲۳ ۴۵۶۷"}
+              {profilePhone}
             </Text>
 
             <View
@@ -368,7 +392,7 @@ export default function ProfileScreen() {
             accessibilityRole="button"
             accessibilityLabel={copy.editProfile}
             onPress={() => {
-              console.log("Edit profile");
+              router.push("/account/personal-information");
             }}
             style={({ pressed }) => [
               styles.editProfileButton,
@@ -915,6 +939,23 @@ function normalizeLanguage(language: string): LanguageName {
   return "English";
 }
 
+function getInitials(fullName: string): string {
+  const nameParts = fullName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (nameParts.length === 0) {
+    return "K";
+  }
+
+  return nameParts
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join("")
+    .toUpperCase();
+}
+
 function directionStyle(isRtl: boolean) {
   return {
     textAlign: isRtl ? ("right" as const) : ("left" as const),
@@ -965,7 +1006,9 @@ function getProfileCopy(language: LanguageName) {
       subtitle:
         "اطلاعات حساب، تنظیمات و گزینه‌های پشتیبانی خود را مدیریت کنید.",
 
-      profileName: "احمد ظاهر",
+      profileName: "مشتری",
+
+      phoneNotAvailable: "شماره تلفن ثبت نشده",
 
       verifiedAccount: "حساب تأییدشده",
 
@@ -1030,7 +1073,9 @@ function getProfileCopy(language: LanguageName) {
 
       subtitle: "د خپل حساب معلومات، تنظیمات او د ملاتړ انتخابونه مدیریت کړئ.",
 
-      profileName: "احمد ظاهر",
+      profileName: "پېرودونکی",
+
+      phoneNotAvailable: "د تلیفون شمېره نشته",
 
       verifiedAccount: "تایید شوی حساب",
 
@@ -1094,7 +1139,9 @@ function getProfileCopy(language: LanguageName) {
 
     subtitle: "Manage your account information, settings and support options.",
 
-    profileName: "Ahmad Zahir",
+    profileName: "Customer",
+
+    phoneNotAvailable: "No phone number saved",
 
     verifiedAccount: "Verified account",
 
@@ -1216,6 +1263,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: KhedmatPalette.navy900,
+  },
+
+  profileAvatarImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: Radius.pill,
   },
 
   profileInitials: {
