@@ -16,10 +16,24 @@ import {
   Typography,
 } from "../constants/theme";
 import { useLanguage } from "../context/languagecontext";
-import {
-  type VerificationChannel,
-  useSupabaseAuth,
-} from "../context/supabase-auth-context";
+import { useSupabaseAuth } from "../context/supabase-auth-context";
+
+type SupportedCountry = "afghanistan" | "india";
+
+const COUNTRY_CONFIG = {
+  afghanistan: {
+    dialCode: "+93",
+    dialDigits: "93",
+    nationalLength: 9,
+    placeholder: "701234567",
+  },
+  india: {
+    dialCode: "+91",
+    dialDigits: "91",
+    nationalLength: 10,
+    placeholder: "9876543210",
+  },
+} as const;
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -36,46 +50,63 @@ export default function SignupScreen() {
 
   const [phoneNumber, setPhoneNumber] = useState("");
 
-  const [verificationChannel, setVerificationChannel] =
-    useState<VerificationChannel>("whatsapp");
+  const [selectedCountry, setSelectedCountry] =
+    useState<SupportedCountry>("afghanistan");
 
   const [submitted, setSubmitted] = useState(false);
+
+  const selectedCountryConfig = COUNTRY_CONFIG[selectedCountry];
 
   const normalizedPhoneNumber = normalizeToEnglishDigits(phoneNumber);
 
   const digits = normalizedPhoneNumber.replace(/\D/g, "");
 
-  const nationalDigits = normalizeAfghanNationalNumber(digits);
+  const nationalDigits = normalizeNationalNumber(digits, selectedCountry);
 
-  const verificationCopy = getVerificationMethodCopy(language);
+  const verificationCopy = getSmsVerificationCopy(language);
+
+  const countryCopy = getCountryCopy(language);
 
   const nameError =
     submitted && fullName.trim().length < 2 ? t("nameError") : undefined;
 
   const phoneError =
-    submitted && nationalDigits.length !== 9 ? t("phoneError") : undefined;
+    submitted && nationalDigits.length !== selectedCountryConfig.nationalLength
+      ? getPhoneErrorMessage(language, selectedCountryConfig.nationalLength)
+      : undefined;
 
   const formValid = useMemo(
-    () => fullName.trim().length >= 2 && nationalDigits.length === 9,
-    [fullName, nationalDigits.length],
+    () =>
+      fullName.trim().length >= 2 &&
+      nationalDigits.length === selectedCountryConfig.nationalLength,
+    [fullName, nationalDigits.length, selectedCountryConfig.nationalLength],
   );
 
-  const displayedPhoneNumber = usesLocalizedDigits
-    ? toLocalizedDigits(normalizedPhoneNumber)
-    : normalizedPhoneNumber;
+  const displayDigits = (value: string): string =>
+    usesLocalizedDigits ? toLocalizedDigits(value) : value;
 
-  const phonePlaceholder = usesLocalizedDigits
-    ? toLocalizedDigits("701234567")
-    : "701234567";
+  const displayedPhoneNumber = displayDigits(normalizedPhoneNumber);
 
-  const countryCode = usesLocalizedDigits ? toLocalizedDigits("+93") : "+93";
+  const phonePlaceholder = displayDigits(selectedCountryConfig.placeholder);
+
+  const countryCode = displayDigits(selectedCountryConfig.dialCode);
+
+  const handleCountryChange = (country: SupportedCountry): void => {
+    if (country === selectedCountry) {
+      return;
+    }
+
+    setSelectedCountry(country);
+    setPhoneNumber("");
+    setSubmitted(false);
+  };
 
   const handlePhoneChange = (value: string): void => {
     const normalized = normalizeToEnglishDigits(value);
 
-    const numbersOnly = normalized.replace(/\D/g, "");
+    const nationalNumber = normalizeNationalNumber(normalized, selectedCountry);
 
-    setPhoneNumber(numbersOnly);
+    setPhoneNumber(nationalNumber);
 
     if (submitted) {
       setSubmitted(false);
@@ -89,14 +120,14 @@ export default function SignupScreen() {
       return;
     }
 
-    const phone = `+93${nationalDigits}`;
+    const phone = `${selectedCountryConfig.dialCode}${nationalDigits}`;
 
     try {
       await sendPhoneOtp({
         phone,
         fullName: fullName.trim(),
         preferredLanguage: language,
-        channel: verificationChannel,
+        channel: "sms",
       });
 
       router.push({
@@ -104,21 +135,16 @@ export default function SignupScreen() {
         params: {
           fullName: fullName.trim(),
           phone,
-          channel: verificationChannel,
+          channel: "sms",
         },
       });
     } catch (error) {
       console.error("Failed to send verification code:", error);
 
-      const fallbackMessage =
-        verificationChannel === "whatsapp"
-          ? verificationCopy.whatsappError
-          : verificationCopy.smsError;
-
       const errorMessage =
         error instanceof Error && error.message
           ? error.message
-          : fallbackMessage;
+          : verificationCopy.smsError;
 
       Alert.alert(verificationCopy.errorTitle, errorMessage);
     }
@@ -153,16 +179,8 @@ export default function SignupScreen() {
       footer={
         <View style={styles.footer}>
           <KhedmatButton
-            label={
-              verificationChannel === "whatsapp"
-                ? verificationCopy.sendWhatsApp
-                : verificationCopy.sendSms
-            }
-            icon={
-              verificationChannel === "whatsapp"
-                ? "logo-whatsapp"
-                : "chatbubble-ellipses-outline"
-            }
+            label={verificationCopy.sendSms}
+            icon="chatbubble-ellipses-outline"
             loading={isSendingOtp}
             disabled={isSendingOtp || (submitted && !formValid)}
             onPress={handleSendCode}
@@ -236,6 +254,34 @@ export default function SignupScreen() {
             value={fullName}
           />
 
+          <View
+            accessibilityRole="radiogroup"
+            style={[
+              styles.countrySelector,
+              {
+                flexDirection: isRtl ? "row-reverse" : "row",
+              },
+            ]}
+          >
+            <CountryOptionButton
+              label={`${countryCopy.afghanistan} ${displayDigits(
+                COUNTRY_CONFIG.afghanistan.dialCode,
+              )}`}
+              selected={selectedCountry === "afghanistan"}
+              disabled={isSendingOtp}
+              onPress={() => handleCountryChange("afghanistan")}
+            />
+
+            <CountryOptionButton
+              label={`${countryCopy.india} ${displayDigits(
+                COUNTRY_CONFIG.india.dialCode,
+              )}`}
+              selected={selectedCountry === "india"}
+              disabled={isSendingOtp}
+              onPress={() => handleCountryChange("india")}
+            />
+          </View>
+
           <KhedmatInput
             autoComplete="tel"
             error={phoneError}
@@ -252,43 +298,31 @@ export default function SignupScreen() {
           />
 
           <View style={styles.verificationSection}>
-            <Text
-              style={[
-                styles.verificationLabel,
-                {
-                  textAlign: isRtl ? "right" : "left",
-                  writingDirection: isRtl ? "rtl" : "ltr",
-                },
-              ]}
-            >
-              {verificationCopy.title}
-            </Text>
-
             <View
               style={[
-                styles.verificationOptions,
+                styles.smsHeader,
                 {
                   flexDirection: isRtl ? "row-reverse" : "row",
                 },
               ]}
             >
-              <VerificationMethodButton
-                channel="whatsapp"
-                icon="logo-whatsapp"
-                label={verificationCopy.whatsapp}
-                selected={verificationChannel === "whatsapp"}
-                disabled={isSendingOtp}
-                onPress={() => setVerificationChannel("whatsapp")}
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={20}
+                color={KhedmatPalette.blue500}
               />
 
-              <VerificationMethodButton
-                channel="sms"
-                icon="chatbubble-ellipses-outline"
-                label={verificationCopy.sms}
-                selected={verificationChannel === "sms"}
-                disabled={isSendingOtp}
-                onPress={() => setVerificationChannel("sms")}
-              />
+              <Text
+                style={[
+                  styles.verificationLabel,
+                  {
+                    textAlign: isRtl ? "right" : "left",
+                    writingDirection: isRtl ? "rtl" : "ltr",
+                  },
+                ]}
+              >
+                {verificationCopy.smsOnlyTitle}
+              </Text>
             </View>
 
             <Text
@@ -300,9 +334,7 @@ export default function SignupScreen() {
                 },
               ]}
             >
-              {verificationChannel === "whatsapp"
-                ? verificationCopy.whatsappHint
-                : verificationCopy.smsHint}
+              {verificationCopy.smsHint}
             </Text>
           </View>
         </View>
@@ -341,26 +373,19 @@ export default function SignupScreen() {
   );
 }
 
-type VerificationMethodButtonProps = {
-  channel: VerificationChannel;
-  icon: "logo-whatsapp" | "chatbubble-ellipses-outline";
+type CountryOptionButtonProps = {
   label: string;
   selected: boolean;
   disabled: boolean;
   onPress: () => void;
 };
 
-function VerificationMethodButton({
-  channel,
-  icon,
+function CountryOptionButton({
   label,
   selected,
   disabled,
   onPress,
-}: VerificationMethodButtonProps) {
-  const selectedIconColor =
-    channel === "whatsapp" ? KhedmatPalette.success : KhedmatPalette.blue500;
-
+}: CountryOptionButtonProps) {
   return (
     <Pressable
       accessibilityRole="radio"
@@ -372,50 +397,45 @@ function VerificationMethodButton({
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
-        styles.verificationOption,
-        selected && styles.verificationOptionSelected,
-        pressed && !disabled && styles.verificationOptionPressed,
-        disabled && styles.verificationOptionDisabled,
+        styles.countryOption,
+        selected && styles.countryOptionSelected,
+        pressed && !disabled && styles.countryOptionPressed,
+        disabled && styles.countryOptionDisabled,
       ]}
     >
-      <Ionicons
-        name={icon}
-        size={24}
-        color={selected ? selectedIconColor : KhedmatPalette.textMuted}
-      />
-
       <Text
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.8}
         style={[
-          styles.verificationOptionText,
-          selected && styles.verificationOptionTextSelected,
+          styles.countryOptionText,
+          selected && styles.countryOptionTextSelected,
         ]}
       >
         {label}
       </Text>
-
-      <View
-        style={[
-          styles.selectionIndicator,
-          selected && styles.selectionIndicatorSelected,
-        ]}
-      >
-        {selected ? <View style={styles.selectionIndicatorDot} /> : null}
-      </View>
     </Pressable>
   );
 }
 
-function normalizeAfghanNationalNumber(value: string): string {
-  let normalized = value.replace(/^0+/, "");
+function normalizeNationalNumber(
+  value: string,
+  country: SupportedCountry,
+): string {
+  const config = COUNTRY_CONFIG[country];
 
-  if (normalized.startsWith("93") && normalized.length > 9) {
-    normalized = normalized.slice(2).replace(/^0+/, "");
+  let normalized = normalizeToEnglishDigits(value).replace(/\D/g, "");
+
+  if (
+    normalized.startsWith(config.dialDigits) &&
+    normalized.length > config.nationalLength
+  ) {
+    normalized = normalized.slice(config.dialDigits.length);
   }
 
-  return normalized;
+  normalized = normalized.replace(/^0+/, "");
+
+  return normalized.slice(0, config.nationalLength);
 }
 
 function normalizeToEnglishDigits(value: string): string {
@@ -445,49 +465,66 @@ function toLocalizedDigits(value: string): string {
   return value.replace(/\d/g, (digit) => digits[digit] ?? digit);
 }
 
-function getVerificationMethodCopy(language: string) {
+function getCountryCopy(language: string) {
+  if (language === "Dari" || language === "Pashto") {
+    return {
+      afghanistan: "افغانستان",
+      india: "هند",
+    };
+  }
+
+  return {
+    afghanistan: "Afghanistan",
+    india: "India",
+  };
+}
+
+function getPhoneErrorMessage(
+  language: string,
+  nationalLength: number,
+): string {
+  const localizedLength =
+    language === "Dari" || language === "Pashto"
+      ? toLocalizedDigits(String(nationalLength))
+      : String(nationalLength);
+
+  if (language === "Dari") {
+    return `یک شماره تماس معتبر ${localizedLength} رقمی وارد کنید.`;
+  }
+
+  if (language === "Pashto") {
+    return `یو معتبر ${localizedLength} عددي تلیفون شمېره دننه کړئ.`;
+  }
+
+  return `Enter a valid ${localizedLength}-digit phone number.`;
+}
+
+function getSmsVerificationCopy(language: string) {
   if (language === "Dari") {
     return {
-      title: "کد تأیید را چگونه دریافت می‌کنید؟",
-      whatsapp: "واتساپ",
-      sms: "پیامک",
-      sendWhatsApp: "ارسال کد از طریق واتساپ",
+      smsOnlyTitle: "تأیید از طریق پیامک",
       sendSms: "ارسال کد از طریق پیامک",
-      whatsappHint: "کد شش رقمی به حساب واتساپ این شماره فرستاده می‌شود.",
       smsHint: "کد شش رقمی از طریق پیامک به این شماره فرستاده می‌شود.",
       errorTitle: "ارسال کد ناموفق بود",
-      whatsappError:
-        "کد واتساپ ارسال نشد. لطفاً دوباره تلاش کنید یا پیامک را انتخاب کنید.",
       smsError: "پیامک ارسال نشد. لطفاً دوباره تلاش کنید.",
     };
   }
 
   if (language === "Pashto") {
     return {
-      title: "د تایید کوډ څنګه ترلاسه کول غواړئ؟",
-      whatsapp: "واټساپ",
-      sms: "پیغام",
-      sendWhatsApp: "کوډ د واټساپ له لارې ولېږئ",
+      smsOnlyTitle: "د پیغام له لارې تایید",
       sendSms: "کوډ د پیغام له لارې ولېږئ",
-      whatsappHint: "شپږ عددي کوډ به د دې شمېرې واټساپ ته ولېږل شي.",
       smsHint: "شپږ عددي کوډ به دې شمېرې ته د پیغام له لارې ولېږل شي.",
       errorTitle: "کوډ ونه لېږل شو",
-      whatsappError: "د واټساپ کوډ ونه لېږل شو. بیا هڅه وکړئ یا پیغام وټاکئ.",
       smsError: "پیغام ونه لېږل شو. مهرباني وکړئ بیا هڅه وکړئ.",
     };
   }
 
   return {
-    title: "How would you like to receive the verification code?",
-    whatsapp: "WhatsApp",
-    sms: "SMS",
-    sendWhatsApp: "Send code via WhatsApp",
+    smsOnlyTitle: "Verification by SMS",
     sendSms: "Send code via SMS",
-    whatsappHint: "A six-digit code will be sent to WhatsApp on this number.",
     smsHint: "A six-digit code will be sent to this number by SMS.",
     errorTitle: "Unable to send code",
-    whatsappError:
-      "The WhatsApp code could not be sent. Try again or select SMS.",
     smsError: "The SMS code could not be sent. Please try again.",
   };
 }
@@ -575,6 +612,53 @@ const styles = StyleSheet.create({
     gap: Spacing.lg,
   },
 
+  countrySelector: {
+    width: "100%",
+    gap: Spacing.sm,
+  },
+
+  countryOption: {
+    flex: 1,
+    minHeight: 46,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: Spacing.sm,
+    borderWidth: 1,
+    borderColor: KhedmatPalette.border,
+    borderRadius: Radius.md,
+    backgroundColor: KhedmatPalette.surfaceSoft,
+  },
+
+  countryOptionSelected: {
+    borderColor: KhedmatPalette.blue500,
+    borderWidth: 2,
+    backgroundColor: KhedmatPalette.surface,
+  },
+
+  countryOptionPressed: {
+    opacity: 0.8,
+    transform: [
+      {
+        scale: 0.98,
+      },
+    ],
+  },
+
+  countryOptionDisabled: {
+    opacity: 0.55,
+  },
+
+  countryOptionText: {
+    ...Typography.captionStyle,
+    color: KhedmatPalette.textSecondary,
+    textAlign: "center",
+    fontWeight: "600",
+  },
+
+  countryOptionTextSelected: {
+    color: KhedmatPalette.navy700,
+  },
+
   countryCode: {
     height: "100%",
     alignItems: "center",
@@ -603,86 +687,23 @@ const styles = StyleSheet.create({
   verificationSection: {
     width: "100%",
     gap: Spacing.sm,
-  },
-
-  verificationLabel: {
-    ...Typography.label,
-    width: "100%",
-    color: KhedmatPalette.textPrimary,
-  },
-
-  verificationOptions: {
-    width: "100%",
-    gap: Spacing.sm,
-  },
-
-  verificationOption: {
-    flex: 1,
-    minHeight: 62,
-    paddingHorizontal: Spacing.sm,
+    padding: Spacing.md,
     borderWidth: 1,
     borderColor: KhedmatPalette.border,
     borderRadius: Radius.md,
     backgroundColor: KhedmatPalette.surfaceSoft,
+  },
+
+  smsHeader: {
+    width: "100%",
     alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.xs,
-    position: "relative",
+    gap: Spacing.sm,
   },
 
-  verificationOptionSelected: {
-    borderColor: KhedmatPalette.blue500,
-    borderWidth: 2,
-    backgroundColor: KhedmatPalette.surface,
-  },
-
-  verificationOptionPressed: {
-    opacity: 0.8,
-    transform: [
-      {
-        scale: 0.98,
-      },
-    ],
-  },
-
-  verificationOptionDisabled: {
-    opacity: 0.55,
-  },
-
-  verificationOptionText: {
-    ...Typography.captionStyle,
-    color: KhedmatPalette.textSecondary,
-    textAlign: "center",
-    fontWeight: "600",
-  },
-
-  verificationOptionTextSelected: {
-    color: KhedmatPalette.navy700,
-  },
-
-  selectionIndicator: {
-    position: "absolute",
-    top: 7,
-    right: 7,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: KhedmatPalette.border,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: KhedmatPalette.surface,
-  },
-
-  selectionIndicatorSelected: {
-    borderColor: KhedmatPalette.blue500,
-  },
-
-  selectionIndicatorDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: KhedmatPalette.blue500,
+  verificationLabel: {
+    ...Typography.label,
+    flex: 1,
+    color: KhedmatPalette.textPrimary,
   },
 
   verificationHint: {
