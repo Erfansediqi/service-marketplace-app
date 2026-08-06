@@ -12,12 +12,18 @@ import {
   CustomerProfileProvider,
   useCustomerProfile,
 } from "../context/customer-profile-context";
+
 import { NotificationProvider } from "../context/notification-context";
 
-import { startSyncEngine } from "@/offline/sync-engine";
+import {
+  SupabaseAuthProvider,
+  useSupabaseAuth,
+} from "../context/supabase-auth-context";
+
 import { BookingProvider, useBooking } from "../context/booking-context";
 import { LanguageProvider, useLanguage } from "../context/languagecontext";
 import { SessionProvider, useSession } from "../context/session-context";
+import { startSyncEngine } from "../offline/sync-engine";
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Expo may already control the splash screen during fast refresh.
@@ -28,19 +34,20 @@ interface AppNavigatorProps {
 }
 
 function SyncEngineLifecycle() {
-  const { isHydrated: sessionIsHydrated } = useSession();
+  const { isHydrated: authIsHydrated, user } = useSupabaseAuth();
 
   useEffect(() => {
-    if (!sessionIsHydrated) {
+    if (!authIsHydrated || !user) {
       return;
     }
 
     return startSyncEngine();
-  }, [sessionIsHydrated]);
+  }, [authIsHydrated, user?.id]);
 
   return null;
 }
 function AppNavigator({ fontsReady }: AppNavigatorProps) {
+  const { isHydrated: authIsHydrated } = useSupabaseAuth();
   const { isHydrated: languageIsHydrated } = useLanguage();
 
   const { isHydrated: sessionIsHydrated } = useSession();
@@ -51,6 +58,7 @@ function AppNavigator({ fontsReady }: AppNavigatorProps) {
 
   const appIsReady =
     fontsReady &&
+    authIsHydrated &&
     languageIsHydrated &&
     sessionIsHydrated &&
     customerProfileIsHydrated &&
@@ -130,18 +138,20 @@ export default function RootLayout() {
   const fontsReady = fontsLoaded || Boolean(fontError);
 
   return (
-    <SessionProvider>
-      <SyncEngineLifecycle />
+    <SupabaseAuthProvider>
+      <SessionProvider>
+        <SyncEngineLifecycle />
 
-      <CustomerProfileProvider>
-        <BookingProvider>
-          <LanguageProvider>
-            <NotificationProvider>
-              <AppNavigator fontsReady={fontsReady} />
-            </NotificationProvider>
-          </LanguageProvider>
-        </BookingProvider>
-      </CustomerProfileProvider>
-    </SessionProvider>
+        <CustomerProfileProvider>
+          <BookingProvider>
+            <LanguageProvider>
+              <NotificationProvider>
+                <AppNavigator fontsReady={fontsReady} />
+              </NotificationProvider>
+            </LanguageProvider>
+          </BookingProvider>
+        </CustomerProfileProvider>
+      </SessionProvider>
+    </SupabaseAuthProvider>
   );
 }
