@@ -8,24 +8,16 @@ import {
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { NotificationProvider } from "../context/notification-context";
 import {
   CustomerProfileProvider,
   useCustomerProfile,
 } from "../context/customer-profile-context";
+import { NotificationProvider } from "../context/notification-context";
 
-import {
-  BookingProvider,
-  useBooking,
-} from "../context/booking-context";
-import {
-  LanguageProvider,
-  useLanguage,
-} from "../context/languagecontext";
-import {
-  SessionProvider,
-  useSession,
-} from "../context/session-context";
+import { startSyncEngine } from "@/offline/sync-engine";
+import { BookingProvider, useBooking } from "../context/booking-context";
+import { LanguageProvider, useLanguage } from "../context/languagecontext";
+import { SessionProvider, useSession } from "../context/session-context";
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Expo may already control the splash screen during fast refresh.
@@ -35,24 +27,27 @@ interface AppNavigatorProps {
   fontsReady: boolean;
 }
 
-function AppNavigator({
-  fontsReady,
-}: AppNavigatorProps) {
-  const {
-    isHydrated: languageIsHydrated,
-  } = useLanguage();
+function SyncEngineLifecycle() {
+  const { isHydrated: sessionIsHydrated } = useSession();
 
-  const {
-    isHydrated: sessionIsHydrated,
-  } = useSession();
+  useEffect(() => {
+    if (!sessionIsHydrated) {
+      return;
+    }
 
-  const {
-    isHydrated: customerProfileIsHydrated,
-  } = useCustomerProfile();
+    return startSyncEngine();
+  }, [sessionIsHydrated]);
 
-  const {
-    isHydrated: bookingIsHydrated,
-  } = useBooking();
+  return null;
+}
+function AppNavigator({ fontsReady }: AppNavigatorProps) {
+  const { isHydrated: languageIsHydrated } = useLanguage();
+
+  const { isHydrated: sessionIsHydrated } = useSession();
+
+  const { isHydrated: customerProfileIsHydrated } = useCustomerProfile();
+
+  const { isHydrated: bookingIsHydrated } = useBooking();
 
   const appIsReady =
     fontsReady &&
@@ -132,18 +127,17 @@ export default function RootLayout() {
     Roboto_700Bold,
   });
 
-  const fontsReady =
-    fontsLoaded || Boolean(fontError);
+  const fontsReady = fontsLoaded || Boolean(fontError);
 
   return (
     <SessionProvider>
+      <SyncEngineLifecycle />
+
       <CustomerProfileProvider>
         <BookingProvider>
           <LanguageProvider>
             <NotificationProvider>
-              <AppNavigator
-                fontsReady={fontsReady}
-              />
+              <AppNavigator fontsReady={fontsReady} />
             </NotificationProvider>
           </LanguageProvider>
         </BookingProvider>
