@@ -8,7 +8,12 @@ import {
   useState,
 } from "react";
 
+import {
+  ProfileRepository,
+  type ProfileRow,
+} from "../repositories/profile-repository";
 import { StorageService } from "../services/storage";
+import { useSupabaseAuth } from "./supabase-auth-context";
 
 export type CustomerProfile = {
   fullName: string;
@@ -28,54 +33,33 @@ type CustomerProfileContextValue = {
     fullName: string;
     phoneNumber: string;
   }) => Promise<void>;
-  updateProfile: (
-    updates: Partial<CustomerProfile>,
-  ) => Promise<void>;
+  updateProfile: (updates: Partial<CustomerProfile>) => Promise<void>;
 };
 
-const CUSTOMER_PROFILE_STORAGE_KEY =
-  "@khedmat_customer_profile";
+const CUSTOMER_PROFILE_STORAGE_KEY = "@khedmat_customer_profile";
 
 const CustomerProfileContext =
-  createContext<CustomerProfileContextValue | null>(
-    null,
-  );
+  createContext<CustomerProfileContextValue | null>(null);
 
 function normalizeText(value: unknown): string {
-  return typeof value === "string"
-    ? value.trim()
-    : "";
+  return typeof value === "string" ? value.trim() : "";
 }
 
-function normalizeStoredProfile(
-  value: unknown,
-): CustomerProfile | null {
-  if (
-    typeof value !== "object" ||
-    value === null
-  ) {
+function normalizeStoredProfile(value: unknown): CustomerProfile | null {
+  if (typeof value !== "object" || value === null) {
     return null;
   }
 
-  const stored = value as Record<
-    string,
-    unknown
-  >;
+  const stored = value as Record<string, unknown>;
 
-  const fullName = normalizeText(
-    stored.fullName,
-  );
-  const phoneNumber = normalizeText(
-    stored.phoneNumber,
-  );
+  const fullName = normalizeText(stored.fullName);
+  const phoneNumber = normalizeText(stored.phoneNumber);
 
   if (!fullName || !phoneNumber) {
     return null;
   }
 
-  const avatarUri = normalizeText(
-    stored.avatarUri,
-  );
+  const avatarUri = normalizeText(stored.avatarUri);
 
   return {
     fullName,
@@ -85,36 +69,101 @@ function normalizeStoredProfile(
   };
 }
 
-export function CustomerProfileProvider({
-  children,
-}: PropsWithChildren) {
-  const [profile, setProfile] =
-    useState<CustomerProfile | null>(null);
-  const [isHydrated, setIsHydrated] =
-    useState(false);
+function mergeRemoteProfile(
+  remoteProfile: ProfileRow,
+  fallbackProfile: CustomerProfile | null,
+): CustomerProfile {
+  return {
+    fullName:
+      normalizeText(remoteProfile.full_name) || fallbackProfile?.fullName || "",
+    phoneNumber:
+      normalizeText(remoteProfile.phone) || fallbackProfile?.phoneNumber || "",
+    email: normalizeText(remoteProfile.email) || fallbackProfile?.email || "",
+    // avatar_path will be converted to a Storage URL when avatar Storage is added.
+    avatarUri: fallbackProfile?.avatarUri ?? null,
+  };
+}
+
+async function readLocalProfile(): Promise<CustomerProfile | null> {
+  const storedProfile = await StorageService.get<unknown>(
+    CUSTOMER_PROFILE_STORAGE_KEY,
+  );
+
+  return normalizeStoredProfile(storedProfile);
+}
+
+async function writeLocalProfile(profile: CustomerProfile): Promise<void> {
+  const persistedProfile: PersistedCustomerProfileV1 = {
+    version: 1,
+    ...profile,
+  };
+
+  await StorageService.save(CUSTOMER_PROFILE_STORAGE_KEY, persistedProfile);
+}
+
+export function CustomerProfileProvider({ children }: PropsWithChildren) {
+  const { user, isHydrated: authIsHydrated } = useSupabaseAuth();
+
+  const [profile, setProfile] = useState<CustomerProfile | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
+    if (!authIsHydrated) {
+      return;
+    }
+
     let isMounted = true;
 
-    const hydrateProfile = async () => {
+    const hydrateProfile = async (): Promise<void> => {
+      setIsHydrated(false);
+
+      let localProfile: CustomerProfile | null = null;
+
       try {
-        const storedProfile =
-          await StorageService.get<unknown>(
-            CUSTOMER_PROFILE_STORAGE_KEY,
+        localProfile = await readLocalProfile();
+
+        if (!user) {
+          if (isMounted) {
+            setProfile(localProfile);
+          }
+
+          return;
+        }
+
+        const cachedProfile = await ProfileRepository.getCachedProfile(user.id);
+
+        if (cachedProfile && isMounted) {
+          setProfile(mergeRemoteProfile(cachedProfile.data, localProfile));
+        } else if (isMounted) {
+          setProfile(localProfile);
+        }
+
+        try {
+          const remoteProfile = await ProfileRepository.fetchRemoteProfile(
+            user.id,
+          );
+          const synchronizedProfile = mergeRemoteProfile(
+            remoteProfile.data,
+            localProfile,
           );
 
-        if (isMounted) {
-          setProfile(
-            normalizeStoredProfile(
-              storedProfile,
-            ),
+          await writeLocalProfile(synchronizedProfile);
+
+          if (isMounted) {
+            setProfile(synchronizedProfile);
+          }
+        } catch (error) {
+          console.warn(
+            "Could not refresh the customer profile from Supabase; using cached/local data:",
+            error,
           );
         }
       } catch (error) {
-        console.error(
-          "Failed to hydrate the customer profile:",
-          error,
-        );
+        console.error("Failed to hydrate the customer profile:", error);
+
+        if (isMounted) {
+          setProfile(localProfile);
+        }
       } finally {
         if (isMounted) {
           setIsHydrated(true);
@@ -127,23 +176,11 @@ export function CustomerProfileProvider({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [authIsHydrated, user?.id]);
 
   const persistProfile = useCallback(
-    async (
-      nextProfile: CustomerProfile,
-    ): Promise<void> => {
-      const persistedProfile: PersistedCustomerProfileV1 =
-        {
-          version: 1,
-          ...nextProfile,
-        };
-
-      await StorageService.save(
-        CUSTOMER_PROFILE_STORAGE_KEY,
-        persistedProfile,
-      );
-
+    async (nextProfile: CustomerProfile): Promise<void> => {
+      await writeLocalProfile(nextProfile);
       setProfile(nextProfile);
     },
     [],
@@ -159,31 +196,24 @@ export function CustomerProfileProvider({
     }): Promise<void> => {
       const nextProfile: CustomerProfile = {
         fullName: normalizeText(fullName),
-        phoneNumber:
-          normalizeText(phoneNumber),
+        phoneNumber: normalizeText(phoneNumber),
         email: profile?.email ?? "",
-        avatarUri:
-          profile?.avatarUri ?? null,
+        avatarUri: profile?.avatarUri ?? null,
       };
 
-      if (
-        !nextProfile.fullName ||
-        !nextProfile.phoneNumber
-      ) {
-        throw new Error(
-          "A customer name and phone number are required.",
-        );
+      if (!nextProfile.fullName || !nextProfile.phoneNumber) {
+        throw new Error("A customer name and phone number are required.");
       }
 
+      // The Auth trigger creates/updates the remote profile from signup metadata.
+      // Keep this local write so the UI remains responsive while auth state hydrates.
       await persistProfile(nextProfile);
     },
     [persistProfile, profile],
   );
 
   const updateProfile = useCallback(
-    async (
-      updates: Partial<CustomerProfile>,
-    ): Promise<void> => {
+    async (updates: Partial<CustomerProfile>): Promise<void> => {
       if (!profile) {
         throw new Error(
           "Cannot update a customer profile before signup is complete.",
@@ -191,13 +221,8 @@ export function CustomerProfileProvider({
       }
 
       const nextProfile: CustomerProfile = {
-        fullName:
-          normalizeText(updates.fullName) ||
-          profile.fullName,
-        phoneNumber:
-          normalizeText(
-            updates.phoneNumber,
-          ) || profile.phoneNumber,
+        fullName: normalizeText(updates.fullName) || profile.fullName,
+        phoneNumber: normalizeText(updates.phoneNumber) || profile.phoneNumber,
         email:
           updates.email === undefined
             ? profile.email
@@ -205,45 +230,67 @@ export function CustomerProfileProvider({
         avatarUri:
           updates.avatarUri === undefined
             ? profile.avatarUri
-            : normalizeText(
-                  updates.avatarUri,
-                ) || null,
+            : normalizeText(updates.avatarUri) || null,
       };
 
+      // Preserve the existing local fields (email/avatar) until their dedicated
+      // Supabase Auth/Storage flows are implemented.
       await persistProfile(nextProfile);
+
+      if (!user) {
+        return;
+      }
+
+      const remoteUpdate: {
+        full_name?: string;
+        phone?: string;
+      } = {};
+
+      if (updates.fullName !== undefined) {
+        remoteUpdate.full_name = nextProfile.fullName;
+      }
+
+      if (updates.phoneNumber !== undefined) {
+        remoteUpdate.phone = nextProfile.phoneNumber;
+      }
+
+      if (Object.keys(remoteUpdate).length === 0) {
+        return;
+      }
+
+      const result = await ProfileRepository.updateProfile(
+        user.id,
+        remoteUpdate,
+      );
+      const synchronizedProfile = mergeRemoteProfile(
+        result.profile.data,
+        nextProfile,
+      );
+
+      await persistProfile(synchronizedProfile);
     },
-    [persistProfile, profile],
+    [persistProfile, profile, user],
   );
 
-  const value =
-    useMemo<CustomerProfileContextValue>(
-      () => ({
-        profile,
-        isHydrated,
-        saveSignupProfile,
-        updateProfile,
-      }),
-      [
-        isHydrated,
-        profile,
-        saveSignupProfile,
-        updateProfile,
-      ],
-    );
+  const value = useMemo<CustomerProfileContextValue>(
+    () => ({
+      profile,
+      isHydrated,
+      saveSignupProfile,
+      updateProfile,
+    }),
+    [isHydrated, profile, saveSignupProfile, updateProfile],
+  );
 
   return (
-    <CustomerProfileContext.Provider
-      value={value}
-    >
+    <CustomerProfileContext.Provider value={value}>
       {children}
     </CustomerProfileContext.Provider>
   );
 }
 
 export function useCustomerProfile(): CustomerProfileContextValue {
-  const context = useContext(
-    CustomerProfileContext,
-  );
+  const context = useContext(CustomerProfileContext);
 
   if (!context) {
     throw new Error(
