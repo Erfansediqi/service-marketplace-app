@@ -12,6 +12,7 @@ import {
   ProfileRepository,
   type ProfileRow,
 } from "../repositories/profile-repository";
+import { AvatarStorage } from "../services/avatar-storage";
 import { StorageService } from "../services/storage";
 import { useSupabaseAuth } from "./supabase-auth-context";
 
@@ -34,6 +35,7 @@ type CustomerProfileContextValue = {
     phoneNumber: string;
   }) => Promise<void>;
   updateProfile: (updates: Partial<CustomerProfile>) => Promise<void>;
+  uploadAvatar: (base64: string) => Promise<void>;
 };
 
 const CUSTOMER_PROFILE_STORAGE_KEY = "@khedmat_customer_profile";
@@ -79,8 +81,12 @@ function mergeRemoteProfile(
     phoneNumber:
       normalizeText(remoteProfile.phone) || fallbackProfile?.phoneNumber || "",
     email: normalizeText(remoteProfile.email) || fallbackProfile?.email || "",
-    // avatar_path will be converted to a Storage URL when avatar Storage is added.
-    avatarUri: fallbackProfile?.avatarUri ?? null,
+    avatarUri: remoteProfile.avatar_path
+      ? AvatarStorage.getPublicUrl(
+          remoteProfile.avatar_path,
+          remoteProfile.updated_at,
+        )
+      : (fallbackProfile?.avatarUri ?? null),
   };
 }
 
@@ -272,14 +278,42 @@ export function CustomerProfileProvider({ children }: PropsWithChildren) {
     [persistProfile, profile, user],
   );
 
+  const uploadAvatar = useCallback(
+    async (base64: string): Promise<void> => {
+      if (!profile) {
+        throw new Error(
+          "Cannot upload a profile photo before signup is complete.",
+        );
+      }
+
+      if (!user) {
+        throw new Error("You must be signed in to upload a profile photo.");
+      }
+
+      const uploadedAvatar = await AvatarStorage.uploadAvatar(user.id, base64);
+      const result = await ProfileRepository.updateProfile(user.id, {
+        avatar_path: uploadedAvatar.path,
+      });
+
+      const synchronizedProfile = mergeRemoteProfile(result.profile.data, {
+        ...profile,
+        avatarUri: uploadedAvatar.publicUrl,
+      });
+
+      await persistProfile(synchronizedProfile);
+    },
+    [persistProfile, profile, user],
+  );
+
   const value = useMemo<CustomerProfileContextValue>(
     () => ({
       profile,
       isHydrated,
       saveSignupProfile,
       updateProfile,
+      uploadAvatar,
     }),
-    [isHydrated, profile, saveSignupProfile, updateProfile],
+    [isHydrated, profile, saveSignupProfile, updateProfile, uploadAvatar],
   );
 
   return (

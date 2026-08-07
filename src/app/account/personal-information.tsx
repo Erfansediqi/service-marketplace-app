@@ -27,12 +27,15 @@ import { useCustomerProfile } from "../../context/customer-profile-context";
 
 export default function PersonalInformationScreen() {
   const router = useRouter();
-  const { profile, updateProfile } = useCustomerProfile();
+  const { profile, updateProfile, uploadAvatar } = useCustomerProfile();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [pendingAvatarBase64, setPendingAvatarBase64] = useState<string | null>(
+    null,
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -71,11 +74,12 @@ export default function PersonalInformationScreen() {
         return;
       }
 
-      const persistentAvatarUri = asset.base64
-        ? `data:image/jpeg;base64,${asset.base64}`
-        : asset.uri;
+      if (!asset.base64) {
+        throw new Error("The selected photo could not be prepared for upload.");
+      }
 
-      setImageUri(persistentAvatarUri);
+      setPendingAvatarBase64(asset.base64);
+      setImageUri(`data:image/jpeg;base64,${asset.base64}`);
     } catch (error) {
       console.error("Failed to select a profile photo:", error);
 
@@ -105,8 +109,12 @@ export default function PersonalInformationScreen() {
       await updateProfile({
         fullName,
         email: normalizedEmail,
-        avatarUri: imageUri,
       });
+
+      if (pendingAvatarBase64) {
+        await uploadAvatar(pendingAvatarBase64);
+        setPendingAvatarBase64(null);
+      }
 
       Alert.alert("Saved", "Your profile information has been updated.", [
         {
@@ -119,7 +127,7 @@ export default function PersonalInformationScreen() {
 
       Alert.alert(
         "Unable to save",
-        "Your changes could not be saved on this device. Please try again.",
+        "Your changes or profile photo could not be saved. Please check your connection and try again.",
       );
     } finally {
       setIsSaving(false);
