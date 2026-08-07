@@ -22,8 +22,8 @@ import {
   Spacing,
   Typography,
 } from "../../constants/theme";
-import { useLanguage } from "../../context/languagecontext";
 import { useCustomerProfile } from "../../context/customer-profile-context";
+import { useLanguage } from "../../context/languagecontext";
 import { useSession } from "../../context/session-context";
 import { getProviderById } from "../../services/provider-repository";
 import { getLocalProviders } from "../../services/provider-storage";
@@ -66,15 +66,6 @@ export default function ProfileScreen() {
 
   const profileName =
     profile?.fullName || copy.profileName;
-
-  const profilePhone = profile?.phoneNumber
-    ? activeLanguage === "English"
-      ? profile.phoneNumber
-      : formatDigits(
-          profile.phoneNumber,
-          true,
-        )
-    : copy.phoneNotAvailable;
 
   const profileInitials = getInitials(
     profileName,
@@ -296,39 +287,8 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.header}>
-          <Text style={[styles.eyebrow, directionStyle(isRtl)]}>
-            {copy.eyebrow}
-          </Text>
-
-          <Text style={[styles.title, directionStyle(isRtl)]}>
-            {copy.title}
-          </Text>
-
-          <Text style={[styles.subtitle, directionStyle(isRtl)]}>
-            {copy.subtitle}
-          </Text>
-        </View>
-
-        <View
-          style={[
-            styles.profileCard,
-            {
-              flexDirection: isRtl ? "row-reverse" : "row",
-            },
-          ]}
-        >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={copy.changeProfilePhoto}
-            onPress={() => {
-              router.push("/account/personal-information");
-            }}
-            style={({ pressed }) => [
-              styles.profileAvatar,
-              pressed && styles.pressed,
-            ]}
-          >
+        <View style={styles.identityHeader}>
+          <View style={styles.profileAvatar}>
             {profile?.avatarUri ? (
               <Image
                 source={{ uri: profile.avatarUri }}
@@ -339,72 +299,18 @@ export default function ProfileScreen() {
                 {profileInitials}
               </Text>
             )}
-
-            <View style={styles.editAvatarBadge}>
-              <Ionicons
-                name="camera-outline"
-                size={13}
-                color={KhedmatPalette.white}
-              />
-            </View>
-          </Pressable>
-
-          <View
-            style={[
-              styles.profileCopy,
-              {
-                alignItems: isRtl ? "flex-end" : "flex-start",
-              },
-            ]}
-          >
-            <Text
-              numberOfLines={1}
-              style={[styles.profileName, directionStyle(isRtl)]}
-            >
-              {profileName}
-            </Text>
-
-            <Text style={[styles.profilePhone, directionStyle(isRtl)]}>
-              {profilePhone}
-            </Text>
-
-            <View
-              style={[
-                styles.accountBadge,
-                {
-                  flexDirection: isRtl ? "row-reverse" : "row",
-                },
-              ]}
-            >
-              <Ionicons
-                name="shield-checkmark"
-                size={14}
-                color={KhedmatPalette.blue500}
-              />
-
-              <Text style={[styles.accountBadgeText, directionStyle(isRtl)]}>
-                {copy.verifiedAccount}
-              </Text>
-            </View>
           </View>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={copy.editProfile}
-            onPress={() => {
-              router.push("/account/personal-information");
-            }}
-            style={({ pressed }) => [
-              styles.editProfileButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Ionicons
-              name="create-outline"
-              size={20}
-              color={KhedmatPalette.navy700}
-            />
-          </Pressable>
+          <Text
+  numberOfLines={2}
+  style={[
+    styles.profileName,
+    directionStyle(isRtl),
+    styles.centeredProfileName,
+  ]}
+>
+  {profileName}
+</Text>
         </View>
 
         {providerStatus ? (
@@ -786,8 +692,6 @@ function getProviderStatusConfig(
 
       title: copy.pendingTitle,
 
-      subtitle: copy.pendingSubtitle,
-
       icon: "time-outline" as const,
 
       color: "#8A5A00",
@@ -805,8 +709,6 @@ function getProviderStatusConfig(
       providerAccountLabel: copy.providerAccount,
 
       title: copy.approvedTitle,
-
-      subtitle: copy.approvedSubtitle,
 
       icon: "checkmark-circle-outline" as const,
 
@@ -1000,21 +902,12 @@ function getLanguageDisplayName(language: LanguageName): string {
 function getProfileCopy(language: LanguageName) {
   if (language === "Dari") {
     return {
-      eyebrow: "حساب کاربری",
       title: "پروفایل",
 
       subtitle:
         "اطلاعات حساب، تنظیمات و گزینه‌های پشتیبانی خود را مدیریت کنید.",
 
       profileName: "مشتری",
-
-      phoneNotAvailable: "شماره تلفن ثبت نشده",
-
-      verifiedAccount: "حساب تأییدشده",
-
-      editProfile: "ویرایش پروفایل",
-
-      changeProfilePhoto: "تغییر عکس پروفایل",
 
       account: "حساب",
 
@@ -1068,20 +961,11 @@ function getProfileCopy(language: LanguageName) {
 
   if (language === "Pashto") {
     return {
-      eyebrow: "کارن حساب",
       title: "پروفایل",
 
       subtitle: "د خپل حساب معلومات، تنظیمات او د ملاتړ انتخابونه مدیریت کړئ.",
 
       profileName: "پېرودونکی",
-
-      phoneNotAvailable: "د تلیفون شمېره نشته",
-
-      verifiedAccount: "تایید شوی حساب",
-
-      editProfile: "پروفایل سمول",
-
-      changeProfilePhoto: "د پروفایل عکس بدلول",
 
       account: "حساب",
 
@@ -1134,20 +1018,14 @@ function getProfileCopy(language: LanguageName) {
   }
 
   return {
-    eyebrow: "User account",
     title: "Profile",
 
-    subtitle: "Manage your account information, settings and support options.",
 
     profileName: "Customer",
 
-    phoneNotAvailable: "No phone number saved",
 
-    verifiedAccount: "Verified account",
 
-    editProfile: "Edit profile",
 
-    changeProfilePhoto: "Change profile photo",
 
     account: "Account",
 
@@ -1214,55 +1092,26 @@ const styles = StyleSheet.create({
     paddingBottom: 130,
   },
 
-  header: {
-    width: "100%",
-    gap: Spacing.xs,
-  },
 
-  eyebrow: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: KhedmatPalette.blue500,
-    fontFamily: Fonts.medium,
-  },
 
-  title: {
-    ...Typography.screenTitle,
+  identityHeader: {
     width: "100%",
-    color: KhedmatPalette.textPrimary,
-    fontSize: 27,
-    lineHeight: 34,
-  },
-
-  subtitle: {
-    ...Typography.bodyStyle,
-    width: "100%",
-    maxWidth: Layout.readableTextMaxWidth,
-    color: KhedmatPalette.textSecondary,
-  },
-
-  profileCard: {
-    width: "100%",
-    minHeight: 118,
-    marginTop: Spacing.xxl,
-    padding: Spacing.lg,
     alignItems: "center",
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xxl,
     gap: Spacing.md,
-    borderWidth: 1,
-    borderColor: KhedmatPalette.border,
-    borderRadius: Radius.xl,
-    backgroundColor: KhedmatPalette.surface,
-    ...Shadows.small,
   },
 
   profileAvatar: {
-    width: 70,
-    height: 70,
-    flexShrink: 0,
+    width: 148,
+    height: 148,
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: KhedmatPalette.navy900,
+    borderWidth: 3,
+    borderColor: KhedmatPalette.surface,
+    ...Shadows.small,
   },
 
   profileAvatarImage: {
@@ -1274,62 +1123,21 @@ const styles = StyleSheet.create({
   profileInitials: {
     fontFamily: Fonts.bold,
     color: KhedmatPalette.white,
-    fontSize: 24,
-  },
-
-  editAvatarBadge: {
-    position: "absolute",
-    right: -2,
-    bottom: -2,
-    width: 25,
-    height: 25,
-    borderRadius: Radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: KhedmatPalette.blue500,
-    borderWidth: 2,
-    borderColor: KhedmatPalette.surface,
-  },
-
-  profileCopy: {
-    flex: 1,
-    gap: 3,
+    fontSize: 42,
+    lineHeight: 50,
   },
 
   profileName: {
     ...Typography.sectionTitle,
-    width: "100%",
     color: KhedmatPalette.textPrimary,
-    fontSize: 21,
-    lineHeight: 28,
+    fontSize: 23,
+    lineHeight: 30,
   },
 
-  profilePhone: {
-    ...Typography.bodyStyle,
+  centeredProfileName: {
     width: "100%",
-    color: KhedmatPalette.textSecondary,
-  },
-
-  accountBadge: {
-    marginTop: Spacing.xs,
-    alignItems: "center",
-    gap: 5,
-  },
-
-  accountBadgeText: {
-    ...Typography.captionStyle,
-    color: KhedmatPalette.blue500,
-    fontFamily: Fonts.medium,
-  },
-
-  editProfileButton: {
-    width: 42,
-    height: 42,
-    flexShrink: 0,
-    borderRadius: Radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: KhedmatPalette.surfaceSoft,
+    maxWidth: 320,
+    textAlign: "center",
   },
 
   providerStatusLoading: {
