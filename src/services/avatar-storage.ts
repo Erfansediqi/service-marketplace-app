@@ -1,7 +1,6 @@
 import { supabase } from "../lib/supabase";
 
 const AVATAR_BUCKET = "avatars";
-const AVATAR_FILENAME = "avatar.jpg";
 
 export type UploadedAvatar = {
   path: string;
@@ -36,7 +35,9 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
 }
 
 function buildAvatarPath(userId: string): string {
-  return `${normalizeUserId(userId)}/${AVATAR_FILENAME}`;
+  const normalizedUserId = normalizeUserId(userId);
+
+  return `${normalizedUserId}/avatar-${Date.now()}.jpg`;
 }
 
 function getPublicUrl(path: string, version?: string | number | null): string {
@@ -49,13 +50,14 @@ function getPublicUrl(path: string, version?: string | number | null): string {
   const { data } = supabase.storage
     .from(AVATAR_BUCKET)
     .getPublicUrl(normalizedPath);
-  const publicUrl = data.publicUrl;
 
-  if (!version) {
-    return publicUrl;
+  if (version === undefined || version === null || version === "") {
+    return data.publicUrl;
   }
 
-  return `${publicUrl}?v=${encodeURIComponent(String(version))}`;
+  const separator = data.publicUrl.includes("?") ? "&" : "?";
+
+  return `${data.publicUrl}${separator}v=${encodeURIComponent(String(version))}`;
 }
 
 async function uploadAvatar(
@@ -70,7 +72,7 @@ async function uploadAvatar(
     .upload(path, fileBody, {
       contentType: "image/jpeg",
       cacheControl: "3600",
-      upsert: true,
+      upsert: false,
     });
 
   if (error) {
@@ -83,17 +85,71 @@ async function uploadAvatar(
   };
 }
 
-async function removeAvatar(userId: string): Promise<void> {
-  const path = buildAvatarPath(userId);
-  const { error } = await supabase.storage.from(AVATAR_BUCKET).remove([path]);
+async function removeOtherAvatars(
+  userId: string,
+  keepPath: string,
+): Promise<void> {
+  const normalizedUserId = normalizeUserId(userId);
+
+  const { data, error } = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .list(normalizedUserId, {
+      limit: 100,
+    });
 
   if (error) {
-    throw new Error(`Failed to remove profile photo: ${error.message}`);
+    console.warn("Could not inspect previous profile photos:", error);
+    return;
+  }
+
+  const pathsToRemove = (data ?? [])
+    .map((file) => `${normalizedUserId}/${file.name}`)
+    .filter((path) => path !== keepPath);
+
+  if (pathsToRemove.length === 0) {
+    return;
+  }
+
+  const { error: removeError } = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .remove(pathsToRemove);
+
+  if (removeError) {
+    console.warn("Could not remove previous profile photos:", removeError);
+  }
+}
+
+async function removeAvatar(userId: string): Promise<void> {
+  const normalizedUserId = normalizeUserId(userId);
+
+  const { data, error } = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .list(normalizedUserId, {
+      limit: 100,
+    });
+
+  if (error) {
+    throw new Error(`Failed to inspect profile photos: ${error.message}`);
+  }
+
+  const paths = (data ?? []).map((file) => `${normalizedUserId}/${file.name}`);
+
+  if (paths.length === 0) {
+    return;
+  }
+
+  const { error: removeError } = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .remove(paths);
+
+  if (removeError) {
+    throw new Error(`Failed to remove profile photo: ${removeError.message}`);
   }
 }
 
 export const AvatarStorage = {
   getPublicUrl,
   uploadAvatar,
+  removeOtherAvatars,
   removeAvatar,
 };

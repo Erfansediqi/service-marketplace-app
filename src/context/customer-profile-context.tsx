@@ -82,10 +82,7 @@ function mergeRemoteProfile(
       normalizeText(remoteProfile.phone) || fallbackProfile?.phoneNumber || "",
     email: normalizeText(remoteProfile.email) || fallbackProfile?.email || "",
     avatarUri: remoteProfile.avatar_path
-      ? AvatarStorage.getPublicUrl(
-          remoteProfile.avatar_path,
-          remoteProfile.updated_at,
-        )
+      ? AvatarStorage.getPublicUrl(remoteProfile.avatar_path)
       : (fallbackProfile?.avatarUri ?? null),
   };
 }
@@ -294,7 +291,7 @@ export function CustomerProfileProvider({ children }: PropsWithChildren) {
       const result = await ProfileRepository.updateProfile(user.id, {
         avatar_path: uploadedAvatar.path,
       });
-
+      await AvatarStorage.removeOtherAvatars(user.id, uploadedAvatar.path);
       const synchronizedProfile = mergeRemoteProfile(result.profile.data, {
         ...profile,
         avatarUri: uploadedAvatar.publicUrl,
