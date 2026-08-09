@@ -11,7 +11,6 @@ import {
   KhedmatPalette,
   Layout,
   Radius,
-  Shadows,
   Spacing,
   Typography,
 } from "../constants/theme";
@@ -77,7 +76,7 @@ export function OnboardingScreen({
                   ? "chevron-forward"
                   : "chevron-back"
               }
-              size={24}
+              size={22}
               color={
                 KhedmatPalette.navy900
               }
@@ -89,11 +88,13 @@ export function OnboardingScreen({
       </View>
 
       <View style={styles.content}>
-        <View style={styles.iconCircle}>
+        <View style={styles.iconArea}>
           <Ionicons
             name={icon}
-            size={46}
-            color={KhedmatPalette.white}
+            size={58}
+            color={
+              KhedmatPalette.navy900
+            }
           />
         </View>
 
@@ -166,26 +167,40 @@ const styles = StyleSheet.create({
   },
 
   backButton: {
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor:
-      KhedmatPalette.surface,
-    borderWidth: 1,
+      KhedmatPalette.white,
+    borderWidth:
+      StyleSheet.hairlineWidth,
     borderColor:
-      KhedmatPalette.border,
+      KhedmatPalette.blue200,
+    shadowColor:
+      KhedmatPalette.navy900,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
+    elevation: 1,
   },
 
   backButtonPressed: {
     opacity: 0.78,
-    transform: [{ scale: 0.96 }],
+    transform: [
+      {
+        scale: 0.96,
+      },
+    ],
   },
 
   backPlaceholder: {
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
   },
 
   content: {
@@ -196,16 +211,12 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.screen,
   },
 
-  iconCircle: {
-    width: 112,
-    height: 112,
+  iconArea: {
+    width: 76,
+    height: 76,
     marginBottom: Spacing.xxl,
-    borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.navy900,
-    ...Shadows.darkAccent,
   },
 
   copy: {

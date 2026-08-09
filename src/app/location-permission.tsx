@@ -65,6 +65,32 @@ export default function LocationPermissionScreen() {
       }
       footer={
         <View style={styles.footer}>
+          <View style={styles.privacyNote}>
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={20}
+              color={
+                KhedmatPalette.blue500
+              }
+            />
+
+            <Text
+              style={[
+                styles.privacyText,
+                {
+                  writingDirection:
+                    isRtl
+                      ? "rtl"
+                      : "ltr",
+                },
+              ]}
+            >
+              {getPrivacyMessage(
+                language,
+              )}
+            </Text>
+          </View>
+
           <KhedmatButton
             label={t("allowLocation")}
             onPress={
@@ -134,57 +160,8 @@ export default function LocationPermissionScreen() {
             {t("locationTitle")}
           </Text>
 
-          <Text
-            style={[
-              styles.subtitle,
-              {
-                writingDirection: isRtl
-                  ? "rtl"
-                  : "ltr",
-              },
-            ]}
-          >
-            {t("locationSubtitle")}
-          </Text>
         </View>
 
-        <View
-          style={[
-            styles.privacyNote,
-            {
-              flexDirection: isRtl
-                ? "row-reverse"
-                : "row",
-            },
-          ]}
-        >
-          <Ionicons
-            name="shield-checkmark-outline"
-            size={17}
-            color={
-              KhedmatPalette.blue500
-            }
-          />
-
-          <Text
-            numberOfLines={2}
-            style={[
-              styles.privacyText,
-              {
-                textAlign: isRtl
-                  ? "right"
-                  : "left",
-                writingDirection: isRtl
-                  ? "rtl"
-                  : "ltr",
-              },
-            ]}
-          >
-            {getPrivacyMessage(
-              language,
-            )}
-          </Text>
-        </View>
       </View>
     </KhedmatScreen>
   );
@@ -276,31 +253,26 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  subtitle: {
-    ...Typography.bodyStyle,
-    width: "100%",
-    color:
-      KhedmatPalette.textSecondary,
-    textAlign: "center",
-    lineHeight: 24,
-  },
 
   privacyNote: {
     width: "100%",
     maxWidth:
       Layout.readableTextMaxWidth,
-    marginTop: Spacing.xxl,
+    alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
-    gap: Spacing.sm,
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
   },
 
   privacyText: {
     ...Typography.captionStyle,
-    flexShrink: 1,
+    width: "100%",
     color:
       KhedmatPalette.textSecondary,
-    lineHeight: 18,
+    textAlign: "center",
+    lineHeight: 19,
   },
 
   footer: {

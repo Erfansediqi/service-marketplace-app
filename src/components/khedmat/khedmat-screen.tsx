@@ -1,22 +1,22 @@
 import {
-    PropsWithChildren,
-    ReactNode,
+  PropsWithChildren,
+  ReactNode,
 } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleProp,
-    StyleSheet,
-    View,
-    ViewStyle,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleProp,
+  StyleSheet,
+  View,
+  ViewStyle,
 } from "react-native";
 
 import {
-    KhedmatPalette,
-    Layout,
-    Spacing,
+  KhedmatPalette,
+  Layout,
+  Spacing,
 } from "../../constants/theme";
 
 type KhedmatScreenProps = PropsWithChildren<{
@@ -94,19 +94,19 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
     backgroundColor:
-      KhedmatPalette.blue050,
+      KhedmatPalette.white,
   },
 
   safeArea: {
     flex: 1,
     backgroundColor:
-      KhedmatPalette.blue050,
+      KhedmatPalette.white,
   },
 
   screen: {
     flex: 1,
     backgroundColor:
-      KhedmatPalette.blue050,
+      KhedmatPalette.white,
   },
 
   staticContent: {
@@ -140,11 +140,11 @@ const styles = StyleSheet.create({
         ? Spacing.md
         : Spacing.lg,
     backgroundColor:
-      KhedmatPalette.blue050,
+      KhedmatPalette.white,
     borderTopWidth:
       StyleSheet.hairlineWidth,
     borderTopColor:
-      KhedmatPalette.border,
+      KhedmatPalette.blue200,
   },
 
   footerInner: {

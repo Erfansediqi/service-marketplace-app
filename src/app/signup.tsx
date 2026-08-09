@@ -1,7 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { KhedmatButton } from "../components/khedmat/khedmat-button";
 import { KhedmatCard } from "../components/khedmat/khedmat-card";
@@ -40,7 +47,12 @@ export default function SignupScreen() {
 
   const { t, language } = useLanguage();
 
-  const { sendPhoneOtp, isSendingOtp } = useSupabaseAuth();
+  const {
+    sendPhoneOtp,
+    signInWithSocialProvider,
+    isSendingOtp,
+    isSocialSigningIn,
+  } = useSupabaseAuth();
 
   const isRtl = language === "Dari" || language === "Pashto";
 
@@ -147,6 +159,52 @@ export default function SignupScreen() {
           : verificationCopy.smsError;
 
       Alert.alert(verificationCopy.errorTitle, errorMessage);
+    }
+  };
+
+  const handleSocialSignIn = async (
+    provider: "google" | "apple",
+  ): Promise<void> => {
+    if (isSocialSigningIn) {
+      return;
+    }
+
+    try {
+      await signInWithSocialProvider(
+        provider,
+      );
+
+      router.replace(
+        "/location-permission",
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error &&
+        error.message
+          ? error.message
+          : getSocialAuthCopy(
+              language,
+            ).genericError;
+
+      if (
+        message.toLowerCase().includes(
+          "cancelled",
+        )
+      ) {
+        return;
+      }
+
+      console.error(
+        `Failed to sign in with ${provider}:`,
+        error,
+      );
+
+      Alert.alert(
+        getSocialAuthCopy(
+          language,
+        ).errorTitle,
+        message,
+      );
     }
   };
 
@@ -369,6 +427,114 @@ export default function SignupScreen() {
           {getSecurityMessage(language)}
         </Text>
       </View>
+
+      <View style={styles.socialSection}>
+        <View style={styles.socialDividerRow}>
+          <View style={styles.socialDivider} />
+
+          <Text
+            style={[
+              styles.socialDividerText,
+              {
+                writingDirection:
+                  isRtl
+                    ? "rtl"
+                    : "ltr",
+              },
+            ]}
+          >
+            {
+              getSocialAuthCopy(
+                language,
+              ).divider
+            }
+          </Text>
+
+          <View style={styles.socialDivider} />
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            getSocialAuthCopy(
+              language,
+            ).google
+          }
+          disabled={isSocialSigningIn}
+          onPress={() =>
+            void handleSocialSignIn(
+              "google",
+            )
+          }
+          style={({ pressed }) => [
+            styles.socialButton,
+            pressed &&
+              !isSocialSigningIn &&
+              styles.socialButtonPressed,
+            isSocialSigningIn &&
+              styles.socialButtonDisabled,
+          ]}
+        >
+          <Text style={styles.googleMark}>
+            G
+          </Text>
+
+          <Text
+            style={styles.socialButtonText}
+          >
+            {
+              getSocialAuthCopy(
+                language,
+              ).google
+            }
+          </Text>
+        </Pressable>
+
+        {Platform.OS === "ios" ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              getSocialAuthCopy(
+                language,
+              ).apple
+            }
+            disabled={isSocialSigningIn}
+            onPress={() =>
+              void handleSocialSignIn(
+                "apple",
+              )
+            }
+            style={({ pressed }) => [
+              styles.socialButton,
+              pressed &&
+                !isSocialSigningIn &&
+                styles.socialButtonPressed,
+              isSocialSigningIn &&
+                styles.socialButtonDisabled,
+            ]}
+          >
+            <Ionicons
+              name="logo-apple"
+              size={20}
+              color={
+                KhedmatPalette.navy900
+              }
+            />
+
+            <Text
+              style={
+                styles.socialButtonText
+              }
+            >
+              {
+                getSocialAuthCopy(
+                  language,
+                ).apple
+              }
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
     </KhedmatScreen>
   );
 }
@@ -463,6 +629,53 @@ function toLocalizedDigits(value: string): string {
   };
 
   return value.replace(/\d/g, (digit) => digits[digit] ?? digit);
+}
+
+function getSocialAuthCopy(
+  language: string,
+) {
+  if (language === "Dari") {
+    return {
+      divider:
+        "یا ادامه با",
+      google:
+        "ادامه با Google",
+      apple:
+        "ادامه با Apple",
+      errorTitle:
+        "ورود ناموفق بود",
+      genericError:
+        "ورود اجتماعی انجام نشد. لطفاً دوباره تلاش کنید.",
+    };
+  }
+
+  if (language === "Pashto") {
+    return {
+      divider:
+        "یا دوام ورکړئ له",
+      google:
+        "له Google سره دوام ورکړئ",
+      apple:
+        "له Apple سره دوام ورکړئ",
+      errorTitle:
+        "ننوتل بریالي نه شول",
+      genericError:
+        "ټولنیز ننوتل بشپړ نه شول. مهرباني وکړئ بیا هڅه وکړئ.",
+    };
+  }
+
+  return {
+    divider:
+      "or continue with",
+    google:
+      "Continue with Google",
+    apple:
+      "Continue with Apple",
+    errorTitle:
+      "Sign in failed",
+    genericError:
+      "Social sign-in could not be completed. Please try again.",
+  };
 }
 
 function getCountryCopy(language: string) {
@@ -726,6 +939,79 @@ const styles = StyleSheet.create({
     flex: 1,
     color: KhedmatPalette.textSecondary,
     lineHeight: 18,
+  },
+
+  socialSection: {
+    width: "100%",
+    marginTop: Spacing.xl,
+    gap: Spacing.sm,
+  },
+
+  socialDividerRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+
+  socialDivider: {
+    flex: 1,
+    height:
+      StyleSheet.hairlineWidth,
+    backgroundColor:
+      KhedmatPalette.blue200,
+  },
+
+  socialDividerText: {
+    ...Typography.captionStyle,
+    color:
+      KhedmatPalette.textMuted,
+    textAlign: "center",
+  },
+
+  socialButton: {
+    width: "100%",
+    minHeight: 52,
+    borderRadius: Radius.lg,
+    borderWidth:
+      StyleSheet.hairlineWidth,
+    borderColor:
+      KhedmatPalette.blue200,
+    backgroundColor:
+      KhedmatPalette.white,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+  },
+
+  socialButtonPressed: {
+    opacity: 0.82,
+    transform: [
+      {
+        scale: 0.992,
+      },
+    ],
+  },
+
+  socialButtonDisabled: {
+    opacity: 0.55,
+  },
+
+  socialButtonText: {
+    ...Typography.label,
+    color:
+      KhedmatPalette.navy900,
+    fontSize: 15,
+    lineHeight: 20,
+  },
+
+  googleMark: {
+    color: "#4285F4",
+    fontSize: 20,
+    lineHeight: 22,
+    fontWeight: "700",
   },
 
   footer: {

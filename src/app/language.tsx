@@ -13,7 +13,6 @@ import {
   KhedmatPalette,
   Layout,
   Radius,
-  Shadows,
   Spacing,
   Typography,
 } from "../constants/theme";
@@ -73,11 +72,11 @@ export default function LanguageScreen() {
       }
     >
       <View style={styles.centerContent}>
-        <View style={styles.iconCircle}>
+        <View style={styles.iconArea}>
           <Ionicons
             name="globe-outline"
-            size={42}
-            color={KhedmatPalette.white}
+            size={54}
+            color={KhedmatPalette.navy900}
           />
         </View>
 
@@ -125,9 +124,7 @@ export default function LanguageScreen() {
                 accessibilityState={{
                   selected,
                 }}
-                accessibilityLabel={
-                  item.label
-                }
+                accessibilityLabel={item.label}
                 onPress={() =>
                   setLanguage(item.id)
                 }
@@ -150,11 +147,7 @@ export default function LanguageScreen() {
                     },
                   ]}
                 >
-                  <View
-                    style={
-                      styles.languageCopy
-                    }
-                  >
+                  <View style={styles.languageCopy}>
                     <Text
                       style={[
                         styles.languageName,
@@ -203,10 +196,8 @@ export default function LanguageScreen() {
                     {selected ? (
                       <Ionicons
                         name="checkmark"
-                        size={16}
-                        color={
-                          KhedmatPalette.white
-                        }
+                        size={15}
+                        color={KhedmatPalette.white}
                       />
                     ) : null}
                   </View>
@@ -235,16 +226,12 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.screen,
   },
 
-  iconCircle: {
-    width: 88,
-    height: 88,
-    marginBottom: Spacing.xl,
-    borderRadius: Radius.pill,
+  iconArea: {
+    width: 68,
+    height: 68,
+    marginBottom: Spacing.lg,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.navy900,
-    ...Shadows.darkAccent,
   },
 
   header: {
@@ -283,25 +270,40 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: Spacing.lg,
     backgroundColor:
-      KhedmatPalette.surface,
-    borderWidth: 1,
+      KhedmatPalette.white,
+    borderWidth:
+      StyleSheet.hairlineWidth,
     borderColor:
-      KhedmatPalette.border,
+      KhedmatPalette.blue200,
     borderRadius: Radius.xl,
+    shadowColor:
+      KhedmatPalette.navy900,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
 
   selectedLanguageCard: {
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor:
       KhedmatPalette.blue500,
     backgroundColor:
-      KhedmatPalette.surfaceSoft,
-    ...Shadows.small,
+      KhedmatPalette.white,
+    shadowOpacity: 0.08,
+    elevation: 3,
   },
 
   languageCardPressed: {
     opacity: 0.88,
-    transform: [{ scale: 0.994 }],
+    transform: [
+      {
+        scale: 0.994,
+      },
+    ],
   },
 
   optionContent: {
@@ -327,7 +329,7 @@ const styles = StyleSheet.create({
 
   selectedLanguageName: {
     color:
-      KhedmatPalette.navy700,
+      KhedmatPalette.navy900,
   },
 
   languageSecondaryLabel: {
@@ -344,18 +346,19 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
+    borderWidth:
+      StyleSheet.hairlineWidth,
     borderColor:
-      KhedmatPalette.border,
+      KhedmatPalette.blue200,
     backgroundColor:
-      KhedmatPalette.surface,
+      KhedmatPalette.white,
   },
 
   selectionCircleSelected: {
     borderColor:
-      KhedmatPalette.blue500,
+      KhedmatPalette.navy900,
     backgroundColor:
-      KhedmatPalette.blue500,
+      KhedmatPalette.navy900,
   },
 
   footer: {

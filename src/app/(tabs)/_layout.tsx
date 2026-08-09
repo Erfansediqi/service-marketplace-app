@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { useMemo } from "react";
 import {
   Platform,
   StyleSheet,
@@ -8,26 +7,22 @@ import {
   View,
 } from "react-native";
 
-import { LOCAL_CUSTOMER_ID } from "../../constants/identity";
 import {
   Fonts,
   KhedmatPalette,
-  Radius,
-  Shadows,
+  Radius
 } from "../../constants/theme";
 import { useLanguage } from "../../context/languagecontext";
-import { useNotifications } from "../../context/notification-context";
 
 type LanguageName =
   | "English"
   | "Dari"
   | "Pashto";
 
-type TabName =
+type VisibleTabName =
   | "home"
   | "search"
   | "bookings"
-  | "notifications"
   | "messages"
   | "profile";
 
@@ -39,56 +34,57 @@ type TabIconProps = {
   color: string;
   activeIcon: IconName;
   inactiveIcon: IconName;
-  badgeCount?: number;
+  isCenter?: boolean;
 };
 
 export default function CustomerTabsLayout() {
-  const { language } = useLanguage();
-
-  const {
-    notifications,
-    getUnreadCount,
-  } = useNotifications();
+  const { language } =
+    useLanguage();
 
   const activeLanguage =
-    normalizeLanguage(language);
-
-  const copy =
-    getTabCopy(activeLanguage);
-
-  const isRtl =
-    activeLanguage === "Dari" ||
-    activeLanguage === "Pashto";
-
-  const unreadNotificationsCount =
-    useMemo(
-      () =>
-        getUnreadCount(
-  "customer",
-  LOCAL_CUSTOMER_ID,
-),
-      [
-        getUnreadCount,
-        notifications,
-      ],
+    normalizeLanguage(
+      language,
     );
 
+  const copy =
+    getTabCopy(
+      activeLanguage,
+    );
+
+  const isRtl =
+    activeLanguage ===
+      "Dari" ||
+    activeLanguage ===
+      "Pashto";
+
   const renderLabel = (
-    tab: TabName,
+    tab: VisibleTabName,
     color: string,
     focused: boolean,
+    isCenter = false,
   ) => (
     <Text
       numberOfLines={1}
       style={[
         styles.label,
+        isCenter &&
+          styles.centerLabel,
         {
-          color,
-          textAlign: "center",
-          writingDirection: isRtl
-            ? "rtl"
-            : "ltr",
+          color:
+            isCenter &&
+            focused
+              ? KhedmatPalette.navy900
+              : color,
+
+          textAlign:
+            "center",
+
+          writingDirection:
+            isRtl
+              ? "rtl"
+              : "ltr",
         },
+
         focused &&
           styles.labelFocused,
       ]}
@@ -102,8 +98,12 @@ export default function CustomerTabsLayout() {
       initialRouteName="index"
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: true,
-        tabBarHideOnKeyboard: true,
+
+        tabBarShowLabel:
+          true,
+
+        tabBarHideOnKeyboard:
+          true,
 
         tabBarActiveTintColor:
           KhedmatPalette.navy900,
@@ -111,17 +111,20 @@ export default function CustomerTabsLayout() {
         tabBarInactiveTintColor:
           KhedmatPalette.textMuted,
 
-        tabBarStyle: styles.tabBar,
+        tabBarStyle:
+          styles.tabBar,
+
         tabBarItemStyle:
           styles.tabItem,
 
-        tabBarBackground: () => (
-          <View
-            style={
-              styles.tabBarBackground
-            }
-          />
-        ),
+        tabBarBackground:
+          () => (
+            <View
+              style={
+                styles.tabBarBackground
+              }
+            />
+          ),
       }}
     >
       <Tabs.Screen
@@ -147,7 +150,9 @@ export default function CustomerTabsLayout() {
             focused,
           }) => (
             <TabIcon
-              focused={focused}
+              focused={
+                focused
+              }
               color={color}
               activeIcon="home"
               inactiveIcon="home-outline"
@@ -179,7 +184,9 @@ export default function CustomerTabsLayout() {
             focused,
           }) => (
             <TabIcon
-              focused={focused}
+              focused={
+                focused
+              }
               color={color}
               activeIcon="search"
               inactiveIcon="search-outline"
@@ -191,10 +198,16 @@ export default function CustomerTabsLayout() {
       <Tabs.Screen
         name="bookings"
         options={{
-          title: copy.bookings,
+          title:
+            copy.bookings,
 
           tabBarAccessibilityLabel:
             copy.bookings,
+
+          tabBarItemStyle: [
+            styles.tabItem,
+            styles.centerTabItem,
+          ],
 
           tabBarLabel: ({
             color,
@@ -204,6 +217,7 @@ export default function CustomerTabsLayout() {
               "bookings",
               color,
               focused,
+              true,
             ),
 
           tabBarIcon: ({
@@ -211,55 +225,37 @@ export default function CustomerTabsLayout() {
             focused,
           }) => (
             <TabIcon
-              focused={focused}
+              focused={
+                focused
+              }
               color={color}
               activeIcon="calendar"
               inactiveIcon="calendar-outline"
+              isCenter
             />
           ),
         }}
       />
 
+      {/*
+       * Notifications remains a valid Expo Router
+       * route, but it is intentionally hidden from
+       * the visible bottom navigation. Notifications
+       * can still be opened from notification buttons
+       * elsewhere in the customer experience.
+       */}
       <Tabs.Screen
         name="notifications"
         options={{
-          title:
-            copy.notifications,
-
-          tabBarAccessibilityLabel:
-            copy.notifications,
-
-          tabBarLabel: ({
-            color,
-            focused,
-          }) =>
-            renderLabel(
-              "notifications",
-              color,
-              focused,
-            ),
-
-          tabBarIcon: ({
-            color,
-            focused,
-          }) => (
-            <TabIcon
-              focused={focused}
-              color={color}
-              activeIcon="notifications"
-              inactiveIcon="notifications-outline"
-              badgeCount={
-                unreadNotificationsCount
-              }
-            />
-          ),
+          href: null,
         }}
       />
 
       <Tabs.Screen
         name="messages"
         options={{
-          title: copy.messages,
+          title:
+            copy.messages,
 
           tabBarAccessibilityLabel:
             copy.messages,
@@ -279,7 +275,9 @@ export default function CustomerTabsLayout() {
             focused,
           }) => (
             <TabIcon
-              focused={focused}
+              focused={
+                focused
+              }
               color={color}
               activeIcon="chatbubble"
               inactiveIcon="chatbubble-outline"
@@ -291,7 +289,8 @@ export default function CustomerTabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: copy.profile,
+          title:
+            copy.profile,
 
           tabBarAccessibilityLabel:
             copy.profile,
@@ -311,7 +310,9 @@ export default function CustomerTabsLayout() {
             focused,
           }) => (
             <TabIcon
-              focused={focused}
+              focused={
+                focused
+              }
               color={color}
               activeIcon="person"
               inactiveIcon="person-outline"
@@ -328,15 +329,29 @@ function TabIcon({
   color,
   activeIcon,
   inactiveIcon,
-  badgeCount = 0,
+  isCenter = false,
 }: TabIconProps) {
   return (
-    <View style={styles.iconWrapper}>
+    <View
+      style={[
+        styles.iconWrapper,
+        isCenter &&
+          styles.centerIconWrapper,
+      ]}
+    >
       <View
         style={[
           styles.iconContainer,
+
           focused &&
             styles.activeIconContainer,
+
+          isCenter &&
+            styles.centerIconContainer,
+
+          isCenter &&
+            focused &&
+            styles.centerIconContainerFocused,
         ]}
       >
         <Ionicons
@@ -353,41 +368,22 @@ function TabIcon({
           }
         />
       </View>
-
-      {badgeCount > 0 ? (
-        <View style={styles.badge}>
-          <Text
-            numberOfLines={1}
-            style={styles.badgeText}
-          >
-            {formatBadgeCount(
-              badgeCount,
-            )}
-          </Text>
-        </View>
-      ) : null}
     </View>
   );
-}
-
-function formatBadgeCount(
-  count: number,
-): string {
-  if (count > 9) {
-    return "9+";
-  }
-
-  return count.toString();
 }
 
 function normalizeLanguage(
   language: string,
 ): LanguageName {
-  if (language === "Dari") {
+  if (
+    language === "Dari"
+  ) {
     return "Dari";
   }
 
-  if (language === "Pashto") {
+  if (
+    language === "Pashto"
+  ) {
     return "Pashto";
   }
 
@@ -396,24 +392,29 @@ function normalizeLanguage(
 
 function getTabCopy(
   language: LanguageName,
-): Record<TabName, string> {
-  if (language === "Dari") {
+): Record<
+  VisibleTabName,
+  string
+> {
+  if (
+    language === "Dari"
+  ) {
     return {
       home: "خانه",
       search: "جستجو",
       bookings: "رزروها",
-      notifications: "اعلان‌ها",
       messages: "پیام‌ها",
       profile: "حساب",
     };
   }
 
-  if (language === "Pashto") {
+  if (
+    language === "Pashto"
+  ) {
     return {
       home: "کور",
       search: "لټون",
       bookings: "رزرفونه",
-      notifications: "خبرتیاوې",
       messages: "پیغامونه",
       profile: "حساب",
     };
@@ -423,142 +424,170 @@ function getTabCopy(
     home: "Home",
     search: "Search",
     bookings: "Bookings",
-    notifications: "Alerts",
     messages: "Messages",
     profile: "Account",
   };
 }
 
-const styles = StyleSheet.create({
-  tabBar: {
-    position: "absolute",
+const styles =
+  StyleSheet.create({
+    tabBar: {      position: "absolute",
 
-    right: 8,
-    left: 8,
+      left: 0,
+      right: 0,
+      bottom: 0,
 
-    bottom:
-      Platform.OS === "ios"
-        ? 8
-        : 12,
+      height:
+        Platform.OS ===
+        "ios"
+          ? 88
+          : 72,
 
-    height:
-      Platform.OS === "ios"
-        ? 82
-        : 72,
+      paddingTop: 8,
 
-    paddingTop: 8,
+      paddingBottom:
+        Platform.OS ===
+        "ios"
+          ? 22
+          : 8,
 
-    paddingBottom:
-      Platform.OS === "ios"
-        ? 20
-        : 8,
+      borderTopWidth: 1,
+      borderLeftWidth: 0,
+      borderRightWidth: 0,
+      borderBottomWidth: 0,
 
-    borderTopWidth: 0,
-    borderWidth: 1,
+      borderColor:
+        KhedmatPalette.border,
 
-    borderColor:
-      KhedmatPalette.border,
+      borderTopLeftRadius:
+        Radius.xl,
 
-    borderRadius: Radius.xl,
+      borderTopRightRadius:
+        Radius.xl,
 
-    backgroundColor:
-      KhedmatPalette.surface,
+      borderBottomLeftRadius: 0,
+      borderBottomRightRadius: 0,
 
-    overflow: "hidden",
+      backgroundColor:
+        KhedmatPalette.white,
 
-    ...Shadows.medium,
-  },
+      overflow: "visible",
+      shadowColor:
+        KhedmatPalette.navy900,
 
-  tabBarBackground: {
-    flex: 1,
+      shadowOffset: {
+        width: 0,
+        height: -4,
+      },
 
-    backgroundColor:
-      KhedmatPalette.surface,
-  },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
 
-  tabItem: {
-    minHeight: 56,
-    paddingHorizontal: 0,
-    borderRadius: Radius.lg,
-  },
+      elevation: 10,
+    },
 
-  label: {
-    maxWidth: 56,
+    tabBarBackground: {
+      flex: 1,
 
-    marginTop: 1,
+      borderTopLeftRadius:
+        Radius.xl,
 
-    fontFamily: Fonts.medium,
+      borderTopRightRadius:
+        Radius.xl,
 
-    fontSize: 9,
+      backgroundColor:
+        KhedmatPalette.white,
+    },
 
-    lineHeight: 12,
+    tabItem: {
+      minHeight: 56,
+      paddingHorizontal: 0,
+      borderRadius:
+        Radius.lg,
+    },
 
-    fontWeight: "500",
-  },
+    centerTabItem: {
+      marginTop: 0,
+    },
 
-  labelFocused: {
-    fontFamily: Fonts.bold,
-    fontWeight: "700",
-  },
+    label: {
+      maxWidth: 62,
 
-  iconWrapper: {
-    width: 38,
-    height: 34,
+      marginTop: 1,
 
-    alignItems: "center",
-    justifyContent: "center",
-  },
+      fontFamily:
+        Fonts.medium,
 
-  iconContainer: {
-    width: 36,
-    height: 32,
+      fontSize: 9,
 
-    borderRadius: Radius.pill,
+      lineHeight: 12,
 
-    alignItems: "center",
-    justifyContent: "center",
-  },
+      fontWeight:
+        "500",
+    },
 
-  activeIconContainer: {
-    backgroundColor:
-      KhedmatPalette.surfaceSoft,
-  },
+    centerLabel: {
+      marginTop: 1,
+    },
 
-  badge: {
-    position: "absolute",
+    labelFocused: {
+      fontFamily:
+        Fonts.bold,
 
-    top: -3,
-    right: -5,
+      fontWeight:
+        "700",
+    },
 
-    minWidth: 18,
-    height: 18,
+    iconWrapper: {
+      width: 38,
+      height: 34,
 
-    paddingHorizontal: 4,
+      alignItems:
+        "center",
 
-    borderRadius: Radius.pill,
+      justifyContent:
+        "center",
+    },
 
-    alignItems: "center",
-    justifyContent: "center",
+    centerIconWrapper: {
+      width: 38,
+      height: 34,
+    },
 
-    borderWidth: 2,
+    iconContainer: {
+      width: 36,
+      height: 32,
 
-    borderColor:
-      KhedmatPalette.surface,
+      borderRadius:
+        Radius.pill,
 
-    backgroundColor:
-      KhedmatPalette.error,
-  },
+      alignItems:
+        "center",
 
-  badgeText: {
-    color:
-      KhedmatPalette.white,
+      justifyContent:
+        "center",
+    },
 
-    fontFamily: Fonts.bold,
+    activeIconContainer: {
+      backgroundColor:
+        "transparent",
+    },
 
-    fontSize: 8,
+    centerIconContainer: {
+      width: 36,
+      height: 32,
 
-    lineHeight: 10,
+      borderRadius:
+        Radius.pill,
 
-    textAlign: "center",
-  },
-});
+      borderWidth: 0,
+
+      backgroundColor:
+        "transparent",
+    },
+
+    centerIconContainerFocused: {
+      backgroundColor:
+        "transparent",
+    },
+  });

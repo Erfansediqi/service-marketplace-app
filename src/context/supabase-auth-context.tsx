@@ -1,4 +1,4 @@
-import type { Session, User } from "@supabase/supabase-js";
+import type { Provider, Session, User } from "@supabase/supabase-js";
 import {
   type PropsWithChildren,
   createContext,
@@ -8,6 +8,10 @@ import {
   useMemo,
   useState,
 } from "react";
+
+import * as AuthSession from "expo-auth-session";
+import * as QueryParams from "expo-auth-session/build/QueryParams";
+import * as WebBrowser from "expo-web-browser";
 
 import { supabase } from "../lib/supabase";
 
@@ -33,10 +37,15 @@ type SupabaseAuthContextValue = {
   isHydrated: boolean;
   isSendingOtp: boolean;
   isVerifyingOtp: boolean;
+  isSocialSigningIn: boolean;
 
   sendPhoneOtp: (input: SendPhoneOtpInput) => Promise<void>;
 
   verifyPhoneOtp: (input: VerifyPhoneOtpInput) => Promise<Session>;
+
+  signInWithSocialProvider: (
+    provider: Extract<Provider, "google" | "apple">,
+  ) => Promise<Session>;
 
   signOut: () => Promise<void>;
 };
@@ -66,6 +75,61 @@ function normalizeFullName(value: string): string {
   return normalizedValue;
 }
 
+WebBrowser.maybeCompleteAuthSession();
+
+const socialAuthRedirectUri =
+  AuthSession.makeRedirectUri({
+    scheme: "servicemarketplaceapp",
+    path: "auth/callback",
+  });
+
+async function createSessionFromRedirectUrl(
+  url: string,
+): Promise<Session> {
+  const {
+    params,
+    errorCode,
+  } = QueryParams.getQueryParams(url);
+
+  if (errorCode) {
+    throw new Error(errorCode);
+  }
+
+  const accessToken =
+    typeof params.access_token === "string"
+      ? params.access_token
+      : "";
+
+  const refreshToken =
+    typeof params.refresh_token === "string"
+      ? params.refresh_token
+      : "";
+
+  if (!accessToken || !refreshToken) {
+    throw new Error(
+      "The social sign-in completed without a valid Supabase session.",
+    );
+  }
+
+  const { data, error } =
+    await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data.session) {
+    throw new Error(
+      "Supabase did not return a session after social sign-in.",
+    );
+  }
+
+  return data.session;
+}
+
 export function SupabaseAuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
 
@@ -74,6 +138,8 @@ export function SupabaseAuthProvider({ children }: PropsWithChildren) {
   const [isSendingOtp, setIsSendingOtp] = useState(false);
 
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+
+  const [isSocialSigningIn, setIsSocialSigningIn] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -199,6 +265,59 @@ export function SupabaseAuthProvider({ children }: PropsWithChildren) {
     [],
   );
 
+  const signInWithSocialProvider = useCallback(
+    async (
+      provider: Extract<Provider, "google" | "apple">,
+    ): Promise<Session> => {
+      setIsSocialSigningIn(true);
+
+      try {
+        const { data, error } =
+          await supabase.auth.signInWithOAuth({
+            provider,
+            options: {
+              redirectTo: socialAuthRedirectUri,
+              skipBrowserRedirect: true,
+            },
+          });
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data.url) {
+          throw new Error(
+            "Supabase did not return a social sign-in URL.",
+          );
+        }
+
+        const result =
+          await WebBrowser.openAuthSessionAsync(
+            data.url,
+            socialAuthRedirectUri,
+          );
+
+        if (result.type !== "success") {
+          throw new Error(
+            "Social sign-in was cancelled.",
+          );
+        }
+
+        const nextSession =
+          await createSessionFromRedirectUrl(
+            result.url,
+          );
+
+        setSession(nextSession);
+
+        return nextSession;
+      } finally {
+        setIsSocialSigningIn(false);
+      }
+    },
+    [],
+  );
+
   const signOut = useCallback(async (): Promise<void> => {
     const { error } = await supabase.auth.signOut();
 
@@ -216,16 +335,20 @@ export function SupabaseAuthProvider({ children }: PropsWithChildren) {
       isHydrated,
       isSendingOtp,
       isVerifyingOtp,
+      isSocialSigningIn,
       sendPhoneOtp,
       verifyPhoneOtp,
+      signInWithSocialProvider,
       signOut,
     }),
     [
       isHydrated,
       isSendingOtp,
       isVerifyingOtp,
+      isSocialSigningIn,
       sendPhoneOtp,
       session,
+      signInWithSocialProvider,
       signOut,
       verifyPhoneOtp,
     ],

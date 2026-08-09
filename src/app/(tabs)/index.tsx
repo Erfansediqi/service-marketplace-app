@@ -1,10 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useMemo } from "react";
 import {
-  ComponentProps,
-  useMemo,
-} from "react";
-import {
+  Image,
+  ImageSourcePropType,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -14,22 +13,18 @@ import {
   useWindowDimensions,
 } from "react-native";
 
+import { LOCAL_CUSTOMER_ID } from "../../constants/identity";
 import {
   Fonts,
   KhedmatPalette,
   Layout,
   Radius,
-  Shadows,
   Spacing,
   Typography,
 } from "../../constants/theme";
 import { useCustomerProfile } from "../../context/customer-profile-context";
 import { useLanguage } from "../../context/languagecontext";
-
-type IconName =
-  ComponentProps<
-    typeof Ionicons
-  >["name"];
+import { useNotifications } from "../../context/notification-context";
 
 type LanguageName =
   | "English"
@@ -46,7 +41,7 @@ type ServiceCategory = {
   id: string;
   title: LocalizedText;
   subtitle: LocalizedText;
-  icon: IconName;
+  image: ImageSourcePropType;
 };
 
 const SERVICE_CATEGORIES: ServiceCategory[] = [
@@ -63,7 +58,9 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
       Dari: "نصب و ترمیم برق",
       Pashto: "نصب او ترمیم",
     },
-    icon: "flash-outline",
+    image: require(
+      "../../../assets/images/categories/3d/electrician.png"
+    ),
   },
   {
     id: "plumber",
@@ -78,7 +75,9 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
       Dari: "آب و فاضلاب",
       Pashto: "اوبه او فاضلاب",
     },
-    icon: "water-outline",
+    image: require(
+      "../../../assets/images/categories/3d/plumber.png"
+    ),
   },
   {
     id: "cleaner",
@@ -93,7 +92,9 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
       Dari: "خانه و دفتر",
       Pashto: "کور او دفتر",
     },
-    icon: "sparkles-outline",
+    image: require(
+      "../../../assets/images/categories/3d/cleaning.png"
+    ),
   },
   {
     id: "construction",
@@ -109,7 +110,9 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
       Pashto:
         "ترمیم او بیارغونه",
     },
-    icon: "construct-outline",
+    image: require(
+      "../../../assets/images/categories/3d/construction.png"
+    ),
   },
   {
     id: "carpenter",
@@ -124,7 +127,9 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
       Dari: "وسایل چوبی",
       Pashto: "لرګین وسایل",
     },
-    icon: "hammer-outline",
+    image: require(
+      "../../../assets/images/categories/3d/carpenter.png"
+    ),
   },
   {
     id: "computer-repair",
@@ -140,7 +145,9 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
       Pashto:
         "موبایل او کمپیوټر",
     },
-    icon: "laptop-outline",
+    image: require(
+      "../../../assets/images/categories/3d/tech-repair.png"
+    ),
   },
   {
     id: "painter",
@@ -157,8 +164,9 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
       Pashto:
         "دیوالونه او ودانۍ",
     },
-    icon:
-      "color-palette-outline",
+    image: require(
+      "../../../assets/images/categories/3d/painting.png"
+    ),
   },
   {
     id: "gardener",
@@ -173,7 +181,9 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
       Dari: "تنظیم باغچه و گل",
       Pashto: "باغ او بوټي",
     },
-    icon: "leaf-outline",
+    image: require(
+      "../../../assets/images/categories/3d/gardening.png"
+    ),
   },
   {
     id: "appliance-repair",
@@ -190,7 +200,9 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
       Pashto:
         "د کور وسایلو ترمیم",
     },
-    icon: "settings-outline",
+    image: require(
+      "../../../assets/images/categories/3d/appliances.png"
+    ),
   },
 ];
 
@@ -202,6 +214,10 @@ export default function HomeScreen() {
 
   const { profile } =
     useCustomerProfile();
+
+  const {
+    getUnreadCount,
+  } = useNotifications();
 
   const { width } =
     useWindowDimensions();
@@ -220,17 +236,34 @@ export default function HomeScreen() {
       activeLanguage,
     );
 
-  const greeting =
-    getTimeSensitiveGreeting(
+  const firstName =
+    getFirstName(
+      profile?.fullName,
+    );
+
+  const greetingLabel =
+    getTimeSensitiveGreetingLabel(
       copy,
-      getFirstName(
-        profile?.fullName,
-      ),
       new Date().getHours(),
     );
 
+  const displayName =
+    firstName ||
+    copy.fallbackName;
+
   const compactGrid =
     width < 370;
+
+  const unreadCount =
+    getUnreadCount(
+      "customer",
+      LOCAL_CUSTOMER_ID,
+    );
+
+  const avatarInitials =
+    getInitials(
+      profile?.fullName,
+    );
 
   const categories =
     useMemo(
@@ -268,6 +301,20 @@ export default function HomeScreen() {
       });
     };
 
+  const openProfile =
+    (): void => {
+      router.push(
+        "/(tabs)/profile",
+      );
+    };
+
+  const openNotifications =
+    (): void => {
+      router.push(
+        "/customer-notifications",
+      );
+    };
+
   return (
     <SafeAreaView
       style={styles.safeArea}
@@ -281,18 +328,129 @@ export default function HomeScreen() {
         }
       >
         <View
-          style={styles.hero}
+          style={[
+            styles.topBar,
+            {
+              flexDirection:
+                isRtl
+                  ? "row-reverse"
+                  : "row",
+            },
+          ]}
         >
-          <Text
-            style={[
-              styles.greeting,
-              directionStyle(
-                isRtl,
-              ),
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              copy.profileAccessibility
+            }
+            onPress={openProfile}
+            style={({ pressed }) => [
+              styles.avatarButton,
+              pressed &&
+                styles.pressed,
             ]}
           >
-            {greeting}
-          </Text>
+            {profile?.avatarUri ? (
+              <Image
+                source={{
+                  uri:
+                    profile.avatarUri,
+                }}
+                style={
+                  styles.avatarImage
+                }
+              />
+            ) : (
+              <View
+                style={
+                  styles.avatarFallback
+                }
+              >
+                <Text
+                  style={
+                    styles.avatarInitials
+                  }
+                >
+                  {avatarInitials}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+
+          <View
+            style={
+              styles.greetingWrap
+            }
+          >
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.82}
+              style={[
+                styles.greetingLabel,
+                directionStyle(
+                  isRtl,
+                ),
+              ]}
+            >
+              {greetingLabel}
+            </Text>
+
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.74}
+              style={[
+                styles.greetingName,
+                directionStyle(
+                  isRtl,
+                ),
+              ]}
+            >
+              {displayName}
+            </Text>
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              copy.notificationsAccessibility
+            }
+            onPress={
+              openNotifications
+            }
+            style={({ pressed }) => [
+              styles.notificationButton,
+              pressed &&
+                styles.pressed,
+            ]}
+          >
+            <Ionicons
+              name="notifications-outline"
+              size={23}
+              color={
+                KhedmatPalette.navy900
+              }
+            />
+
+            {unreadCount > 0 ? (
+              <View
+                style={
+                  styles.notificationBadge
+                }
+              >
+                <Text
+                  style={
+                    styles.notificationBadgeText
+                  }
+                >
+                  {unreadCount > 99
+                    ? "99+"
+                    : unreadCount}
+                </Text>
+              </View>
+            ) : null}
+          </Pressable>
         </View>
 
         <View
@@ -346,21 +504,19 @@ export default function HomeScreen() {
                   >
                     <View
                       style={
-                        styles.categoryIcon
+                        styles.categoryImageContainer
                       }
                     >
-                      <Ionicons
-                        name={
-                          category.icon
+                      <Image
+                        source={
+                          category.image
                         }
-                        size={
-                          compactGrid
-                            ? 26
-                            : 28
-                        }
-                        color={
-                          KhedmatPalette.blue500
-                        }
+                        resizeMode="contain"
+                        style={[
+                          styles.categoryImage,
+                          compactGrid &&
+                            styles.categoryImageCompact,
+                        ]}
                       />
                     </View>
 
@@ -385,6 +541,172 @@ export default function HomeScreen() {
               ),
             )}
           </View>
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            copy.searchBannerAccessibility
+          }
+          onPress={openSearch}
+          style={({ pressed }) => [
+            styles.searchBanner,
+            pressed &&
+              styles.cardPressed,
+          ]}
+        >
+          <View
+            style={[
+              styles.searchBannerContent,
+              {
+                flexDirection:
+                  isRtl
+                    ? "row-reverse"
+                    : "row",
+              },
+            ]}
+          >
+            <View
+              style={
+                styles.searchBannerCopy
+              }
+            >
+              <Text
+                style={[
+                  styles.searchBannerTitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {
+                  copy.searchBannerTitle
+                }
+              </Text>
+
+              <Text
+                style={[
+                  styles.searchBannerSubtitle,
+                  directionStyle(
+                    isRtl,
+                  ),
+                ]}
+              >
+                {
+                  copy.searchBannerSubtitle
+                }
+              </Text>
+
+              <View
+                style={[
+                  styles.searchBannerCta,
+                  {
+                    flexDirection:
+                      isRtl
+                        ? "row-reverse"
+                        : "row",
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="search-outline"
+                  size={16}
+                  color={
+                    KhedmatPalette.white
+                  }
+                />
+
+                <Text
+                  style={
+                    styles.searchBannerCtaText
+                  }
+                >
+                  {
+                    copy.searchBannerButton
+                  }
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={
+                styles.searchIllustration
+              }
+            >
+              <View
+                style={
+                  styles.searchIllustrationPhone
+                }
+              >
+                <Ionicons
+                  name="location"
+                  size={27}
+                  color={
+                    KhedmatPalette.blue500
+                  }
+                />
+              </View>
+
+              <View
+                style={
+                  styles.searchIllustrationLens
+                }
+              >
+                <Ionicons
+                  name="search"
+                  size={22}
+                  color={
+                    KhedmatPalette.navy900
+                  }
+                />
+              </View>
+            </View>
+          </View>
+        </Pressable>
+
+        <View
+          style={[
+            styles.trustStrip,
+            {
+              flexDirection:
+                isRtl
+                  ? "row-reverse"
+                  : "row",
+            },
+          ]}
+        >
+          <TrustItem
+            icon="shield-checkmark-outline"
+            label={
+              copy.trustedProviders
+            }
+          />
+
+          <View
+            style={
+              styles.trustDivider
+            }
+          />
+
+          <TrustItem
+            icon="receipt-outline"
+            label={
+              copy.clearPricing
+            }
+          />
+
+          <View
+            style={
+              styles.trustDivider
+            }
+          />
+
+          <TrustItem
+            icon="headset-outline"
+            label={
+              copy.support
+            }
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -469,6 +791,44 @@ function SectionHeader({
   );
 }
 
+type TrustItemProps = {
+  icon:
+    keyof typeof Ionicons.glyphMap;
+  label: string;
+};
+
+function TrustItem({
+  icon,
+  label,
+}: TrustItemProps) {
+  return (
+    <View
+      style={
+        styles.trustItem
+      }
+    >
+      <Ionicons
+        name={icon}
+        size={18}
+        color={
+          KhedmatPalette.textMuted
+        }
+      />
+
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.72}
+        style={
+          styles.trustItemText
+        }
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 function normalizeLanguage(
   language: string,
 ): LanguageName {
@@ -527,27 +887,55 @@ function getFirstName(
   );
 }
 
-function getTimeSensitiveGreeting(
+function getInitials(
+  fullName:
+    | string
+    | null
+    | undefined,
+): string {
+  const normalized =
+    fullName
+      ?.trim()
+      .replace(
+        /\s+/g,
+        " ",
+      );
+
+  if (!normalized) {
+    return "U";
+  }
+
+  return normalized
+    .split(" ")
+    .slice(0, 2)
+    .map((part) =>
+      part.charAt(0),
+    )
+    .join("")
+    .toUpperCase();
+}
+
+function getTimeSensitiveGreetingLabel(
   copy: ReturnType<
     typeof getHomeCopy
   >,
-  firstName: string | null,
   hour: number,
 ): string {
-  const greeting =
+  if (
     hour >= 5 &&
     hour < 12
-      ? copy.morningGreeting
-      : hour >= 12 &&
-          hour < 17
-        ? copy.afternoonGreeting
-        : copy.eveningGreeting;
+  ) {
+    return copy.morningGreeting;
+  }
 
-  const displayName =
-    firstName ||
-    copy.fallbackName;
+  if (
+    hour >= 12 &&
+    hour < 17
+  ) {
+    return copy.afternoonGreeting;
+  }
 
-  return `${greeting}, ${displayName}`;
+  return copy.eveningGreeting;
 }
 
 function getHomeCopy(
@@ -568,6 +956,24 @@ function getHomeCopy(
         "خدمات محبوب",
       viewAll:
         "مشاهده همه",
+      profileAccessibility:
+        "پروفایل",
+      notificationsAccessibility:
+        "اعلان‌ها",
+      searchBannerAccessibility:
+        "جستجوی خدمات",
+      searchBannerTitle:
+        "خدمات مورد نیاز خود را پیدا کنید",
+      searchBannerSubtitle:
+        "با ارائه‌دهندگان معتبر خدمات در ارتباط باشید.",
+      searchBannerButton:
+        "جستجو",
+      trustedProviders:
+        "ارائه‌دهندگان معتبر",
+      clearPricing:
+        "قیمت شفاف",
+      support:
+        "پشتیبانی",
     };
   }
 
@@ -586,6 +992,24 @@ function getHomeCopy(
         "مشهور خدمتونه",
       viewAll:
         "ټول وګورئ",
+      profileAccessibility:
+        "پروفایل",
+      notificationsAccessibility:
+        "خبرتیاوې",
+      searchBannerAccessibility:
+        "خدمتونه ولټوئ",
+      searchBannerTitle:
+        "اړین خدمتونه ومومئ",
+      searchBannerSubtitle:
+        "له باوري خدمت وړاندې کوونکو سره اړیکه ونیسئ.",
+      searchBannerButton:
+        "لټون",
+      trustedProviders:
+        "باوري وړاندې کوونکي",
+      clearPricing:
+        "روښانه بیې",
+      support:
+        "ملاتړ",
     };
   }
 
@@ -600,6 +1024,24 @@ function getHomeCopy(
     popularServices:
       "Popular services",
     viewAll: "View all",
+    profileAccessibility:
+      "Profile",
+    notificationsAccessibility:
+      "Notifications",
+    searchBannerAccessibility:
+      "Search for services",
+    searchBannerTitle:
+      "Find the service you need",
+    searchBannerSubtitle:
+      "Connect with trusted service providers.",
+    searchBannerButton:
+      "Search",
+    trustedProviders:
+      "Trusted providers",
+    clearPricing:
+      "Clear pricing",
+    support:
+      "Support",
   };
 }
 
@@ -608,7 +1050,7 @@ const styles =
     safeArea: {
       flex: 1,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
 
     scrollContent: {
@@ -622,18 +1064,126 @@ const styles =
       paddingBottom: 125,
     },
 
-    hero: {
+    topBar: {
       width: "100%",
-      marginTop: Spacing.md,
+      minHeight: 56,
+      alignItems: "center",
+      gap: Spacing.md,
+      marginTop: Spacing.xs,
     },
 
-    greeting: {
-      ...Typography.sectionTitle,
+    avatarButton: {
+      width: 50,
+      height: 50,
+      flexShrink: 0,
+      borderRadius:
+        Radius.pill,
+      borderWidth: 1,
+      borderColor:
+        KhedmatPalette.blue200,
+      padding: 2,
+      overflow: "hidden",
+      backgroundColor:
+        KhedmatPalette.white,
+    },
+
+    avatarImage: {
+      width: "100%",
+      height: "100%",
+      borderRadius:
+        Radius.pill,
+    },
+
+    avatarFallback: {
+      flex: 1,
+      borderRadius:
+        Radius.pill,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.navy900,
+    },
+
+    avatarInitials: {
+      color:
+        KhedmatPalette.white,
+      fontFamily:
+        Fonts.bold,
+      fontSize: 15,
+      lineHeight: 19,
+    },
+
+    greetingWrap: {
+      flex: 1,
+      minWidth: 0,
+      minHeight: 46,
+      justifyContent: "center",
+      gap: 1,
+    },
+
+    greetingLabel: {
+      ...Typography.captionStyle,
       width: "100%",
       color:
         KhedmatPalette.blue500,
-      fontSize: 22,
-      lineHeight: 29,
+      fontFamily:
+        Fonts.medium,
+      fontSize: 13,
+      lineHeight: 17,
+    },
+
+    greetingName: {
+      ...Typography.label,
+      width: "100%",
+      color:
+        KhedmatPalette.navy900,
+      fontFamily:
+        Fonts.bold,
+      fontSize: 17,
+      lineHeight: 21,
+    },
+
+    notificationButton: {
+      width: 42,
+      height: 42,
+      flexShrink: 0,
+      borderRadius:
+        Radius.pill,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.white,
+      borderWidth:
+        StyleSheet.hairlineWidth,
+      borderColor:
+        KhedmatPalette.blue200,
+    },
+
+    notificationBadge: {
+      position: "absolute",
+      top: -4,
+      right: -4,
+      minWidth: 18,
+      height: 18,
+      paddingHorizontal: 4,
+      borderRadius:
+        Radius.pill,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.blue500,
+      borderWidth: 1,
+      borderColor:
+        KhedmatPalette.white,
+    },
+
+    notificationBadgeText: {
+      color:
+        KhedmatPalette.white,
+      fontFamily:
+        Fonts.bold,
+      fontSize: 9,
+      lineHeight: 11,
     },
 
     section: {
@@ -682,25 +1232,42 @@ const styles =
 
     categoryCard: {
       width: "24%",
-      minHeight: 102,
+      minHeight: 116,
       paddingHorizontal: 4,
       paddingVertical:
         Spacing.xs,
       alignItems: "center",
       justifyContent:
         "center",
+
       borderRadius:
         Radius.lg,
+
       backgroundColor:
-        KhedmatPalette.surface,
-      borderWidth: 1,
+        KhedmatPalette.white,
+
+      borderWidth:
+        StyleSheet.hairlineWidth,
+
       borderColor:
-        KhedmatPalette.border,
-      ...Shadows.small,
+        KhedmatPalette.blue200,
+
+      shadowColor:
+        KhedmatPalette.navy900,
+
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+
+      shadowOpacity: 0.07,
+      shadowRadius: 10,
+
+      elevation: 3,
     },
 
     categoryCardCompact: {
-      minHeight: 96,
+      minHeight: 108,
     },
 
     categoryContent: {
@@ -710,18 +1277,24 @@ const styles =
         "center",
     },
 
-    categoryIcon: {
-      width: 46,
-      height: 46,
+    categoryImageContainer: {
+      width: 64,
+      height: 64,
       marginBottom:
         Spacing.xs,
-      borderRadius:
-        Radius.md,
       alignItems: "center",
       justifyContent:
         "center",
-      backgroundColor:
-        KhedmatPalette.surfaceSoft,
+    },
+
+    categoryImage: {
+      width: 60,
+      height: 60,
+    },
+
+    categoryImageCompact: {
+      width: 54,
+      height: 54,
     },
 
     categoryTitle: {
@@ -736,6 +1309,175 @@ const styles =
       lineHeight: 14,
       includeFontPadding:
         false,
+    },
+
+    searchBanner: {
+      width: "100%",
+      marginTop: Spacing.xxl,
+      borderRadius:
+        Radius.xl,
+      borderWidth:
+        StyleSheet.hairlineWidth,
+      borderColor:
+        KhedmatPalette.blue200,
+      backgroundColor:
+        KhedmatPalette.blue050,
+      shadowColor:
+        KhedmatPalette.navy900,
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: 0.05,
+      shadowRadius: 10,
+      elevation: 2,
+    },
+
+    searchBannerContent: {
+      width: "100%",
+      minHeight: 150,
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+      gap: Spacing.md,
+      paddingHorizontal:
+        Spacing.lg,
+      paddingVertical:
+        Spacing.lg,
+    },
+
+    searchBannerCopy: {
+      flex: 1,
+      minWidth: 0,
+    },
+
+    searchBannerTitle: {
+      ...Typography.sectionTitle,
+      color:
+        KhedmatPalette.textPrimary,
+      fontSize: 18,
+      lineHeight: 24,
+    },
+
+    searchBannerSubtitle: {
+      ...Typography.captionStyle,
+      marginTop: 4,
+      color:
+        KhedmatPalette.textSecondary,
+      lineHeight: 18,
+    },
+
+    searchBannerCta: {
+      alignSelf: "flex-start",
+      minHeight: 40,
+      marginTop: Spacing.md,
+      paddingHorizontal:
+        Spacing.md,
+      borderRadius:
+        Radius.md,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: Spacing.xs,
+      backgroundColor:
+        KhedmatPalette.navy900,
+    },
+
+    searchBannerCtaText: {
+      ...Typography.label,
+      color:
+        KhedmatPalette.white,
+      fontSize: 12,
+      lineHeight: 16,
+    },
+
+    searchIllustration: {
+      width: 92,
+      height: 92,
+      flexShrink: 0,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    searchIllustrationPhone: {
+      width: 56,
+      height: 72,
+      borderRadius:
+        Radius.lg,
+      borderWidth: 3,
+      borderColor:
+        KhedmatPalette.navy900,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.white,
+      transform: [
+        {
+          rotate: "8deg",
+        },
+      ],
+    },
+
+    searchIllustrationLens: {
+      position: "absolute",
+      right: 3,
+      bottom: 5,
+      width: 42,
+      height: 42,
+      borderRadius:
+        Radius.pill,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor:
+        KhedmatPalette.white,
+      borderWidth: 3,
+      borderColor:
+        KhedmatPalette.navy900,
+    },
+
+    trustStrip: {
+      width: "100%",
+      minHeight: 58,
+      marginTop: Spacing.lg,
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+      paddingHorizontal:
+        Spacing.md,
+      borderRadius:
+        Radius.lg,
+      backgroundColor:
+        KhedmatPalette.blue050,
+      borderWidth:
+        StyleSheet.hairlineWidth,
+      borderColor:
+        KhedmatPalette.blue200,
+    },
+
+    trustItem: {
+      flex: 1,
+      minWidth: 0,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 3,
+    },
+
+    trustItemText: {
+      ...Typography.captionStyle,
+      width: "100%",
+      color:
+        KhedmatPalette.textMuted,
+      textAlign: "center",
+      fontSize: 9,
+      lineHeight: 12,
+    },
+
+    trustDivider: {
+      width:
+        StyleSheet.hairlineWidth,
+      height: 28,
+      marginHorizontal: 4,
+      backgroundColor:
+        KhedmatPalette.blue200,
     },
 
     pressed: {

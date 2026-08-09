@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ComponentProps, useEffect, useMemo, useState } from "react";
+import { ComponentProps, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Pressable,
@@ -25,14 +24,10 @@ import {
 import { useCustomerProfile } from "../../context/customer-profile-context";
 import { useLanguage } from "../../context/languagecontext";
 import { useSession } from "../../context/session-context";
-import { getProviderById } from "../../services/provider-repository";
-import { getLocalProviders } from "../../services/provider-storage";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
 type LanguageName = "English" | "Dari" | "Pashto";
-
-type ProviderStatus = "not-started" | "pending" | "approved" | "rejected";
 
 type LocalizedText = {
   English: string;
@@ -55,8 +50,7 @@ export default function ProfileScreen() {
   const { language } = useLanguage();
   const { profile } = useCustomerProfile();
 
-  const { activeProviderId, enterProviderWorkspace, resetSession } =
-    useSession();
+  const { resetSession } = useSession();
 
   const activeLanguage = normalizeLanguage(language);
 
@@ -72,75 +66,6 @@ export default function ProfileScreen() {
   );
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-
-  const [providerStatus, setProviderStatus] = useState<ProviderStatus | null>(
-    null,
-  );
-
-  const [providerAccountId, setProviderAccountId] = useState<string | null>(
-    null,
-  );
-
-  const [providerAccountError, setProviderAccountError] =
-    useState<Error | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const resolveProviderAccount = async (): Promise<void> => {
-      setProviderStatus(null);
-      setProviderAccountError(null);
-
-      try {
-        if (activeProviderId) {
-          const activeProvider = await getProviderById(activeProviderId);
-
-          if (isMounted && activeProvider) {
-            setProviderAccountId(activeProvider.id);
-            setProviderStatus("approved");
-
-            return;
-          }
-        }
-
-        const localProviders = await getLocalProviders();
-
-        if (!isMounted) {
-          return;
-        }
-
-        const savedProvider = localProviders[0];
-
-        if (savedProvider) {
-          setProviderAccountId(savedProvider.id);
-          setProviderStatus("approved");
-
-          return;
-        }
-
-        setProviderAccountId(null);
-        setProviderStatus("not-started");
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
-        setProviderAccountId(null);
-        setProviderStatus("not-started");
-        setProviderAccountError(
-          error instanceof Error
-            ? error
-            : new Error("Failed to resolve the provider account."),
-        );
-      }
-    };
-
-    void resolveProviderAccount();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [activeProviderId]);
 
   const accountItems = useMemo<ProfileMenuItem[]>(
     () => [
@@ -259,28 +184,6 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const openProviderStatus = () => {
-    if (!providerStatus) {
-      return;
-    }
-
-    if (providerStatus === "not-started") {
-      router.push("/provider-welcome");
-
-      return;
-    }
-
-    if (providerStatus === "approved" && providerAccountId) {
-      enterProviderWorkspace(providerAccountId);
-
-      router.push("/(provider-tabs)");
-
-      return;
-    }
-
-    console.log("Open provider application status");
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -313,51 +216,15 @@ export default function ProfileScreen() {
 </Text>
         </View>
 
-        {providerStatus ? (
-          <ProviderStatusCard
-            status={providerStatus}
-            language={activeLanguage}
-            isRtl={isRtl}
-            onPress={openProviderStatus}
-          />
-        ) : (
-          <View
-            style={[
-              styles.providerStatusLoading,
-              {
-                flexDirection: isRtl ? "row-reverse" : "row",
-              },
-            ]}
-          >
-            <ActivityIndicator size="small" color={KhedmatPalette.blue500} />
-
-            <Text
-              style={[styles.providerStatusLoadingText, directionStyle(isRtl)]}
-            >
-              {activeLanguage === "Dari"
-                ? "در حال بررسی حساب ارائه‌دهنده..."
-                : activeLanguage === "Pashto"
-                  ? "د خدمت چمتو کوونکي حساب کتل کېږي..."
-                  : "Checking provider account..."}
-            </Text>
-          </View>
-        )}
-
-        {providerAccountError ? (
-          <Text style={[styles.providerStatusError, directionStyle(isRtl)]}>
-            {activeLanguage === "Dari"
-              ? "بارگذاری حساب ارائه‌دهنده ناموفق بود."
-              : activeLanguage === "Pashto"
-                ? "د خدمت چمتو کوونکي حساب بارول ناکام شول."
-                : "Unable to load the provider account."}
-          </Text>
-        ) : null}
-
-        <ProfileSection
-          title={copy.account}
-          items={accountItems}
-          isRtl={isRtl}
-        />
+        <View style={styles.accountMenu}>
+          {accountItems.map((item) => (
+            <ProfileMenuItemCard
+              key={item.id}
+              item={item}
+              isRtl={isRtl}
+            />
+          ))}
+        </View>
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
@@ -430,92 +297,11 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
-
-type ProviderStatusCardProps = {
-  status: ProviderStatus;
-  language: LanguageName;
-  isRtl: boolean;
-  onPress: () => void;
-};
-
-function ProviderStatusCard({
-  status,
-  language,
-  isRtl,
-  onPress,
-}: ProviderStatusCardProps) {
-  const config = getProviderStatusConfig(status, language);
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={config.title}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.providerStatusCard,
-        {
-          borderColor: config.borderColor,
-          backgroundColor: config.backgroundColor,
-          flexDirection: isRtl ? "row-reverse" : "row",
-        },
-        pressed && styles.cardPressed,
-      ]}
-    >
-      <View
-        style={[
-          styles.providerStatusIcon,
-          {
-            backgroundColor: config.iconBackground,
-          },
-        ]}
-      >
-        <Ionicons name={config.icon} size={24} color={config.color} />
-      </View>
-
-      <View
-        style={[
-          styles.providerStatusCopy,
-          {
-            alignItems: isRtl ? "flex-end" : "flex-start",
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.providerStatusEyebrow,
-            {
-              color: config.color,
-            },
-            directionStyle(isRtl),
-          ]}
-        >
-          {config.providerAccountLabel}
-        </Text>
-
-        <Text style={[styles.providerStatusTitle, directionStyle(isRtl)]}>
-          {config.title}
-        </Text>
-
-        <Text style={[styles.providerStatusSubtitle, directionStyle(isRtl)]}>
-          {config.subtitle}
-        </Text>
-      </View>
-
-      <Ionicons
-        name={isRtl ? "chevron-back" : "chevron-forward"}
-        size={20}
-        color={KhedmatPalette.textMuted}
-      />
-    </Pressable>
-  );
-}
-
 type ProfileSectionProps = {
   title: string;
   items: ProfileMenuItem[];
   isRtl: boolean;
 };
-
 function ProfileSection({ title, items, isRtl }: ProfileSectionProps) {
   return (
     <View style={styles.section}>
@@ -678,155 +464,6 @@ function ProfileToggleItem({ item, selected, isRtl }: ProfileToggleItemProps) {
       </View>
     </Pressable>
   );
-}
-
-function getProviderStatusConfig(
-  status: ProviderStatus,
-  language: LanguageName,
-) {
-  const copy = getProviderStatusCopy(language);
-
-  if (status === "pending") {
-    return {
-      providerAccountLabel: copy.providerAccount,
-
-      title: copy.pendingTitle,
-
-      icon: "time-outline" as const,
-
-      color: "#8A5A00",
-
-      backgroundColor: "#FFF9E9",
-
-      borderColor: "#E5C875",
-
-      iconBackground: "#FFF0C2",
-    };
-  }
-
-  if (status === "approved") {
-    return {
-      providerAccountLabel: copy.providerAccount,
-
-      title: copy.approvedTitle,
-
-      icon: "checkmark-circle-outline" as const,
-
-      color: KhedmatPalette.success,
-
-      backgroundColor: "#F2FBF6",
-
-      borderColor: "#9ED9B6",
-
-      iconBackground: KhedmatPalette.successSoft,
-    };
-  }
-
-  if (status === "rejected") {
-    return {
-      providerAccountLabel: copy.providerAccount,
-
-      title: copy.rejectedTitle,
-
-      subtitle: copy.rejectedSubtitle,
-
-      icon: "alert-circle-outline" as const,
-
-      color: KhedmatPalette.error,
-
-      backgroundColor: "#FFF5F4",
-
-      borderColor: "#E8AAA5",
-
-      iconBackground: KhedmatPalette.errorSoft,
-    };
-  }
-
-  return {
-    providerAccountLabel: copy.providerAccount,
-
-    title: copy.notStartedTitle,
-
-    subtitle: copy.notStartedSubtitle,
-
-    icon: "briefcase-outline" as const,
-
-    color: KhedmatPalette.blue500,
-
-    backgroundColor: "#F4FBFC",
-
-    borderColor: KhedmatPalette.blue200,
-
-    iconBackground: KhedmatPalette.surfaceSoft,
-  };
-}
-
-function getProviderStatusCopy(language: LanguageName) {
-  if (language === "Dari") {
-    return {
-      providerAccount: "حساب ارائه‌دهنده",
-
-      pendingTitle: "درخواست شما در حال بررسی است",
-
-      pendingSubtitle: "پس از تأیید، حساب حرفه‌ای شما فعال می‌شود.",
-
-      approvedTitle: "حساب ارائه‌دهنده فعال است",
-
-      approvedSubtitle: "درخواست‌های مشتریان را مشاهده و مدیریت کنید.",
-
-      rejectedTitle: "درخواست نیاز به اصلاح دارد",
-
-      rejectedSubtitle: "جزئیات درخواست را مشاهده و اطلاعات را تکمیل کنید.",
-
-      notStartedTitle: "به‌عنوان ارائه‌دهنده ثبت‌نام کنید",
-
-      notStartedSubtitle:
-        "مهارت‌های خود را معرفی کنید و درخواست‌های کاری دریافت نمایید.",
-    };
-  }
-
-  if (language === "Pashto") {
-    return {
-      providerAccount: "د خدمت وړاندې کوونکي حساب",
-
-      pendingTitle: "ستاسو غوښتنه تر کتنې لاندې ده",
-
-      pendingSubtitle: "له تایید وروسته به ستاسو مسلکي حساب فعال شي.",
-
-      approvedTitle: "د خدمت وړاندې کوونکي حساب فعال دی",
-
-      approvedSubtitle: "د پیرودونکو غوښتنې وګورئ او مدیریت یې کړئ.",
-
-      rejectedTitle: "غوښتنه سمون ته اړتیا لري",
-
-      rejectedSubtitle: "د غوښتنې تفصیل وګورئ او معلومات بشپړ کړئ.",
-
-      notStartedTitle: "د خدمت وړاندې کوونکي په توګه نوم‌لیکنه وکړئ",
-
-      notStartedSubtitle: "خپل مهارتونه معرفي کړئ او کاري غوښتنې ترلاسه کړئ.",
-    };
-  }
-
-  return {
-    providerAccount: "Provider account",
-
-    pendingTitle: "Your application is under review",
-
-    pendingSubtitle: "Your professional account will activate after approval.",
-
-    approvedTitle: "Your provider account is active",
-
-    approvedSubtitle: "View and manage customer service requests.",
-
-    rejectedTitle: "Your application needs changes",
-
-    rejectedSubtitle:
-      "Review the application and complete the required information.",
-
-    notStartedTitle: "Register as a provider",
-
-    notStartedSubtitle: "Present your skills and receive service requests.",
-  };
 }
 
 function normalizeLanguage(language: string): LanguageName {
@@ -1080,7 +717,7 @@ function getProfileCopy(language: LanguageName) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: KhedmatPalette.blue050,
+    backgroundColor: KhedmatPalette.white,
   },
 
   scrollContent: {
@@ -1098,7 +735,7 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     marginTop: Spacing.sm,
-    marginBottom: Spacing.xxl,
+    marginBottom: Spacing.sm,
     gap: Spacing.md,
   },
 
@@ -1110,7 +747,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: KhedmatPalette.navy900,
     borderWidth: 3,
-    borderColor: KhedmatPalette.surface,
+    borderColor: KhedmatPalette.blue200,
     ...Shadows.small,
   },
 
@@ -1140,82 +777,15 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  providerStatusLoading: {
+  accountMenu: {
     width: "100%",
-    minHeight: 88,
-    marginTop: Spacing.lg,
-    padding: Spacing.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.md,
-    borderWidth: 1,
-    borderColor: KhedmatPalette.border,
-    borderRadius: Radius.xl,
-    backgroundColor: KhedmatPalette.surface,
-  },
-
-  providerStatusLoadingText: {
-    ...Typography.label,
-    flex: 1,
-    color: KhedmatPalette.textSecondary,
-  },
-
-  providerStatusError: {
-    ...Typography.captionStyle,
-    width: "100%",
-    marginTop: Spacing.sm,
-    color: KhedmatPalette.error,
-  },
-
-  providerStatusCard: {
-    width: "100%",
-    minHeight: 112,
-    marginTop: Spacing.lg,
-    padding: Spacing.lg,
-    alignItems: "center",
-    gap: Spacing.md,
-    borderWidth: 1,
-    borderRadius: Radius.xl,
-  },
-
-  providerStatusIcon: {
-    width: 50,
-    height: 50,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  providerStatusCopy: {
-    flex: 1,
-    gap: 3,
-  },
-
-  providerStatusEyebrow: {
-    ...Typography.captionStyle,
-    width: "100%",
-    fontFamily: Fonts.medium,
-  },
-
-  providerStatusTitle: {
-    ...Typography.label,
-    width: "100%",
-    color: KhedmatPalette.textPrimary,
-    fontSize: 17,
-    lineHeight: 23,
-  },
-
-  providerStatusSubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: KhedmatPalette.textSecondary,
-    lineHeight: 19,
+    marginTop: Spacing.xl,
+    gap: Spacing.sm,
   },
 
   section: {
     width: "100%",
-    marginTop: Spacing.section,
+    marginTop: Spacing.xl,
     gap: Spacing.md,
   },
 

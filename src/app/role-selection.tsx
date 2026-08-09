@@ -65,17 +65,21 @@ export default function RoleSelectionScreen() {
     {
       id: "customer",
       title: t("customerTitle"),
-      subtitle: t(
-        "customerSubtitle",
-      ),
+      subtitle:
+        getConciseRoleSubtitle(
+          language,
+          "customer",
+        ),
       icon: "person-outline",
     },
     {
       id: "provider",
       title: t("providerTitle"),
-      subtitle: t(
-        "providerSubtitle",
-      ),
+      subtitle:
+        getConciseRoleSubtitle(
+          language,
+          "provider",
+        ),
       icon: "briefcase-outline",
     },
   ];
@@ -128,19 +132,6 @@ export default function RoleSelectionScreen() {
             }
           />
 
-          <Text
-            style={[
-              styles.helperText,
-              {
-                writingDirection:
-                  isRtl
-                    ? "rtl"
-                    : "ltr",
-              },
-            ]}
-          >
-            {t("roleHelperText")}
-          </Text>
         </View>
       }
     >
@@ -203,33 +194,6 @@ export default function RoleSelectionScreen() {
             {t("roleEyebrow")}
           </Text>
 
-          <Text
-            style={[
-              styles.title,
-              {
-                writingDirection:
-                  isRtl
-                    ? "rtl"
-                    : "ltr",
-              },
-            ]}
-          >
-            {t("roleTitle")}
-          </Text>
-
-          <Text
-            style={[
-              styles.subtitle,
-              {
-                writingDirection:
-                  isRtl
-                    ? "rtl"
-                    : "ltr",
-              },
-            ]}
-          >
-            {t("roleSubtitle")}
-          </Text>
         </View>
       </View>
 
@@ -384,6 +348,27 @@ export default function RoleSelectionScreen() {
   );
 }
 
+function getConciseRoleSubtitle(
+  language: string,
+  role: UserRole,
+): string {
+  if (language === "Dari") {
+    return role === "customer"
+      ? "خدمات مورد نیاز خود را پیدا و رزرو کنید."
+      : "خدمات ارائه کنید و درخواست دریافت کنید.";
+  }
+
+  if (language === "Pashto") {
+    return role === "customer"
+      ? "اړین خدمتونه ومومئ او رزرو یې کړئ."
+      : "خدمتونه وړاندې کړئ او غوښتنې ترلاسه کړئ.";
+  }
+
+  return role === "customer"
+    ? "Find and book services."
+    : "Offer services and receive requests.";
+}
+
 const styles = StyleSheet.create({
   screenContent: {
     paddingTop: Spacing.sm,
@@ -424,6 +409,7 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: Spacing.lg,
     alignItems: "center",
+    marginBottom: Spacing.lg,
   },
 
   headerIcon: {
@@ -443,7 +429,6 @@ const styles = StyleSheet.create({
     maxWidth:
       Layout.readableTextMaxWidth,
     alignItems: "center",
-    gap: Spacing.xs,
   },
 
   eyebrow: {
@@ -455,25 +440,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  title: {
-    ...Typography.screenTitle,
-    width: "100%",
-    color:
-      KhedmatPalette.textPrimary,
-    textAlign: "center",
-    fontSize: 25,
-    lineHeight: 32,
-  },
 
-  subtitle: {
-    ...Typography.bodyStyle,
-    width: "100%",
-    marginTop: Spacing.xs,
-    color:
-      KhedmatPalette.textSecondary,
-    textAlign: "center",
-    lineHeight: 23,
-  },
 
   options: {
     width: "100%",
@@ -607,14 +574,4 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
 
-  helperText: {
-    ...Typography.captionStyle,
-    width: "100%",
-    maxWidth:
-      Layout.readableTextMaxWidth,
-    color:
-      KhedmatPalette.textMuted,
-    textAlign: "center",
-    lineHeight: 18,
-  },
 });
