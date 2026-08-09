@@ -386,6 +386,82 @@ export type Database = {
           },
         ]
       }
+      provider_verification_submissions: {
+        Row: {
+          created_at: string
+          declaration_accepted_at: string
+          id: string
+          identity_back_path: string | null
+          identity_front_path: string
+          identity_number: string
+          owner_user_id: string
+          profile_photo_path: string
+          provider_id: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          submitted_at: string
+          sync_version: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          declaration_accepted_at: string
+          id?: string
+          identity_back_path?: string | null
+          identity_front_path: string
+          identity_number: string
+          owner_user_id: string
+          profile_photo_path: string
+          provider_id: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          submitted_at?: string
+          sync_version?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          declaration_accepted_at?: string
+          id?: string
+          identity_back_path?: string | null
+          identity_front_path?: string
+          identity_number?: string
+          owner_user_id?: string
+          profile_photo_path?: string
+          provider_id?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          submitted_at?: string
+          sync_version?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_verification_submissions_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_verification_submissions_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: true
+            referencedRelation: "provider_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_verification_submissions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_categories: {
         Row: {
           created_at: string
@@ -545,6 +621,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      current_user_is_admin: { Args: never; Returns: boolean }
       submit_provider_account: {
         Args: { p_provider_id: string }
         Returns: {

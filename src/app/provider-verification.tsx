@@ -16,11 +16,13 @@ import {
 } from "react-native";
 import { useSupabaseAuth } from "../context/supabase-auth-context";
 import { ProviderAccountRepository } from "../repositories/provider-account-repository";
+import { ProviderVerificationRepository } from "../repositories/provider-verification-repository";
 import {
   createLocalProviderProfile,
   type ProviderRegistrationData,
 } from "../services/provider-profile-factory";
 import { addLocalProvider } from "../services/provider-storage";
+import { ProviderVerificationStorage } from "../services/provider-verification-storage";
 
 import {
   Fonts,
@@ -334,6 +336,57 @@ export default function ProviderVerificationScreen() {
         })),
       });
 
+      /*
+       * Upload verification evidence before moving the provider account to
+       * `pending`. These objects live in the private provider-verification bucket
+       * and are accessible only through Storage RLS.
+       */
+      const uploadedVerification =
+        await ProviderVerificationStorage.uploadVerificationImages({
+          ownerUserId: user.id,
+          providerId: remoteDraft.provider.id,
+          profilePhotoUri: images.profilePhoto!,
+          identityFrontUri: images.identityFront!,
+          identityBackUri: images.identityBack,
+        });
+
+      const uploadedPaths = [
+        uploadedVerification.profilePhoto.path,
+        uploadedVerification.identityFront.path,
+        uploadedVerification.identityBack?.path,
+      ].filter((path): path is string => Boolean(path));
+
+      try {
+        await ProviderVerificationRepository.saveSubmission({
+          providerId: remoteDraft.provider.id,
+          ownerUserId: user.id,
+          identityNumber: trimmedIdentityNumber,
+          profilePhotoPath: uploadedVerification.profilePhoto.path,
+          identityFrontPath: uploadedVerification.identityFront.path,
+          identityBackPath: uploadedVerification.identityBack?.path ?? null,
+          declarationAcceptedAt: new Date().toISOString(),
+        });
+      } catch (error) {
+        /*
+         * If metadata persistence fails, remove the freshly uploaded private
+         * files so the user does not leave orphaned identity documents behind.
+         */
+        try {
+          await ProviderVerificationStorage.removeFiles(uploadedPaths);
+        } catch (cleanupError) {
+          console.warn(
+            "Could not clean up verification uploads after metadata failure:",
+            cleanupError,
+          );
+        }
+
+        throw error;
+      }
+
+      /*
+       * Only submit the provider for review after both the provider/service data
+       * and private verification evidence have been persisted successfully.
+       */
       const submittedProvider =
         await ProviderAccountRepository.submitProviderAccount(
           remoteDraft.provider.id,
@@ -353,9 +406,9 @@ export default function ProviderVerificationScreen() {
       await addLocalProvider(provider);
 
       /*
-       * Identity numbers and document image URIs are still intentionally not
-       * persisted in AsyncStorage. Document Storage will be a separate backend
-       * step after provider-account creation is verified.
+       * Sensitive verification data is intentionally never copied into
+       * AsyncStorage. The local mirror contains only marketplace-facing provider
+       * data; identity metadata and evidence remain in private Supabase storage.
        */
       router.replace({
         pathname: "/provider-submitted",
