@@ -24,10 +24,12 @@ import {
   Typography,
 } from "../../constants/theme";
 import { useCustomerProfile } from "../../context/customer-profile-context";
+import { useLanguage } from "../../context/languagecontext";
 
 export default function PersonalInformationScreen() {
   const router = useRouter();
   const { profile, updateProfile, uploadAvatar } = useCustomerProfile();
+  const { t, isRTL, rowDirection, textDirection } = useLanguage();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -84,22 +86,22 @@ export default function PersonalInformationScreen() {
       console.error("Failed to select a profile photo:", error);
 
       Alert.alert(
-        "Photo unavailable",
-        "The selected photo could not be loaded. Please try another image.",
+        t("photoUnavailableTitle"),
+        t("photoUnavailableMessage"),
       );
     }
   };
 
   const saveProfile = async (): Promise<void> => {
     if (fullName.length < 2) {
-      Alert.alert("Name required", "Please enter your full name.");
+      Alert.alert(t("nameRequiredTitle"), t("nameRequiredMessage"));
       return;
     }
 
     const normalizedEmail = email.trim();
 
     if (normalizedEmail && !isValidEmail(normalizedEmail)) {
-      Alert.alert("Invalid email", "Please enter a valid email address.");
+      Alert.alert(t("invalidEmailTitle"), t("invalidEmailMessage"));
       return;
     }
 
@@ -116,9 +118,9 @@ export default function PersonalInformationScreen() {
         setPendingAvatarBase64(null);
       }
 
-      Alert.alert("Saved", "Your profile information has been updated.", [
+      Alert.alert(t("profileSavedTitle"), t("profileSavedMessage"), [
         {
-          text: "OK",
+          text: t("okAction"),
           onPress: () => router.back(),
         },
       ]);
@@ -126,8 +128,8 @@ export default function PersonalInformationScreen() {
       console.error("Failed to save profile data:", error);
 
       Alert.alert(
-        "Unable to save",
-        "Your changes or profile photo could not be saved. Please check your connection and try again.",
+        t("unableSaveTitle"),
+        t("unableSaveMessage"),
       );
     } finally {
       setIsSaving(false);
@@ -140,21 +142,42 @@ export default function PersonalInformationScreen() {
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.header}>
+        <View
+          style={[
+            styles.header,
+            {
+              flexDirection: rowDirection,
+            },
+          ]}
+        >
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={t("back")}
             onPress={() => router.back()}
             style={styles.backButton}
           >
             <Ionicons
-              name="arrow-back"
+              name={
+                isRTL
+                  ? "arrow-forward"
+                  : "arrow-back"
+              }
               size={24}
               color={KhedmatPalette.textPrimary}
             />
           </Pressable>
 
-          <Text style={styles.title}>Personal Information</Text>
+          <Text
+            style={[
+              styles.title,
+              {
+                writingDirection:
+                  textDirection,
+              },
+            ]}
+          >
+            {t("personalInformationTitle")}
+          </Text>
         </View>
 
         <ScrollView
@@ -172,66 +195,76 @@ export default function PersonalInformationScreen() {
 
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Change profile photo"
+              accessibilityLabel={t("changePhoto")}
               onPress={pickImage}
             >
-              <Text style={styles.changePhotoText}>Change Photo</Text>
+              <Text style={[styles.changePhotoText, { writingDirection: textDirection }]}>{t("changePhoto")}</Text>
             </Pressable>
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>First Name</Text>
+            <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: textDirection }]}>{t("firstNameLabel")}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { textAlign: isRTL ? "right" : "left", writingDirection: textDirection }]}
               value={firstName}
               onChangeText={setFirstName}
               autoCapitalize="words"
               autoComplete="given-name"
               textContentType="givenName"
-              placeholder="Enter first name"
+              placeholder={t("firstNamePlaceholder")}
               placeholderTextColor={KhedmatPalette.textMuted}
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Last Name</Text>
+            <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: textDirection }]}>{t("lastNameLabel")}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { textAlign: isRTL ? "right" : "left", writingDirection: textDirection }]}
               value={lastName}
               onChangeText={setLastName}
               autoCapitalize="words"
               autoComplete="family-name"
               textContentType="familyName"
-              placeholder="Enter last name"
+              placeholder={t("lastNamePlaceholder")}
               placeholderTextColor={KhedmatPalette.textMuted}
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Email Address</Text>
+            <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: textDirection }]}>{t("emailAddressLabel")}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { textAlign: isRTL ? "right" : "left", writingDirection: textDirection }]}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
               textContentType="emailAddress"
-              placeholder="Enter email address"
+              placeholder={t("emailAddressPlaceholder")}
               placeholderTextColor={KhedmatPalette.textMuted}
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Phone Number</Text>
+            <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: textDirection }]}>{t("phoneNumberLabel")}</Text>
             <TextInput
-              style={[styles.input, styles.disabledInput]}
+              style={[styles.input, styles.disabledInput, { textAlign: isRTL ? "right" : "left", writingDirection: textDirection }]}
               value={profile?.phoneNumber || "—"}
               editable={false}
             />
-            <Text style={styles.helperText}>
-              Phone number is linked to the verified account and cannot be
-              changed here.
+            <Text
+              style={[
+                styles.helperText,
+                {
+                  textAlign: isRTL
+                    ? "right"
+                    : "left",
+                  writingDirection:
+                    textDirection,
+                },
+              ]}
+            >
+              {t("verifiedPhoneHint")}
             </Text>
           </View>
         </ScrollView>
@@ -246,8 +279,16 @@ export default function PersonalInformationScreen() {
             ]}
             onPress={saveProfile}
           >
-            <Text style={styles.saveButtonText}>
-              {isSaving ? "Saving..." : "Save Changes"}
+            <Text
+              style={[
+                styles.saveButtonText,
+                {
+                  writingDirection:
+                    textDirection,
+                },
+              ]}
+            >
+              {isSaving ? t("savingChanges") : t("saveChanges")}
             </Text>
           </Pressable>
         </View>
@@ -293,18 +334,17 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    backgroundColor: KhedmatPalette.blue050,
+    backgroundColor: KhedmatPalette.white,
   },
   header: {
-    flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
   },
   backButton: {
-    marginRight: Spacing.md,
     padding: Spacing.xs,
+    marginHorizontal: Spacing.xs,
   },
   title: {
     ...Typography.screenTitle,
@@ -320,14 +360,16 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   avatar: {
-    width: 80,
-    height: 80,
+    width: 84,
+    height: 84,
     borderRadius: Radius.pill,
     backgroundColor: KhedmatPalette.navy900,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: Spacing.sm,
     overflow: "hidden",
+    borderWidth: 2,
+    borderColor: KhedmatPalette.blue200,
   },
   avatarImage: {
     width: "100%",
@@ -352,17 +394,25 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   input: {
-    backgroundColor: KhedmatPalette.surface,
-    borderWidth: 1,
-    borderColor: KhedmatPalette.border,
+    backgroundColor: KhedmatPalette.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: KhedmatPalette.blue200,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     height: 52,
     ...Typography.bodyStyle,
     color: KhedmatPalette.textPrimary,
+    shadowColor: KhedmatPalette.navy900,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   disabledInput: {
-    backgroundColor: KhedmatPalette.surfaceSoft,
+    backgroundColor: KhedmatPalette.blue050,
     color: KhedmatPalette.textSecondary,
   },
   helperText: {
@@ -372,16 +422,24 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: Spacing.lg,
-    backgroundColor: KhedmatPalette.surface,
-    borderTopWidth: 1,
-    borderColor: KhedmatPalette.border,
+    backgroundColor: KhedmatPalette.white,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: KhedmatPalette.blue200,
   },
   saveButton: {
-    backgroundColor: KhedmatPalette.blue500,
+    backgroundColor: KhedmatPalette.navy900,
     height: 52,
     borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: KhedmatPalette.navy900,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 2,
   },
   saveButtonPressed: {
     opacity: 0.7,

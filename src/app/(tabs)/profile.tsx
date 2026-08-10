@@ -21,6 +21,7 @@ import {
   Spacing,
   Typography,
 } from "../../constants/theme";
+import { useCustomerAddresses } from "../../context/customer-address-context";
 import { useCustomerProfile } from "../../context/customer-profile-context";
 import { useLanguage } from "../../context/languagecontext";
 import { useSession } from "../../context/session-context";
@@ -47,8 +48,15 @@ type ProfileMenuItem = {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { language } = useLanguage();
+  const {
+    language,
+    t,
+  } = useLanguage();
   const { profile } = useCustomerProfile();
+
+  const {
+    addresses,
+  } = useCustomerAddresses();
 
   const { resetSession } = useSession();
 
@@ -56,10 +64,8 @@ export default function ProfileScreen() {
 
   const isRtl = activeLanguage === "Dari" || activeLanguage === "Pashto";
 
-  const copy = getProfileCopy(activeLanguage);
-
   const profileName =
-    profile?.fullName || copy.profileName;
+    profile?.fullName || t("profileName");
 
   const profileInitials = getInitials(
     profileName,
@@ -71,8 +77,8 @@ export default function ProfileScreen() {
     () => [
       {
         id: "personal-information",
-        title: copy.personalInformation,
-        subtitle: copy.personalInformationSubtitle,
+        title: t("personalInformationMenuTitle"),
+        subtitle: t("personalInformationMenuSubtitle"),
         icon: "person-outline",
         onPress: () => {
           router.push("/account/personal-information");
@@ -80,33 +86,46 @@ export default function ProfileScreen() {
       },
       {
         id: "saved-addresses",
-        title: copy.savedAddresses,
-        subtitle: copy.savedAddressesSubtitle,
+        title: t("savedAddressesMenuTitle"),
+        subtitle: t("savedAddressesMenuSubtitle"),
         icon: "location-outline",
-        badge: formatDigits("2", activeLanguage !== "English"),
+        badge: formatDigits(
+          addresses.length.toString(),
+          activeLanguage !== "English",
+        ),
         onPress: () => {
           router.push("/account/saved-addresses");
         },
       },
       {
         id: "language",
-        title: copy.appLanguage,
+        title: t("appLanguage"),
         subtitle: getLanguageDisplayName(activeLanguage),
         icon: "language-outline",
         onPress: () => {
-          router.push("/language");
+          router.push({
+            pathname: "/language",
+            params: {
+              source: "account",
+            },
+          });
         },
       },
     ],
-    [activeLanguage, copy, router],
+    [
+      activeLanguage,
+      addresses.length,
+      router,
+      t,
+    ],
   );
 
   const settingsItems = useMemo<ProfileMenuItem[]>(
     () => [
       {
         id: "notifications",
-        title: copy.notifications,
-        subtitle: copy.notificationsSubtitle,
+        title: t("notificationsMenuTitle"),
+        subtitle: t("notificationsMenuSubtitle"),
         icon: "notifications-outline",
         onPress: () => {
           setNotificationsEnabled((current) => !current);
@@ -114,8 +133,8 @@ export default function ProfileScreen() {
       },
       {
         id: "privacy",
-        title: copy.privacyAndSecurity,
-        subtitle: copy.privacyAndSecuritySubtitle,
+        title: t("privacySecurityMenuTitle"),
+        subtitle: t("privacySecurityMenuSubtitle"),
         icon: "shield-checkmark-outline",
         onPress: () => {
           router.push("/account/privacy-security");
@@ -123,23 +142,23 @@ export default function ProfileScreen() {
       },
       {
         id: "payments",
-        title: copy.payments,
-        subtitle: copy.paymentsSubtitle,
+        title: t("paymentsMenuTitle"),
+        subtitle: t("paymentsMenuSubtitle"),
         icon: "card-outline",
         onPress: () => {
           router.push("/account/payments");
         },
       },
     ],
-    [copy, router],
+    [router, t],
   );
 
   const supportItems = useMemo<ProfileMenuItem[]>(
     () => [
       {
         id: "help",
-        title: copy.helpCenter,
-        subtitle: copy.helpCenterSubtitle,
+        title: t("helpCenterMenuTitle"),
+        subtitle: t("helpCenterMenuSubtitle"),
         icon: "help-circle-outline",
         onPress: () => {
           router.push("/account/help-center");
@@ -147,8 +166,8 @@ export default function ProfileScreen() {
       },
       {
         id: "contact-support",
-        title: copy.contactSupport,
-        subtitle: copy.contactSupportSubtitle,
+        title: t("contactSupportMenuTitle"),
+        subtitle: t("contactSupportMenuSubtitle"),
         icon: "headset-outline",
         onPress: () => {
           router.push("/account/contact-support");
@@ -156,24 +175,24 @@ export default function ProfileScreen() {
       },
       {
         id: "terms",
-        title: copy.termsAndPrivacy,
+        title: t("termsPrivacyMenuTitle"),
         icon: "document-text-outline",
         onPress: () => {
           router.push("/account/terms-and-privacy");
         },
       },
     ],
-    [copy, router],
+    [router, t],
   );
 
   const handleLogout = () => {
-    Alert.alert(copy.logout, copy.logoutConfirmation, [
+    Alert.alert(t("logoutAction"), t("logoutConfirmation"), [
       {
-        text: copy.cancel,
+        text: t("cancelActionProfile"),
         style: "cancel",
       },
       {
-        text: copy.logout,
+        text: t("logoutAction"),
         style: "destructive",
         onPress: () => {
           resetSession();
@@ -228,7 +247,7 @@ export default function ProfileScreen() {
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
-            {copy.settings}
+            {t("settingsSectionTitle")}
           </Text>
 
           <View style={styles.menuList}>
@@ -252,19 +271,19 @@ export default function ProfileScreen() {
         </View>
 
         <ProfileSection
-          title={copy.support}
+          title={t("supportSectionTitle")}
           items={supportItems}
           isRtl={isRtl}
         />
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
-            {copy.accountActions}
+            {t("accountActionsSectionTitle")}
           </Text>
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={copy.logout}
+            accessibilityLabel={t("logoutAction")}
             onPress={handleLogout}
             style={({ pressed }) => [
               styles.logoutButton,
@@ -286,13 +305,13 @@ export default function ProfileScreen() {
               />
 
               <Text style={[styles.logoutButtonText, directionStyle(isRtl)]}>
-                {copy.logout}
+                {t("logoutAction")}
               </Text>
             </View>
           </Pressable>
         </View>
 
-        <Text style={styles.versionText}>{copy.version}</Text>
+        <Text style={styles.versionText}>{t("appVersionLabel")}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -534,184 +553,6 @@ function getLanguageDisplayName(language: LanguageName): string {
   }
 
   return "English";
-}
-
-function getProfileCopy(language: LanguageName) {
-  if (language === "Dari") {
-    return {
-      title: "پروفایل",
-
-      subtitle:
-        "اطلاعات حساب، تنظیمات و گزینه‌های پشتیبانی خود را مدیریت کنید.",
-
-      profileName: "مشتری",
-
-      account: "حساب",
-
-      personalInformation: "اطلاعات شخصی",
-
-      personalInformationSubtitle: "نام، شماره تلفن و عکس پروفایل",
-
-      savedAddresses: "آدرس‌های ذخیره‌شده",
-
-      savedAddressesSubtitle: "خانه، محل کار و آدرس‌های دیگر",
-
-      appLanguage: "زبان برنامه",
-
-      settings: "تنظیمات",
-
-      notifications: "اعلان‌ها",
-
-      notificationsSubtitle: "رزروها، پیام‌ها و تغییرات حساب",
-
-      privacyAndSecurity: "حریم خصوصی و امنیت",
-
-      privacyAndSecuritySubtitle: "رمز، دسترسی‌ها و مدیریت اطلاعات",
-
-      payments: "پرداخت‌ها",
-
-      paymentsSubtitle: "روش‌های پرداخت و تاریخچه",
-
-      support: "پشتیبانی",
-
-      helpCenter: "مرکز راهنما",
-
-      helpCenterSubtitle: "پرسش‌های رایج و راهنمای استفاده",
-
-      contactSupport: "تماس با پشتیبانی",
-
-      contactSupportSubtitle: "گزارش مشکل یا درخواست کمک",
-
-      termsAndPrivacy: "شرایط استفاده و حریم خصوصی",
-
-      accountActions: "مدیریت حساب",
-
-      logout: "خروج از حساب",
-
-      logoutConfirmation: "آیا مطمئن هستید که می‌خواهید از حساب خود خارج شوید؟",
-
-      cancel: "لغو",
-
-      version: "خدمت، نسخهٔ ۱.۰.۰",
-    };
-  }
-
-  if (language === "Pashto") {
-    return {
-      title: "پروفایل",
-
-      subtitle: "د خپل حساب معلومات، تنظیمات او د ملاتړ انتخابونه مدیریت کړئ.",
-
-      profileName: "پېرودونکی",
-
-      account: "حساب",
-
-      personalInformation: "شخصي معلومات",
-
-      personalInformationSubtitle: "نوم، د ټیلیفون شمېره او د پروفایل عکس",
-
-      savedAddresses: "خوندي شوې پتې",
-
-      savedAddressesSubtitle: "کور، د کار ځای او نورې پتې",
-
-      appLanguage: "د اپلېکېشن ژبه",
-
-      settings: "تنظیمات",
-
-      notifications: "خبرتیاوې",
-
-      notificationsSubtitle: "رزرفونه، پیغامونه او د حساب بدلونونه",
-
-      privacyAndSecurity: "محرمیت او امنیت",
-
-      privacyAndSecuritySubtitle: "پټنوم، اجازې او د معلوماتو مدیریت",
-
-      payments: "تادیات",
-
-      paymentsSubtitle: "د تادیې لارې او تاریخچه",
-
-      support: "ملاتړ",
-
-      helpCenter: "د مرستې مرکز",
-
-      helpCenterSubtitle: "عامې پوښتنې او د کارونې لارښود",
-
-      contactSupport: "له ملاتړ سره اړیکه",
-
-      contactSupportSubtitle: "ستونزه راپور کړئ یا مرسته وغواړئ",
-
-      termsAndPrivacy: "د کارونې شرایط او محرمیت",
-
-      accountActions: "د حساب مدیریت",
-
-      logout: "له حسابه وتل",
-
-      logoutConfirmation: "ایا ډاډه یاست چې غواړئ له خپل حسابه ووځئ؟",
-
-      cancel: "لغوه",
-
-      version: "خدمت، نسخه ۱.۰.۰",
-    };
-  }
-
-  return {
-    title: "Profile",
-
-
-    profileName: "Customer",
-
-
-
-
-
-    account: "Account",
-
-    personalInformation: "Personal information",
-
-    personalInformationSubtitle: "Name, phone number and profile photo",
-
-    savedAddresses: "Saved addresses",
-
-    savedAddressesSubtitle: "Home, work and other addresses",
-
-    appLanguage: "App language",
-
-    settings: "Settings",
-
-    notifications: "Notifications",
-
-    notificationsSubtitle: "Bookings, messages and account updates",
-
-    privacyAndSecurity: "Privacy and security",
-
-    privacyAndSecuritySubtitle: "Password, permissions and data management",
-
-    payments: "Payments",
-
-    paymentsSubtitle: "Payment methods and history",
-
-    support: "Support",
-
-    helpCenter: "Help center",
-
-    helpCenterSubtitle: "Frequently asked questions and usage guides",
-
-    contactSupport: "Contact support",
-
-    contactSupportSubtitle: "Report a problem or request help",
-
-    termsAndPrivacy: "Terms of use and privacy",
-
-    accountActions: "Account management",
-
-    logout: "Log out",
-
-    logoutConfirmation: "Are you sure you want to log out of your account?",
-
-    cancel: "Cancel",
-
-    version: "Khedmat, version 1.0.0",
-  };
 }
 
 const styles = StyleSheet.create({

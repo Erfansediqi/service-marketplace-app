@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   Pressable,
   StyleSheet,
@@ -45,6 +45,11 @@ const languages: LanguageOption[] = [
 export default function LanguageScreen() {
   const router = useRouter();
 
+  const params =
+    useLocalSearchParams<{
+      source?: string;
+    }>();
+
   const {
     language,
     setLanguage,
@@ -56,6 +61,11 @@ export default function LanguageScreen() {
     language === "Pashto";
 
   const handleContinue = () => {
+    if (params.source === "account") {
+      router.back();
+      return;
+    }
+
     router.push("/onboarding-1");
   };
 

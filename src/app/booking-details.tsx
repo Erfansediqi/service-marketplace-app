@@ -30,6 +30,10 @@ import {
   BookingAddress,
   useBooking,
 } from "../context/booking-context";
+import {
+  type CustomerAddress,
+  useCustomerAddresses,
+} from "../context/customer-address-context";
 import { useLanguage } from "../context/languagecontext";
 
 type IconName =
@@ -63,29 +67,6 @@ const SUCCESS_SOFT = "#E8F6EE";
 const ERROR = "#B3261E";
 const ERROR_SOFT = "#FCE8E6";
 
-const SAVED_ADDRESSES: AddressOption[] = [
-  {
-    id: "home",
-    label: "خانه",
-    fullAddress:
-      "کابل، ناحیه دهم، سرک سوم، خانه ۲۴",
-    subtitleKey: "primaryAddress",
-    latitude: 34.5553,
-    longitude: 69.2075,
-    icon: "home-outline",
-  },
-  {
-    id: "work",
-    label: "محل کار",
-    fullAddress:
-      "کابل، شهر نو، سرک انصاری، ساختمان ۸",
-    subtitleKey: "savedAddress",
-    latitude: 34.5326,
-    longitude: 69.1717,
-    icon: "business-outline",
-  },
-];
-
 export default function BookingDetailsScreen() {
   const router = useRouter();
 
@@ -93,6 +74,10 @@ export default function BookingDetailsScreen() {
     bookingDraft,
     updateBookingDraft,
   } = useBooking();
+
+  const {
+    addresses: customerAddresses,
+  } = useCustomerAddresses();
 
   const { language } =
     useLanguage();
@@ -112,9 +97,25 @@ export default function BookingDetailsScreen() {
       activeLanguage,
     );
 
+  const savedAddressOptions =
+    useMemo<AddressOption[]>(
+      () =>
+        customerAddresses.map(
+          (address) =>
+            toBookingAddressOption(
+              address,
+              activeLanguage,
+            ),
+        ),
+      [
+        activeLanguage,
+        customerAddresses,
+      ],
+    );
+
   const initialAddressId =
     bookingDraft.address?.id &&
-    SAVED_ADDRESSES.some(
+    savedAddressOptions.some(
       (address) =>
         address.id ===
         bookingDraft.address?.id,
@@ -176,12 +177,15 @@ export default function BookingDetailsScreen() {
   const selectedSavedAddress =
     useMemo(
       () =>
-        SAVED_ADDRESSES.find(
+        savedAddressOptions.find(
           (address) =>
             address.id ===
             selectedAddressId,
         ) ?? null,
-      [selectedAddressId],
+      [
+        savedAddressOptions,
+        selectedAddressId,
+      ],
     );
 
   const resolvedAddress =
@@ -671,7 +675,7 @@ export default function BookingDetailsScreen() {
             <View
               style={styles.addresses}
             >
-              {SAVED_ADDRESSES.map(
+              {savedAddressOptions.map(
                 (address) => {
                   const selected =
                     !manualAddressEnabled &&
@@ -701,6 +705,36 @@ export default function BookingDetailsScreen() {
                   );
                 },
               )}
+
+              {savedAddressOptions.length ===
+              0 ? (
+                <View
+                  style={
+                    styles.savedAddressEmpty
+                  }
+                >
+                  <Ionicons
+                    name="location-outline"
+                    size={20}
+                    color={
+                      KhedmatPalette.textMuted
+                    }
+                  />
+
+                  <Text
+                    style={[
+                      styles.savedAddressEmptyText,
+                      directionStyle(
+                        isRtl,
+                      ),
+                    ]}
+                  >
+                    {
+                      copy.noSavedAddresses
+                    }
+                  </Text>
+                </View>
+              ) : null}
 
               <Pressable
                 accessibilityRole="radio"
@@ -1462,6 +1496,84 @@ export default function BookingDetailsScreen() {
   );
 }
 
+function toBookingAddressOption(
+  address: CustomerAddress,
+  language: LanguageName,
+): AddressOption {
+  return {
+    id: address.id,
+    label:
+      getSavedAddressLabel(
+        address,
+        language,
+      ),
+    fullAddress:
+      address.fullAddress,
+    latitude:
+      address.latitude ??
+      undefined,
+    longitude:
+      address.longitude ??
+      undefined,
+    icon:
+      address.label === "home"
+        ? "home-outline"
+        : address.label === "work"
+          ? "business-outline"
+          : "location-outline",
+    subtitleKey:
+      address.label === "home"
+        ? "primaryAddress"
+        : "savedAddress",
+  };
+}
+
+function getSavedAddressLabel(
+  address: CustomerAddress,
+  language: LanguageName,
+): string {
+  if (
+    address.label === "other" &&
+    address.customLabel
+  ) {
+    return address.customLabel;
+  }
+
+  if (language === "Dari") {
+    if (address.label === "home") {
+      return "خانه";
+    }
+
+    if (address.label === "work") {
+      return "محل کار";
+    }
+
+    return "آدرس";
+  }
+
+  if (language === "Pashto") {
+    if (address.label === "home") {
+      return "کور";
+    }
+
+    if (address.label === "work") {
+      return "کار";
+    }
+
+    return "پته";
+  }
+
+  if (address.label === "home") {
+    return "Home";
+  }
+
+  if (address.label === "work") {
+    return "Work";
+  }
+
+  return "Saved address";
+}
+
 function AddressCard({
   address,
   selected,
@@ -2002,6 +2114,8 @@ function getDetailsCopy(
         "آدرس اصلی",
       savedAddress:
         "آدرس ذخیره‌شده",
+      noSavedAddresses:
+        "هنوز آدرس ذخیره‌شده‌ای ندارید. می‌توانید آدرس این رزرو را در پایین وارد کنید.",
       otherAddress:
         "آدرس دیگر",
       otherAddressSubtitle:
@@ -2105,6 +2219,8 @@ function getDetailsCopy(
         "اصلي پته",
       savedAddress:
         "خوندي شوې پته",
+      noSavedAddresses:
+        "تر اوسه خوندي شوې پته نه لرئ. د دې رزرف پته لاندې ولیکئ.",
       otherAddress:
         "بله پته",
       otherAddressSubtitle:
@@ -2205,6 +2321,8 @@ function getDetailsCopy(
       "Primary address",
     savedAddress:
       "Saved address",
+    noSavedAddresses:
+      "You do not have a saved address yet. You can enter an address for this booking below.",
     otherAddress:
       "Another address",
     otherAddressSubtitle:
@@ -2495,6 +2613,33 @@ const styles =
       width: "100%",
       gap: Spacing.md,
     },
+    savedAddressEmpty: {
+      width: "100%",
+      minHeight: 58,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: Spacing.sm,
+      paddingHorizontal:
+        Spacing.md,
+      borderRadius:
+        Radius.md,
+      borderWidth:
+        StyleSheet.hairlineWidth,
+      borderColor:
+        KhedmatPalette.blue200,
+      backgroundColor:
+        KhedmatPalette.blue050,
+    },
+
+    savedAddressEmptyText: {
+      ...Typography.captionStyle,
+      flex: 1,
+      color:
+        KhedmatPalette.textSecondary,
+      lineHeight: 18,
+    },
+
     addressCard: {
       width: "100%",
       minHeight: 110,

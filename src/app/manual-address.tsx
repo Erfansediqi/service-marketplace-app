@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ComponentProps,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -29,6 +31,7 @@ import {
   Spacing,
   Typography,
 } from "../constants/theme";
+import { useCustomerAddresses } from "../context/customer-address-context";
 import { useLanguage } from "../context/languagecontext";
 import { provinces } from "../data/afghanistan-addresses";
 
@@ -60,9 +63,47 @@ type SelectFieldProps = {
   error?: string;
 };
 
+type ManualAddressMode =
+  | "onboarding"
+  | "create"
+  | "edit";
+
 export default function ManualAddressScreen() {
   const router = useRouter();
+
+  const params =
+    useLocalSearchParams<{
+      mode?: string;
+      addressId?: string;
+      returnTo?: string;
+    }>();
+
   const { t, language } = useLanguage();
+
+  const {
+    addAddress,
+    updateAddress,
+    getAddressById,
+  } = useCustomerAddresses();
+
+  const mode: ManualAddressMode =
+    params.mode === "create" ||
+    params.mode === "edit"
+      ? params.mode
+      : "onboarding";
+
+  const addressId =
+    typeof params.addressId === "string"
+      ? params.addressId
+      : "";
+
+  const returnTo =
+    typeof params.returnTo === "string"
+      ? params.returnTo
+      : "";
+
+  const initializedEditRef =
+    useRef(false);
 
   const isEnglish =
     language === "English";
@@ -92,6 +133,9 @@ export default function ManualAddressScreen() {
     useState("");
 
   const [submitted, setSubmitted] =
+    useState(false);
+
+  const [isSaving, setIsSaving] =
     useState(false);
 
   const provinceOptions =
@@ -152,6 +196,56 @@ export default function ManualAddressScreen() {
     [districtId, selectedProvince],
   );
 
+  useEffect(() => {
+    if (
+      mode !== "edit" ||
+      initializedEditRef.current
+    ) {
+      return;
+    }
+
+    if (!addressId) {
+      return;
+    }
+
+    const existingAddress =
+      getAddressById(addressId);
+
+    if (!existingAddress) {
+      return;
+    }
+
+    initializedEditRef.current = true;
+
+    setProvinceId(
+      existingAddress.provinceId,
+    );
+
+    setDistrictId(
+      existingAddress.districtId,
+    );
+
+    setNeighbourhood(
+      existingAddress.neighbourhood,
+    );
+
+    setStreet(
+      existingAddress.street,
+    );
+
+    setHouse(
+      existingAddress.house,
+    );
+
+    setDetails(
+      existingAddress.details,
+    );
+  }, [
+    addressId,
+    getAddressById,
+    mode,
+  ]);
+
   const provinceError =
     submitted && !provinceId
       ? t("provinceErrorText")
@@ -196,49 +290,102 @@ export default function ManualAddressScreen() {
     }
   };
 
-  const saveAddress = () => {
-    setSubmitted(true);
+  const saveAddress =
+    async (): Promise<void> => {
+      setSubmitted(true);
 
-    if (!formIsValid) {
-      return;
-    }
+      if (
+        !formIsValid ||
+        isSaving
+      ) {
+        return;
+      }
 
-    const address = {
-      provinceId,
+      setIsSaving(true);
 
-      provinceName: selectedProvince
-        ? isEnglish
-          ? selectedProvince.nameEn
-          : selectedProvince.nameFa
-        : "",
+      try {
+        const input = {
+          provinceId,
 
-      districtId,
+          provinceName:
+            selectedProvince?.nameEn ??
+            "",
 
-      districtName: selectedDistrict
-        ? isEnglish
-          ? selectedDistrict.nameEn
-          : selectedDistrict.nameFa
-        : "",
+          districtId,
 
-      neighbourhood:
-        neighbourhood.trim(),
+          districtName:
+            selectedDistrict?.nameEn ??
+            "",
 
-      street: street.trim(),
-      house: house.trim(),
-      details: details.trim(),
+          neighbourhood:
+            neighbourhood.trim(),
 
-      source: "manual" as const,
+          street:
+            street.trim(),
+
+          house:
+            house.trim(),
+
+          details:
+            details.trim(),
+
+          source:
+            "manual" as const,
+        };
+
+        if (mode === "edit") {
+          if (!addressId) {
+            throw new Error(
+              "The saved address could not be identified.",
+            );
+          }
+
+          await updateAddress(
+            addressId,
+            input,
+          );
+        } else {
+          await addAddress({
+            ...input,
+
+            label:
+              mode === "onboarding"
+                ? "home"
+                : "other",
+          });
+        }
+
+        if (
+          mode === "onboarding"
+        ) {
+          router.replace(
+            "/role-selection",
+          );
+
+          return;
+        }
+
+        if (
+          returnTo ===
+          "saved-addresses"
+        ) {
+          router.replace(
+            "/account/saved-addresses",
+          );
+
+          return;
+        }
+
+        router.back();
+      } catch (error) {
+        console.error(
+          "Failed to save customer address:",
+          error,
+        );
+      } finally {
+        setIsSaving(false);
+      }
     };
-
-    console.log(
-      "Manual address:",
-      address,
-    );
-
-    router.replace(
-      "/role-selection",
-    );
-  };
 
   return (
     <KhedmatScreen
@@ -252,9 +399,13 @@ export default function ManualAddressScreen() {
               "saveAddressButton",
             )}
             disabled={
-              submitted && !formIsValid
+              isSaving ||
+              (submitted &&
+                !formIsValid)
             }
-            onPress={saveAddress}
+            onPress={() => {
+              void saveAddress();
+            }}
           />
         </View>
       }

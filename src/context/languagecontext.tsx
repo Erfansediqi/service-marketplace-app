@@ -115,20 +115,7 @@ export function LanguageProvider({
 
   const t = useCallback(
     (key: TranslationKeys): string => {
-      const currentDictionary: Partial<
-        Record<TranslationKeys, string>
-      > = translations[language];
-
-      const englishDictionary: Record<
-        TranslationKeys,
-        string
-      > = translations.English;
-
-      return (
-        currentDictionary[key] ??
-        englishDictionary[key] ??
-        key
-      );
+      return translations[language][key];
     },
     [language],
   );

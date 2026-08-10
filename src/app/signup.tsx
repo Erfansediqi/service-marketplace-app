@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   Alert,
+  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -398,36 +399,6 @@ export default function SignupScreen() {
         </View>
       </KhedmatCard>
 
-      <View
-        style={[
-          styles.securityNote,
-          {
-            flexDirection: isRtl ? "row-reverse" : "row",
-          },
-        ]}
-      >
-        <Ionicons
-          name="shield-checkmark-outline"
-          size={17}
-          color={KhedmatPalette.blue500}
-        />
-
-        <Text
-          numberOfLines={2}
-          adjustsFontSizeToFit
-          minimumFontScale={0.78}
-          style={[
-            styles.securityText,
-            {
-              textAlign: isRtl ? "right" : "left",
-              writingDirection: isRtl ? "rtl" : "ltr",
-            },
-          ]}
-        >
-          {getSecurityMessage(language)}
-        </Text>
-      </View>
-
       <View style={styles.socialSection}>
         <View style={styles.socialDividerRow}>
           <View style={styles.socialDivider} />
@@ -453,59 +424,34 @@ export default function SignupScreen() {
           <View style={styles.socialDivider} />
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={
-            getSocialAuthCopy(
-              language,
-            ).google
-          }
-          disabled={isSocialSigningIn}
-          onPress={() =>
-            void handleSocialSignIn(
-              "google",
-            )
-          }
-          style={({ pressed }) => [
-            styles.socialButton,
-            pressed &&
-              !isSocialSigningIn &&
-              styles.socialButtonPressed,
-            isSocialSigningIn &&
-              styles.socialButtonDisabled,
+        <View
+          style={[
+            styles.socialButtonsRow,
+            {
+              flexDirection:
+                isRtl
+                  ? "row-reverse"
+                  : "row",
+            },
           ]}
         >
-          <Text style={styles.googleMark}>
-            G
-          </Text>
-
-          <Text
-            style={styles.socialButtonText}
-          >
-            {
-              getSocialAuthCopy(
-                language,
-              ).google
-            }
-          </Text>
-        </Pressable>
-
-        {Platform.OS === "ios" ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={
               getSocialAuthCopy(
                 language,
-              ).apple
+              ).google
             }
             disabled={isSocialSigningIn}
             onPress={() =>
               void handleSocialSignIn(
-                "apple",
+                "google",
               )
             }
             style={({ pressed }) => [
               styles.socialButton,
+              Platform.OS !== "ios" &&
+                styles.socialButtonFullWidth,
               pressed &&
                 !isSocialSigningIn &&
                 styles.socialButtonPressed,
@@ -513,27 +459,76 @@ export default function SignupScreen() {
                 styles.socialButtonDisabled,
             ]}
           >
-            <Ionicons
-              name="logo-apple"
-              size={20}
-              color={
-                KhedmatPalette.navy900
-              }
+            <Image
+              source={require(
+                "../../assets/images/google-g.png"
+              )}
+              resizeMode="contain"
+              style={styles.googleLogo}
             />
 
             <Text
-              style={
-                styles.socialButtonText
-              }
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.82}
+              style={styles.socialButtonText}
             >
               {
                 getSocialAuthCopy(
                   language,
-                ).apple
+                ).googleShort
               }
             </Text>
           </Pressable>
-        ) : null}
+
+          {Platform.OS === "ios" ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                getSocialAuthCopy(
+                  language,
+                ).apple
+              }
+              disabled={isSocialSigningIn}
+              onPress={() =>
+                void handleSocialSignIn(
+                  "apple",
+                )
+              }
+              style={({ pressed }) => [
+                styles.socialButton,
+                pressed &&
+                  !isSocialSigningIn &&
+                  styles.socialButtonPressed,
+                isSocialSigningIn &&
+                  styles.socialButtonDisabled,
+              ]}
+            >
+              <Ionicons
+                name="logo-apple"
+                size={22}
+                color={
+                  KhedmatPalette.navy900
+                }
+              />
+
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.82}
+                style={
+                  styles.socialButtonText
+                }
+              >
+                {
+                  getSocialAuthCopy(
+                    language,
+                  ).appleShort
+                }
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
       </View>
     </KhedmatScreen>
   );
@@ -640,8 +635,12 @@ function getSocialAuthCopy(
         "یا ادامه با",
       google:
         "ادامه با Google",
+      googleShort:
+        "Google",
       apple:
         "ادامه با Apple",
+      appleShort:
+        "Apple",
       errorTitle:
         "ورود ناموفق بود",
       genericError:
@@ -655,8 +654,12 @@ function getSocialAuthCopy(
         "یا دوام ورکړئ له",
       google:
         "له Google سره دوام ورکړئ",
+      googleShort:
+        "Google",
       apple:
         "له Apple سره دوام ورکړئ",
+      appleShort:
+        "Apple",
       errorTitle:
         "ننوتل بریالي نه شول",
       genericError:
@@ -669,8 +672,12 @@ function getSocialAuthCopy(
       "or continue with",
     google:
       "Continue with Google",
+    googleShort:
+      "Google",
     apple:
       "Continue with Apple",
+    appleShort:
+      "Apple",
     errorTitle:
       "Sign in failed",
     genericError:
@@ -742,17 +749,6 @@ function getSmsVerificationCopy(language: string) {
   };
 }
 
-function getSecurityMessage(language: string): string {
-  if (language === "Dari") {
-    return "شماره تماس شما فقط برای تأیید حساب و هماهنگی خدمات استفاده می‌شود.";
-  }
-
-  if (language === "Pashto") {
-    return "ستاسو د تلیفون شمېره یوازې د حساب د تایید او خدمتونو د همغږۍ لپاره کارول کېږي.";
-  }
-
-  return "Your phone number is used only for account verification and service coordination.";
-}
 
 const styles = StyleSheet.create({
   screenContent: {
@@ -926,21 +922,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  securityNote: {
-    width: "100%",
-    marginTop: Spacing.lg,
-    alignItems: "center",
-    gap: Spacing.sm,
-    paddingHorizontal: 2,
-  },
-
-  securityText: {
-    ...Typography.captionStyle,
-    flex: 1,
-    color: KhedmatPalette.textSecondary,
-    lineHeight: 18,
-  },
-
   socialSection: {
     width: "100%",
     marginTop: Spacing.xl,
@@ -970,10 +951,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  socialButton: {
+  socialButtonsRow: {
     width: "100%",
-    minHeight: 52,
-    borderRadius: Radius.lg,
+    gap: Spacing.sm,
+  },
+
+  socialButton: {
+    flex: 1,
+    minHeight: 48,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
     borderWidth:
       StyleSheet.hairlineWidth,
     borderColor:
@@ -984,6 +971,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: Spacing.sm,
+  },
+
+  socialButtonFullWidth: {
+    flex: 0,
+    width: "100%",
   },
 
   socialButtonPressed: {
@@ -1003,15 +995,13 @@ const styles = StyleSheet.create({
     ...Typography.label,
     color:
       KhedmatPalette.navy900,
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 18,
   },
 
-  googleMark: {
-    color: "#4285F4",
-    fontSize: 20,
-    lineHeight: 22,
-    fontWeight: "700",
+  googleLogo: {
+    width: 21,
+    height: 21,
   },
 
   footer: {

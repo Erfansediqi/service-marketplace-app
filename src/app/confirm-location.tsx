@@ -23,6 +23,7 @@ import {
   Spacing,
   Typography,
 } from "../constants/theme";
+import { useCustomerAddresses } from "../context/customer-address-context";
 import { useLanguage } from "../context/languagecontext";
 import { requestUserLocation, reverseGeocode } from "../services/location";
 
@@ -74,6 +75,10 @@ export default function ConfirmLocationScreen() {
 
   const { t, language } = useLanguage();
 
+  const {
+    addAddress,
+  } = useCustomerAddresses();
+
   const isEnglish = language === "English";
 
   const isRtl = language === "Dari" || language === "Pashto";
@@ -120,6 +125,8 @@ export default function ConfirmLocationScreen() {
   const [isResolvingAddress, setIsResolvingAddress] = useState(true);
 
   const [isLocatingUser, setIsLocatingUser] = useState(false);
+
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   const [addressError, setAddressError] = useState<string | null>(null);
 
@@ -246,7 +253,66 @@ export default function ConfirmLocationScreen() {
     }
   };
 
+  const persistConfirmedLocation =
+    async (): Promise<void> => {
+      if (isSavingAddress) {
+        return;
+      }
+
+      setIsSavingAddress(true);
+
+      try {
+        const fullAddress = [
+          address.title,
+          address.details,
+        ]
+          .map((part) =>
+            part.trim(),
+          )
+          .filter(Boolean)
+          .join(
+            isEnglish
+              ? ", "
+              : "، ",
+          );
+
+        await addAddress({
+          label: "home",
+          fullAddress,
+          details:
+            address.details,
+          latitude:
+            selectedRegion.latitude,
+          longitude:
+            selectedRegion.longitude,
+          source: "location",
+        });
+
+        router.replace(
+          "/role-selection",
+        );
+      } catch (error) {
+        console.error(
+          "Failed to save confirmed location:",
+          error,
+        );
+
+        Alert.alert(
+          t("confirmLocationHeader"),
+          getSaveLocationErrorMessage(
+            language,
+          ),
+        );
+      } finally {
+        setIsSavingAddress(false);
+      }
+    };
+
   const handleConfirmLocation = () => {
+    if (isSavingAddress) {
+      return;
+    }
+
     Alert.alert(
       t("confirmLocationHeader"),
       `${address.title}\n${address.details}`,
@@ -258,15 +324,7 @@ export default function ConfirmLocationScreen() {
         {
           text: t("confirmAction"),
           onPress: () => {
-            router.replace({
-              pathname: "/role-selection",
-              params: {
-                latitude: selectedRegion.latitude.toString(),
-                longitude: selectedRegion.longitude.toString(),
-                addressTitle: address.title,
-                addressDetails: address.details,
-              },
-            });
+            void persistConfirmedLocation();
           },
         },
       ],
@@ -282,7 +340,11 @@ export default function ConfirmLocationScreen() {
   const longitudeText = formatCoordinate(selectedRegion.longitude, isRtl);
 
   const confirmDisabled =
-    !isMapReady || isMovingMap || isResolvingAddress || isLocatingUser;
+    !isMapReady ||
+    isMovingMap ||
+    isResolvingAddress ||
+    isLocatingUser ||
+    isSavingAddress;
 
   return (
     <View style={styles.container}>
@@ -568,6 +630,20 @@ function toLocalizedDigits(value: string): string {
   };
 
   return value.replace(/\d/g, (digit) => digits[digit] ?? digit);
+}
+
+function getSaveLocationErrorMessage(
+  language: string,
+): string {
+  if (language === "Dari") {
+    return "ذخیره موقعیت انجام نشد. لطفاً دوباره تلاش کنید.";
+  }
+
+  if (language === "Pashto") {
+    return "د موقعیت خوندي کول بریالي نه شول. مهرباني وکړئ بیا هڅه وکړئ.";
+  }
+
+  return "Your location could not be saved. Please try again.";
 }
 
 function getLocationErrorTitle(language: string): string {

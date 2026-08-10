@@ -8,10 +8,21 @@ import {
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import { BiometricAppLock } from "../components/security/biometric-app-lock";
 import {
   CustomerProfileProvider,
   useCustomerProfile,
 } from "../context/customer-profile-context";
+
+import {
+  CustomerAddressProvider,
+  useCustomerAddresses,
+} from "../context/customer-address-context";
+
+import {
+  BiometricSecurityProvider,
+  useBiometricSecurity,
+} from "../context/biometric-security-context";
 
 import { NotificationProvider } from "../context/notification-context";
 
@@ -54,7 +65,13 @@ function AppNavigator({ fontsReady }: AppNavigatorProps) {
 
   const { isHydrated: customerProfileIsHydrated } = useCustomerProfile();
 
+  const { isHydrated: customerAddressesAreHydrated } =
+    useCustomerAddresses();
+
   const { isHydrated: bookingIsHydrated } = useBooking();
+
+  const { isHydrated: biometricSecurityIsHydrated } =
+    useBiometricSecurity();
 
   const appIsReady =
     fontsReady &&
@@ -62,7 +79,9 @@ function AppNavigator({ fontsReady }: AppNavigatorProps) {
     languageIsHydrated &&
     sessionIsHydrated &&
     customerProfileIsHydrated &&
-    bookingIsHydrated;
+    customerAddressesAreHydrated &&
+    bookingIsHydrated &&
+    biometricSecurityIsHydrated;
 
   useEffect(() => {
     if (!appIsReady) {
@@ -119,6 +138,8 @@ function AppNavigator({ fontsReady }: AppNavigatorProps) {
       <Stack.Screen name="booking-summary" />
       <Stack.Screen name="booking-success" />
 
+      <Stack.Screen name="account/change-password" />
+
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(provider-tabs)" />
 
@@ -139,19 +160,25 @@ export default function RootLayout() {
 
   return (
     <SupabaseAuthProvider>
-      <SessionProvider>
-        <SyncEngineLifecycle />
+      <BiometricSecurityProvider>
+        <SessionProvider>
+          <SyncEngineLifecycle />
 
-        <CustomerProfileProvider>
-          <BookingProvider>
-            <LanguageProvider>
-              <NotificationProvider>
-                <AppNavigator fontsReady={fontsReady} />
-              </NotificationProvider>
-            </LanguageProvider>
-          </BookingProvider>
-        </CustomerProfileProvider>
-      </SessionProvider>
+          <CustomerProfileProvider>
+          <CustomerAddressProvider>
+            <BookingProvider>
+              <LanguageProvider>
+                <NotificationProvider>
+                  <BiometricAppLock>
+                    <AppNavigator fontsReady={fontsReady} />
+                  </BiometricAppLock>
+                </NotificationProvider>
+              </LanguageProvider>
+            </BookingProvider>
+          </CustomerAddressProvider>
+          </CustomerProfileProvider>
+        </SessionProvider>
+      </BiometricSecurityProvider>
     </SupabaseAuthProvider>
   );
 }

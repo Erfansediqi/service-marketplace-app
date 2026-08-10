@@ -38,6 +38,7 @@ type SupabaseAuthContextValue = {
   isSendingOtp: boolean;
   isVerifyingOtp: boolean;
   isSocialSigningIn: boolean;
+  isUpdatingPassword: boolean;
 
   sendPhoneOtp: (input: SendPhoneOtpInput) => Promise<void>;
 
@@ -46,6 +47,10 @@ type SupabaseAuthContextValue = {
   signInWithSocialProvider: (
     provider: Extract<Provider, "google" | "apple">,
   ) => Promise<Session>;
+
+  updatePassword: (
+    newPassword: string,
+  ) => Promise<void>;
 
   signOut: () => Promise<void>;
 };
@@ -140,6 +145,8 @@ export function SupabaseAuthProvider({ children }: PropsWithChildren) {
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
   const [isSocialSigningIn, setIsSocialSigningIn] = useState(false);
+
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -318,6 +325,47 @@ export function SupabaseAuthProvider({ children }: PropsWithChildren) {
     [],
   );
 
+  const updatePassword = useCallback(
+    async (
+      newPassword: string,
+    ): Promise<void> => {
+      const normalizedPassword =
+        newPassword.trim();
+
+      if (
+        normalizedPassword.length <
+        8
+      ) {
+        throw new Error(
+          "Your password must contain at least 8 characters.",
+        );
+      }
+
+      if (!session?.user) {
+        throw new Error(
+          "You must be signed in to set or change your password.",
+        );
+      }
+
+      setIsUpdatingPassword(true);
+
+      try {
+        const { error } =
+          await supabase.auth.updateUser({
+            password:
+              normalizedPassword,
+          });
+
+        if (error) {
+          throw error;
+        }
+      } finally {
+        setIsUpdatingPassword(false);
+      }
+    },
+    [session?.user],
+  );
+
   const signOut = useCallback(async (): Promise<void> => {
     const { error } = await supabase.auth.signOut();
 
@@ -336,9 +384,11 @@ export function SupabaseAuthProvider({ children }: PropsWithChildren) {
       isSendingOtp,
       isVerifyingOtp,
       isSocialSigningIn,
+      isUpdatingPassword,
       sendPhoneOtp,
       verifyPhoneOtp,
       signInWithSocialProvider,
+      updatePassword,
       signOut,
     }),
     [
@@ -346,10 +396,12 @@ export function SupabaseAuthProvider({ children }: PropsWithChildren) {
       isSendingOtp,
       isVerifyingOtp,
       isSocialSigningIn,
+      isUpdatingPassword,
       sendPhoneOtp,
       session,
       signInWithSocialProvider,
       signOut,
+      updatePassword,
       verifyPhoneOtp,
     ],
   );
