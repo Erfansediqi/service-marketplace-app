@@ -14,35 +14,40 @@ export type UserRole =
   | "customer"
   | "provider";
 
-type PersistedSessionV1 = {
-  version: 1;
+/*
+ * Versions 1–3 are migrated structurally in normalizeStoredSession().
+ * Their historical shapes remain documented by the migration branches
+ * below; separate type aliases are unnecessary because persisted storage
+ * is intentionally read as unknown before validation.
+ */
+
+type PersistedSessionV4 = {
+  version: 4;
+
+  /*
+   * Runtime workspace restored for the current app
+   * session. Logout intentionally resets this to
+   * customer/null without erasing the remembered
+   * workspace preference below.
+   */
   role: UserRole;
   activeProviderId: string | null;
-};
-
-type PersistedSessionV2 = {
-  version: 2;
-  role: UserRole;
 
   /*
-   * Version 2 preserved the most recently opened
-   * provider while the customer workspace was active.
+   * Workspace most recently entered by the user.
+   * This survives logout and is used only as a
+   * post-login preference.
    */
-  lastProviderId: string | null;
-};
-
-type PersistedSessionV3 = {
-  version: 3;
-  role: UserRole;
+  lastWorkspaceRole: UserRole;
 
   /*
-   * The provider workspace most recently opened.
+   * Provider account most recently opened by the user.
+   * This survives logout.
    */
   lastProviderId: string | null;
 
   /*
-   * The provider account explicitly selected as the
-   * preferred/default account.
+   * Provider account explicitly marked as preferred.
    */
   defaultProviderId: string | null;
 };
@@ -50,6 +55,8 @@ type PersistedSessionV3 = {
 type NormalizedSession = {
   role: UserRole;
   activeProviderId: string | null;
+  lastWorkspaceRole: UserRole;
+  lastProviderId: string | null;
   defaultProviderId: string | null;
 };
 
@@ -57,12 +64,23 @@ type SessionContextValue = {
   role: UserRole;
 
   /**
-   * The most recently opened local provider account.
-   *
-   * This may remain populated while the customer
-   * workspace is active so the UI can show "Last used".
+   * Provider account active in the current runtime
+   * workspace. This is cleared when leaving provider
+   * mode or logging out.
    */
   activeProviderId: string | null;
+
+  /**
+   * Workspace most recently entered by the user.
+   * Preserved across logout for post-login routing.
+   */
+  lastWorkspaceRole: UserRole;
+
+  /**
+   * Provider account most recently opened by the user.
+   * Preserved across logout.
+   */
+  lastProviderId: string | null;
 
   /**
    * The provider account explicitly selected as the
@@ -115,6 +133,8 @@ const SESSION_STORAGE_KEY =
 const DEFAULT_SESSION: NormalizedSession = {
   role: "customer",
   activeProviderId: null,
+  lastWorkspaceRole: "customer",
+  lastProviderId: null,
   defaultProviderId: null,
 };
 
@@ -169,8 +189,20 @@ function normalizeStoredSession(
     ? value.role
     : DEFAULT_SESSION.role;
 
-  if (value.version === 3) {
+  if (value.version === 4) {
     const activeProviderId =
+      normalizeProviderId(
+        value.activeProviderId,
+      );
+
+    const lastWorkspaceRole =
+      isUserRole(
+        value.lastWorkspaceRole,
+      )
+        ? value.lastWorkspaceRole
+        : role;
+
+    const lastProviderId =
       normalizeProviderId(
         value.lastProviderId,
       );
@@ -180,25 +212,58 @@ function normalizeStoredSession(
         value.defaultProviderId,
       );
 
-    /*
-     * A provider workspace cannot be active without a
-     * valid provider ID. Fall back to customer mode
-     * while preserving the default preference.
-     */
-    if (
+    const normalizedRole =
       role === "provider" &&
       !activeProviderId
-    ) {
-      return {
-        role: "customer",
-        activeProviderId: null,
-        defaultProviderId,
-      };
-    }
+        ? "customer"
+        : role;
 
     return {
-      role,
-      activeProviderId,
+      role: normalizedRole,
+      activeProviderId:
+        normalizedRole ===
+        "provider"
+          ? activeProviderId
+          : null,
+      lastWorkspaceRole:
+        lastWorkspaceRole ===
+          "provider" &&
+        !lastProviderId
+          ? "customer"
+          : lastWorkspaceRole,
+      lastProviderId,
+      defaultProviderId,
+    };
+  }
+
+  if (value.version === 3) {
+    const lastProviderId =
+      normalizeProviderId(
+        value.lastProviderId,
+      );
+
+    const defaultProviderId =
+      normalizeProviderId(
+        value.defaultProviderId,
+      );
+
+    const validProviderRole =
+      role === "provider" &&
+      Boolean(lastProviderId);
+
+    return {
+      role: validProviderRole
+        ? "provider"
+        : "customer",
+      activeProviderId:
+        validProviderRole
+          ? lastProviderId
+          : null,
+      lastWorkspaceRole:
+        validProviderRole
+          ? "provider"
+          : "customer",
+      lastProviderId,
       defaultProviderId,
     };
   }
@@ -208,25 +273,28 @@ function normalizeStoredSession(
    * Do not silently turn "last used" into "default".
    */
   if (value.version === 2) {
-    const activeProviderId =
+    const lastProviderId =
       normalizeProviderId(
         value.lastProviderId,
       );
 
-    if (
+    const validProviderRole =
       role === "provider" &&
-      !activeProviderId
-    ) {
-      return {
-        role: "customer",
-        activeProviderId: null,
-        defaultProviderId: null,
-      };
-    }
+      Boolean(lastProviderId);
 
     return {
-      role,
-      activeProviderId,
+      role: validProviderRole
+        ? "provider"
+        : "customer",
+      activeProviderId:
+        validProviderRole
+          ? lastProviderId
+          : null,
+      lastWorkspaceRole:
+        validProviderRole
+          ? "provider"
+          : "customer",
+      lastProviderId,
       defaultProviderId: null,
     };
   }
@@ -235,25 +303,28 @@ function normalizeStoredSession(
    * Version 1 stored only an active provider ID.
    */
   if (value.version === 1) {
-    const activeProviderId =
+    const lastProviderId =
       normalizeProviderId(
         value.activeProviderId,
       );
 
-    if (
+    const validProviderRole =
       role === "provider" &&
-      !activeProviderId
-    ) {
-      return {
-        role: "customer",
-        activeProviderId: null,
-        defaultProviderId: null,
-      };
-    }
+      Boolean(lastProviderId);
 
     return {
-      role,
-      activeProviderId,
+      role: validProviderRole
+        ? "provider"
+        : "customer",
+      activeProviderId:
+        validProviderRole
+          ? lastProviderId
+          : null,
+      lastWorkspaceRole:
+        validProviderRole
+          ? "provider"
+          : "customer",
+      lastProviderId,
       defaultProviderId: null,
     };
   }
@@ -261,7 +332,7 @@ function normalizeStoredSession(
   /*
    * Tolerate unversioned prototype data.
    */
-  const activeProviderId =
+  const lastProviderId =
     normalizeProviderId(
       value.lastProviderId ??
         value.activeProviderId,
@@ -272,20 +343,32 @@ function normalizeStoredSession(
       value.defaultProviderId,
     );
 
-  if (
+  const lastWorkspaceRole =
+    isUserRole(
+      value.lastWorkspaceRole,
+    )
+      ? value.lastWorkspaceRole
+      : role;
+
+  const validProviderRole =
     role === "provider" &&
-    !activeProviderId
-  ) {
-    return {
-      role: "customer",
-      activeProviderId: null,
-      defaultProviderId,
-    };
-  }
+    Boolean(lastProviderId);
 
   return {
-    role,
-    activeProviderId,
+    role: validProviderRole
+      ? "provider"
+      : "customer",
+    activeProviderId:
+      validProviderRole
+        ? lastProviderId
+        : null,
+    lastWorkspaceRole:
+      lastWorkspaceRole ===
+        "provider" &&
+      !lastProviderId
+        ? "customer"
+        : lastWorkspaceRole,
+    lastProviderId,
     defaultProviderId,
   };
 }
@@ -303,6 +386,20 @@ export function SessionProvider({
     setActiveProviderIdState,
   ] = useState<string | null>(
     DEFAULT_SESSION.activeProviderId,
+  );
+
+  const [
+    lastWorkspaceRole,
+    setLastWorkspaceRoleState,
+  ] = useState<UserRole>(
+    DEFAULT_SESSION.lastWorkspaceRole,
+  );
+
+  const [
+    lastProviderId,
+    setLastProviderIdState,
+  ] = useState<string | null>(
+    DEFAULT_SESSION.lastProviderId,
   );
 
   const [
@@ -343,6 +440,14 @@ export function SessionProvider({
             normalizedSession.activeProviderId,
           );
 
+          setLastWorkspaceRoleState(
+            normalizedSession.lastWorkspaceRole,
+          );
+
+          setLastProviderIdState(
+            normalizedSession.lastProviderId,
+          );
+
           setDefaultProviderIdState(
             normalizedSession.defaultProviderId,
           );
@@ -359,6 +464,14 @@ export function SessionProvider({
 
             setActiveProviderIdState(
               DEFAULT_SESSION.activeProviderId,
+            );
+
+            setLastWorkspaceRoleState(
+              DEFAULT_SESSION.lastWorkspaceRole,
+            );
+
+            setLastProviderIdState(
+              DEFAULT_SESSION.lastProviderId,
             );
 
             setDefaultProviderIdState(
@@ -386,11 +499,12 @@ export function SessionProvider({
 
     const persistSession =
       async (): Promise<void> => {
-        const session: PersistedSessionV3 = {
-          version: 3,
+        const session: PersistedSessionV4 = {
+          version: 4,
           role,
-          lastProviderId:
-            activeProviderId,
+          activeProviderId,
+          lastWorkspaceRole,
+          lastProviderId,
           defaultProviderId,
         };
 
@@ -412,6 +526,8 @@ export function SessionProvider({
     activeProviderId,
     defaultProviderId,
     isHydrated,
+    lastProviderId,
+    lastWorkspaceRole,
     role,
   ]);
 
@@ -419,9 +535,33 @@ export function SessionProvider({
     (
       nextRole: UserRole,
     ): void => {
+      if (
+        nextRole === "provider"
+      ) {
+        if (!activeProviderId) {
+          console.error(
+            "Cannot set provider role without an active provider ID.",
+          );
+
+          return;
+        }
+
+        setLastWorkspaceRoleState(
+          "provider",
+        );
+
+        setLastProviderIdState(
+          activeProviderId,
+        );
+      } else {
+        setLastWorkspaceRoleState(
+          "customer",
+        );
+      }
+
       setRoleState(nextRole);
     },
-    [],
+    [activeProviderId],
   );
 
   const setActiveProviderId =
@@ -458,10 +598,15 @@ export function SessionProvider({
 
   const enterCustomerWorkspace =
     useCallback((): void => {
-      /*
-       * Keep the last-used and default provider IDs.
-       */
       setRoleState("customer");
+
+      setActiveProviderIdState(
+        null,
+      );
+
+      setLastWorkspaceRoleState(
+        "customer",
+      );
     }, []);
 
   const enterProviderWorkspace =
@@ -486,6 +631,14 @@ export function SessionProvider({
           normalizedProviderId,
         );
 
+        setLastProviderIdState(
+          normalizedProviderId,
+        );
+
+        setLastWorkspaceRoleState(
+          "provider",
+        );
+
         setRoleState("provider");
       },
       [],
@@ -504,8 +657,9 @@ export function SessionProvider({
   const resetSession =
     useCallback((): void => {
       /*
-       * Logout ends the active workspace session but
-       * keeps the default provider preference.
+       * Logout ends only the active runtime workspace.
+       * The last workspace/provider and explicit default
+       * provider preferences intentionally survive.
        */
       setRoleState(
         DEFAULT_SESSION.role,
@@ -521,6 +675,8 @@ export function SessionProvider({
       () => ({
         role,
         activeProviderId,
+        lastWorkspaceRole,
+        lastProviderId,
         defaultProviderId,
         isHydrated,
         setRole,
@@ -535,6 +691,8 @@ export function SessionProvider({
         activeProviderId,
         beginProviderRegistration,
         defaultProviderId,
+        lastProviderId,
+        lastWorkspaceRole,
         enterCustomerWorkspace,
         enterProviderWorkspace,
         isHydrated,

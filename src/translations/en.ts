@@ -356,6 +356,41 @@ const en = {
   contactSupportPolicySectionBody: "Questions about these policies can be directed through the Contact Support page using the available WhatsApp or email options.",
   policyUpdateNotice: "These policies may be updated as Khedmat services and features evolve.",
 
+  // Returning user login
+  loginTitle: "Welcome back",
+  loginSubtitle: "Sign in to continue to Khedmat",
+  loginPhoneLabel: "Phone Number",
+  loginPhonePlaceholderAfghanistan: "701234567",
+  loginPhonePlaceholderIndia: "9876543210",
+  loginContinue: "Continue",
+  loginSendingCode: "Sending code...",
+  loginNoAccount: "Don't have an account?",
+  loginCreateAccount: "Create account",
+  loginOr: "or",
+  loginGoogle: "Google",
+  loginApple: "Apple",
+  loginErrorTitle: "Unable to sign in",
+  loginOtpError: "We couldn't send a login code. Check the phone number and try again.",
+  loginAccountNotFound: "No account was found for this phone number. Create an account first.",
+
+  // Logout feedback
+  logoutFailedTitle: "Unable to log out",
+  logoutFailedMessage: "Khedmat could not log you out. Please try again.",
+
+  // Workspace switching
+  switchToProviderTitle: "Switch to Provider",
+  switchToProviderSubtitle: "Open your provider workspace or create one",
+  switchWorkspaceFailedTitle: "Unable to switch workspace",
+  switchWorkspaceFailedMessage: "Khedmat could not load your provider accounts. Please try again.",
+
+  // Customer workspace switching
+  switchToCustomerTitle: "Switch to Customer",
+  switchToCustomerSubtitle: "Open your customer workspace",
+
+  // Provider onboarding entry
+  becomeProviderTitle: "Become a Provider",
+  becomeProviderSubtitle: "Create your provider profile and start offering services",
+
 };
 
 export type TranslationKeys = keyof typeof en;

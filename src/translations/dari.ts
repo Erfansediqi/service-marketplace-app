@@ -359,6 +359,41 @@ const dari = {
   contactSupportPolicySectionBody: "پرسش‌های مربوط به این سیاست‌ها را می‌توانید از طریق صفحه تماس با پشتیبانی و گزینه‌های واتساپ یا ایمیل مطرح کنید.",
   policyUpdateNotice: "این سیاست‌ها ممکن است همزمان با توسعه خدمات و امکانات خدمت به‌روزرسانی شوند.",
 
+  // Returning user login
+  loginTitle: "خوش آمدید",
+  loginSubtitle: "برای ادامه در خدمت وارد حساب شوید",
+  loginPhoneLabel: "شماره تلفن",
+  loginPhonePlaceholderAfghanistan: "۷۰۱۲۳۴۵۶۷",
+  loginPhonePlaceholderIndia: "۹۸۷۶۵۴۳۲۱۰",
+  loginContinue: "ادامه",
+  loginSendingCode: "در حال ارسال کد...",
+  loginNoAccount: "حساب ندارید؟",
+  loginCreateAccount: "ایجاد حساب",
+  loginOr: "یا",
+  loginGoogle: "گوگل",
+  loginApple: "اپل",
+  loginErrorTitle: "ورود انجام نشد",
+  loginOtpError: "کد ورود ارسال نشد. شماره تلفن را بررسی کرده و دوباره تلاش کنید.",
+  loginAccountNotFound: "برای این شماره تلفن حسابی پیدا نشد. ابتدا یک حساب ایجاد کنید.",
+
+  // Logout feedback
+  logoutFailedTitle: "خروج انجام نشد",
+  logoutFailedMessage: "خدمت نتوانست شما را از حساب خارج کند. لطفاً دوباره تلاش کنید.",
+
+  // Workspace switching
+  switchToProviderTitle: "رفتن به حساب ارائه‌دهنده",
+  switchToProviderSubtitle: "حساب ارائه‌دهندهٔ خود را باز کنید یا یک حساب جدید بسازید",
+  switchWorkspaceFailedTitle: "تغییر حساب انجام نشد",
+  switchWorkspaceFailedMessage: "خدمت نتوانست حساب‌های ارائه‌دهندهٔ شما را بارگذاری کند. لطفاً دوباره تلاش کنید.",
+
+  // Customer workspace switching
+  switchToCustomerTitle: "رفتن به حساب مشتری",
+  switchToCustomerSubtitle: "حساب مشتری خود را باز کنید",
+
+  // Provider onboarding entry
+  becomeProviderTitle: "ارائه‌دهنده شوید",
+  becomeProviderSubtitle: "پروفایل ارائه‌دهندهٔ خود را بسازید و ارائهٔ خدمات را آغاز کنید",
+
 } satisfies Record<TranslationKeys, string>;
 
 export default dari;

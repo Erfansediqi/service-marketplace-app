@@ -15,6 +15,13 @@ import {
 } from "react-native";
 
 import KhedmatOpening from "../../assets/images/khedmat-opening.svg";
+import { useSession } from "../context/session-context";
+import { useSupabaseAuth } from "../context/supabase-auth-context";
+import {
+  hasCompletedOnboarding,
+  markOnboardingCompleted,
+} from "../services/onboarding-state";
+import { resolvePostLoginWorkspace } from "../services/post-login-workspace-resolver";
 
 const SPLASH_BACKGROUND = "#D6E8EE";
 
@@ -25,6 +32,27 @@ const EXIT_DURATION = 420;
 
 export default function SplashScreen() {
   const router = useRouter();
+
+  const {
+    user,
+    isHydrated: authIsHydrated,
+  } = useSupabaseAuth();
+
+  const {
+    defaultProviderId,
+    lastWorkspaceRole,
+    lastProviderId,
+    enterCustomerWorkspace,
+    enterProviderWorkspace,
+    isHydrated: sessionIsHydrated,
+  } = useSession();
+
+  const [
+    onboardingCompleted,
+    setOnboardingCompleted,
+  ] = useState<boolean | null>(
+    null,
+  );
 
   const hasNavigatedRef =
     useRef(false);
@@ -42,6 +70,11 @@ export default function SplashScreen() {
     setMotionPreferenceLoaded,
   ] = useState(false);
 
+  const [
+    splashAnimationFinished,
+    setSplashAnimationFinished,
+  ] = useState(false);
+
   const artworkOpacity = useRef(
     new Animated.Value(0),
   ).current;
@@ -54,16 +87,113 @@ export default function SplashScreen() {
     new Animated.Value(1),
   ).current;
 
-  const navigateToLanguage =
-    useCallback((): void => {
-      if (hasNavigatedRef.current) {
+  useEffect(() => {
+    let isMounted = true;
+
+    void hasCompletedOnboarding()
+      .then((completed) => {
+        if (isMounted) {
+          setOnboardingCompleted(
+            completed,
+          );
+        }
+      })
+      .catch((error) => {
+        console.error(
+          "Failed to read onboarding state:",
+          error,
+        );
+
+        if (isMounted) {
+          setOnboardingCompleted(
+            false,
+          );
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const navigateAfterSplash =
+    useCallback(async (): Promise<void> => {
+      if (
+        hasNavigatedRef.current ||
+        !authIsHydrated ||
+        !sessionIsHydrated ||
+        onboardingCompleted === null
+      ) {
         return;
       }
 
       hasNavigatedRef.current = true;
 
-      router.replace("/language");
-    }, [router]);
+      if (!user) {
+        router.replace(
+          onboardingCompleted
+            ? "/login"
+            : "/language",
+        );
+
+        return;
+      }
+
+      if (!onboardingCompleted) {
+        try {
+          await markOnboardingCompleted();
+
+          setOnboardingCompleted(
+            true,
+          );
+        } catch (error) {
+          console.warn(
+            "Authenticated user could not be migrated to completed onboarding state:",
+            error,
+          );
+        }
+      }
+
+      const workspace =
+        await resolvePostLoginWorkspace({
+          userId: user.id,
+          lastWorkspaceRole,
+          lastProviderId,
+          defaultProviderId,
+        });
+
+      if (
+        workspace.role ===
+        "provider"
+      ) {
+        enterProviderWorkspace(
+          workspace.providerId,
+        );
+
+        router.replace(
+          "/(provider-tabs)",
+        );
+
+        return;
+      }
+
+      enterCustomerWorkspace();
+
+      router.replace(
+        "/(tabs)",
+      );
+    }, [
+      authIsHydrated,
+      defaultProviderId,
+      enterCustomerWorkspace,
+      enterProviderWorkspace,
+      lastProviderId,
+      lastWorkspaceRole,
+      onboardingCompleted,
+      router,
+      sessionIsHydrated,
+      user,
+    ]);
 
   useEffect(() => {
     let isMounted = true;
@@ -166,7 +296,9 @@ export default function SplashScreen() {
 
     sequence.start(({ finished }) => {
       if (finished) {
-        navigateToLanguage();
+        setSplashAnimationFinished(
+          true,
+        );
       }
     });
 
@@ -177,9 +309,22 @@ export default function SplashScreen() {
     artworkOpacity,
     artworkScale,
     motionPreferenceLoaded,
-    navigateToLanguage,
+    navigateAfterSplash,
     reduceMotion,
     screenOpacity,
+  ]);
+
+  useEffect(() => {
+    if (
+      !splashAnimationFinished
+    ) {
+      return;
+    }
+
+    void navigateAfterSplash();
+  }, [
+    navigateAfterSplash,
+    splashAnimationFinished,
   ]);
 
   return (

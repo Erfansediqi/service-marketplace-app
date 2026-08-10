@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as LocalAuthentication from "expo-local-authentication";
+import { useRouter } from "expo-router";
 import {
   type PropsWithChildren,
   useCallback,
@@ -27,6 +28,7 @@ import {
 } from "../../constants/theme";
 import { useBiometricSecurity } from "../../context/biometric-security-context";
 import { useLanguage } from "../../context/languagecontext";
+import { useSession } from "../../context/session-context";
 import { useSupabaseAuth } from "../../context/supabase-auth-context";
 
 type BiometricAppLockProps =
@@ -35,6 +37,8 @@ type BiometricAppLockProps =
 export function BiometricAppLock({
   children,
 }: BiometricAppLockProps) {
+  const router = useRouter();
+
   const {
     t,
     rowDirection,
@@ -45,6 +49,10 @@ export function BiometricAppLock({
     user,
     signOut,
   } = useSupabaseAuth();
+
+  const {
+    resetSession,
+  } = useSession();
 
   const {
     isHydrated,
@@ -181,6 +189,7 @@ export function BiometricAppLock({
         biometricLabel,
         biometricsEnabled,
         isAuthenticating,
+        t,
         user,
       ],
     );
@@ -337,9 +346,15 @@ export function BiometricAppLock({
       try {
         await signOut();
 
+        resetSession();
+
         setIsLocked(false);
 
         setUnlockError(null);
+
+        router.replace(
+          "/login",
+        );
       } catch (error) {
         console.error(
           "Could not sign out from biometric lock screen:",

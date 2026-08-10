@@ -22,6 +22,7 @@ import {
 } from "../../constants/theme";
 import { useLanguage } from "../../context/languagecontext";
 import { useSession } from "../../context/session-context";
+import { useSupabaseAuth } from "../../context/supabase-auth-context";
 import type { ProviderProfile } from "../../data/providers";
 import { useActiveProvider } from "../../hooks/use-active-provider";
 import { updateProviderAvailability } from "../../services/provider-repository";
@@ -39,8 +40,6 @@ type ProfileMenuItem = {
   badgeTone?: "default" | "success" | "warning";
   onPress: () => void;
 };
-
-type ProfileCopy = ReturnType<typeof getProfileCopy>;
 
 const SUCCESS = "#268A57";
 const SUCCESS_SOFT = "#E8F6EE";
@@ -85,8 +84,16 @@ export default function ProviderAccountScreen() {
 function ProviderAccountContent({ provider }: { provider: ProviderProfile }) {
   const router = useRouter();
 
-  const { resetSession } = useSession();
-  const { language } = useLanguage();
+  const {
+    resetSession,
+    enterCustomerWorkspace,
+  } = useSession();
+  const { signOut } =
+    useSupabaseAuth();
+  const {
+    language,
+    t,
+  } = useLanguage();
 
   const activeLanguage = normalizeLanguage(language);
 
@@ -258,6 +265,24 @@ function ProviderAccountContent({ provider }: { provider: ProviderProfile }) {
   const settingsItems = useMemo<ProfileMenuItem[]>(
     () => [
       {
+        id: "switch-to-customer",
+        title: t(
+          "switchToCustomerTitle",
+        ),
+        subtitle: t(
+          "switchToCustomerSubtitle",
+        ),
+        icon:
+          "swap-horizontal-outline",
+        onPress: () => {
+          enterCustomerWorkspace();
+
+          router.replace(
+            "/(tabs)",
+          );
+        },
+      },
+      {
         id: "notifications",
         title: copy.notifications,
         subtitle: copy.notificationsSubtitle,
@@ -283,7 +308,14 @@ function ProviderAccountContent({ provider }: { provider: ProviderProfile }) {
         subtitle: getLanguageDisplayName(activeLanguage),
         icon: "language-outline",
         onPress: () => {
-          router.push("/language");
+          router.push({
+            pathname:
+              "/language",
+            params: {
+              source:
+                "account",
+            },
+          });
         },
       },
       {
@@ -296,25 +328,58 @@ function ProviderAccountContent({ provider }: { provider: ProviderProfile }) {
         },
       },
     ],
-    [activeLanguage, copy, notificationsEnabled, router],
+    [
+      activeLanguage,
+      copy,
+      enterCustomerWorkspace,
+      notificationsEnabled,
+      router,
+      t,
+    ],
   );
 
   const handleLogout = () => {
-    Alert.alert(copy.logout, copy.logoutConfirmation, [
-      {
-        text: copy.cancel,
-        style: "cancel",
-      },
-      {
-        text: copy.logout,
-        style: "destructive",
-        onPress: () => {
-          resetSession();
-
-          router.replace("/language");
+    Alert.alert(
+      copy.logout,
+      copy.logoutConfirmation,
+      [
+        {
+          text: copy.cancel,
+          style: "cancel",
         },
-      },
-    ]);
+        {
+          text: copy.logout,
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              try {
+                await signOut();
+
+                resetSession();
+
+                router.replace(
+                  "/login",
+                );
+              } catch (error) {
+                console.error(
+                  "Failed to log out of provider account:",
+                  error,
+                );
+
+                Alert.alert(
+                  t(
+                    "logoutFailedTitle",
+                  ),
+                  t(
+                    "logoutFailedMessage",
+                  ),
+                );
+              }
+            })();
+          },
+        },
+      ],
+    );
   };
 
   return (

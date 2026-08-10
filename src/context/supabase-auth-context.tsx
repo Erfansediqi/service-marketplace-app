@@ -26,6 +26,11 @@ type SendPhoneOtpInput = {
   channel: VerificationChannel;
 };
 
+type SendPhoneLoginOtpInput = {
+  phone: string;
+  channel: VerificationChannel;
+};
+
 type VerifyPhoneOtpInput = {
   phone: string;
   token: string;
@@ -41,6 +46,8 @@ type SupabaseAuthContextValue = {
   isUpdatingPassword: boolean;
 
   sendPhoneOtp: (input: SendPhoneOtpInput) => Promise<void>;
+
+  sendPhoneLoginOtp: (input: SendPhoneLoginOtpInput) => Promise<void>;
 
   verifyPhoneOtp: (input: VerifyPhoneOtpInput) => Promise<Session>;
 
@@ -233,6 +240,34 @@ export function SupabaseAuthProvider({ children }: PropsWithChildren) {
     [],
   );
 
+  const sendPhoneLoginOtp = useCallback(
+    async ({
+      phone,
+      channel,
+    }: SendPhoneLoginOtpInput): Promise<void> => {
+      const normalizedPhone = normalizePhoneNumber(phone);
+
+      setIsSendingOtp(true);
+
+      try {
+        const { error } = await supabase.auth.signInWithOtp({
+          phone: normalizedPhone,
+          options: {
+            shouldCreateUser: false,
+            channel,
+          },
+        });
+
+        if (error) {
+          throw error;
+        }
+      } finally {
+        setIsSendingOtp(false);
+      }
+    },
+    [],
+  );
+
   const verifyPhoneOtp = useCallback(
     async ({ phone, token }: VerifyPhoneOtpInput): Promise<Session> => {
       const normalizedPhone = normalizePhoneNumber(phone);
@@ -386,6 +421,7 @@ export function SupabaseAuthProvider({ children }: PropsWithChildren) {
       isSocialSigningIn,
       isUpdatingPassword,
       sendPhoneOtp,
+      sendPhoneLoginOtp,
       verifyPhoneOtp,
       signInWithSocialProvider,
       updatePassword,
@@ -398,6 +434,7 @@ export function SupabaseAuthProvider({ children }: PropsWithChildren) {
       isSocialSigningIn,
       isUpdatingPassword,
       sendPhoneOtp,
+      sendPhoneLoginOtp,
       session,
       signInWithSocialProvider,
       signOut,

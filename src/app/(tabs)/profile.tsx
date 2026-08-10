@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ComponentProps, useMemo, useState } from "react";
+import { ComponentProps, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
@@ -25,16 +25,13 @@ import { useCustomerAddresses } from "../../context/customer-address-context";
 import { useCustomerProfile } from "../../context/customer-profile-context";
 import { useLanguage } from "../../context/languagecontext";
 import { useSession } from "../../context/session-context";
+import { useSupabaseAuth } from "../../context/supabase-auth-context";
+import { listOwnedProviderAccounts } from "../../repositories/provider-account-repository";
+import { resolveProviderWorkspaceSwitch } from "../../services/provider-workspace-switch-resolver";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
 type LanguageName = "English" | "Dari" | "Pashto";
-
-type LocalizedText = {
-  English: string;
-  Dari: string;
-  Pashto: string;
-};
 
 type ProfileMenuItem = {
   id: string;
@@ -58,7 +55,16 @@ export default function ProfileScreen() {
     addresses,
   } = useCustomerAddresses();
 
-  const { resetSession } = useSession();
+  const {
+    resetSession,
+    enterProviderWorkspace,
+    beginProviderRegistration,
+  } = useSession();
+
+  const {
+    user,
+    signOut,
+  } = useSupabaseAuth();
 
   const activeLanguage = normalizeLanguage(language);
 
@@ -73,8 +79,188 @@ export default function ProfileScreen() {
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
+  const [
+    isSwitchingWorkspace,
+    setIsSwitchingWorkspace,
+  ] = useState(false);
+
+  const [
+    hasProviderAccount,
+    setHasProviderAccount,
+  ] = useState<boolean | null>(
+    null,
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!user) {
+      setHasProviderAccount(
+        null,
+      );
+
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    void listOwnedProviderAccounts(
+      user.id,
+    )
+      .then((providers) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setHasProviderAccount(
+          providers.length > 0,
+        );
+      })
+      .catch((error) => {
+        console.warn(
+          "Could not determine whether the customer owns provider accounts:",
+          error,
+        );
+
+        if (isMounted) {
+          /*
+           * Unknown is intentionally represented as null.
+           * The UI falls back to "Switch to Provider"
+           * rather than falsely implying no provider
+           * account exists.
+           */
+          setHasProviderAccount(
+            null,
+          );
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
+  const handleSwitchToProvider =
+    useCallback(
+      async (): Promise<void> => {
+      if (
+        isSwitchingWorkspace
+      ) {
+        return;
+      }
+
+      if (!user) {
+        Alert.alert(
+          t(
+            "switchWorkspaceFailedTitle",
+          ),
+          t(
+            "switchWorkspaceFailedMessage",
+          ),
+        );
+
+        return;
+      }
+
+      setIsSwitchingWorkspace(
+        true,
+      );
+
+      try {
+        const resolution =
+          await resolveProviderWorkspaceSwitch(
+            user.id,
+          );
+
+        if (
+          resolution.destination ===
+          "provider"
+        ) {
+          enterProviderWorkspace(
+            resolution.providerId,
+          );
+
+          router.replace(
+            "/(provider-tabs)",
+          );
+
+          return;
+        }
+
+        if (
+          resolution.destination ===
+          "provider-selection"
+        ) {
+          router.push(
+            "/provider-account-selection",
+          );
+
+          return;
+        }
+
+        beginProviderRegistration();
+
+        router.push(
+          "/provider-welcome",
+        );
+      } catch (error) {
+        console.error(
+          "Failed to switch from customer to provider workspace:",
+          error,
+        );
+
+        Alert.alert(
+          t(
+            "switchWorkspaceFailedTitle",
+          ),
+          t(
+            "switchWorkspaceFailedMessage",
+          ),
+        );
+      } finally {
+        setIsSwitchingWorkspace(
+          false,
+        );
+      }
+    },
+      [
+        beginProviderRegistration,
+        enterProviderWorkspace,
+        isSwitchingWorkspace,
+        router,
+        t,
+        user,
+      ],
+    );
+
   const accountItems = useMemo<ProfileMenuItem[]>(
     () => [
+      {
+        id: "switch-to-provider",
+        title:
+          hasProviderAccount === false
+            ? t(
+                "becomeProviderTitle",
+              )
+            : t(
+                "switchToProviderTitle",
+              ),
+        subtitle:
+          hasProviderAccount === false
+            ? t(
+                "becomeProviderSubtitle",
+              )
+            : t(
+                "switchToProviderSubtitle",
+              ),
+        icon:
+          hasProviderAccount === false
+            ? "briefcase-outline"
+            : "swap-horizontal-outline",
+        onPress: () => {
+          void handleSwitchToProvider();
+        },
+      },
       {
         id: "personal-information",
         title: t("personalInformationMenuTitle"),
@@ -115,6 +301,8 @@ export default function ProfileScreen() {
     [
       activeLanguage,
       addresses.length,
+      handleSwitchToProvider,
+      hasProviderAccount,
       router,
       t,
     ],
@@ -186,21 +374,49 @@ export default function ProfileScreen() {
   );
 
   const handleLogout = () => {
-    Alert.alert(t("logoutAction"), t("logoutConfirmation"), [
-      {
-        text: t("cancelActionProfile"),
-        style: "cancel",
-      },
-      {
-        text: t("logoutAction"),
-        style: "destructive",
-        onPress: () => {
-          resetSession();
-
-          router.replace("/language");
+    Alert.alert(
+      t("logoutAction"),
+      t("logoutConfirmation"),
+      [
+        {
+          text: t(
+            "cancelActionProfile",
+          ),
+          style: "cancel",
         },
-      },
-    ]);
+        {
+          text: t("logoutAction"),
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              try {
+                await signOut();
+
+                resetSession();
+
+                router.replace(
+                  "/login",
+                );
+              } catch (error) {
+                console.error(
+                  "Failed to log out:",
+                  error,
+                );
+
+                Alert.alert(
+                  t(
+                    "logoutFailedTitle",
+                  ),
+                  t(
+                    "logoutFailedMessage",
+                  ),
+                );
+              }
+            })();
+          },
+        },
+      ],
+    );
   };
 
   return (

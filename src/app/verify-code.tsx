@@ -24,11 +24,13 @@ import {
 } from "../constants/theme";
 import { useCustomerProfile } from "../context/customer-profile-context";
 import { useLanguage } from "../context/languagecontext";
+import { useSession } from "../context/session-context";
 import {
   type VerificationChannel,
   useSupabaseAuth,
 } from "../context/supabase-auth-context";
 import { ProfileRepository } from "../repositories/profile-repository";
+import { resolvePostLoginWorkspace } from "../services/post-login-workspace-resolver";
 
 const CODE_LENGTH = 6;
 const RESEND_SECONDS = 60;
@@ -40,12 +42,26 @@ export default function VerifyCodeScreen() {
     fullName?: string;
     phone?: string;
     channel?: string;
+    mode?: string;
   }>();
 
   const { saveSignupProfile } = useCustomerProfile();
 
-  const { verifyPhoneOtp, sendPhoneOtp, isVerifyingOtp, isSendingOtp } =
-    useSupabaseAuth();
+  const {
+    defaultProviderId,
+    lastWorkspaceRole,
+    lastProviderId,
+    enterCustomerWorkspace,
+    enterProviderWorkspace,
+  } = useSession();
+
+  const {
+    verifyPhoneOtp,
+    sendPhoneOtp,
+    sendPhoneLoginOtp,
+    isVerifyingOtp,
+    isSendingOtp,
+  } = useSupabaseAuth();
 
   const { language } = useLanguage();
 
@@ -68,6 +84,14 @@ export default function VerifyCodeScreen() {
     typeof params.fullName === "string" ? params.fullName.trim() : "";
 
   const phone = typeof params.phone === "string" ? params.phone.trim() : "";
+
+  const mode =
+    params.mode === "login"
+      ? "login"
+      : "signup";
+
+  const isLoginMode =
+    mode === "login";
 
   const validCode = useMemo(() => code.length === CODE_LENGTH, [code.length]);
 
@@ -104,8 +128,15 @@ export default function VerifyCodeScreen() {
       return;
     }
 
-    if (!fullName || !phone) {
-      Alert.alert(copy.missingSignupTitle, copy.missingSignupMessage);
+    if (
+      !phone ||
+      (!isLoginMode &&
+        !fullName)
+    ) {
+      Alert.alert(
+        copy.missingSignupTitle,
+        copy.missingSignupMessage,
+      );
 
       return;
     }
@@ -116,10 +147,12 @@ export default function VerifyCodeScreen() {
         token: code,
       });
 
-      await saveSignupProfile({
-        fullName,
-        phoneNumber: phone,
-      });
+      if (!isLoginMode) {
+        await saveSignupProfile({
+          fullName,
+          phoneNumber: phone,
+        });
+      }
 
       try {
         await ProfileRepository.fetchRemoteProfile(
@@ -132,7 +165,43 @@ export default function VerifyCodeScreen() {
         );
       }
 
-      router.replace("/location-permission");
+      if (isLoginMode) {
+        const workspace =
+          await resolvePostLoginWorkspace({
+            userId:
+              authenticatedSession.user.id,
+            lastWorkspaceRole,
+            lastProviderId,
+            defaultProviderId,
+          });
+
+        if (
+          workspace.role ===
+          "provider"
+        ) {
+          enterProviderWorkspace(
+            workspace.providerId,
+          );
+
+          router.replace(
+            "/(provider-tabs)",
+          );
+
+          return;
+        }
+
+        enterCustomerWorkspace();
+
+        router.replace(
+          "/(tabs)",
+        );
+
+        return;
+      }
+
+      router.replace(
+        "/location-permission",
+      );
     } catch (error) {
       console.error("Failed to verify the phone code:", error);
 
@@ -152,19 +221,35 @@ export default function VerifyCodeScreen() {
       return;
     }
 
-    if (!fullName || !phone) {
-      Alert.alert(copy.missingSignupTitle, copy.missingSignupMessage);
+    if (
+      !phone ||
+      (!isLoginMode &&
+        !fullName)
+    ) {
+      Alert.alert(
+        copy.missingSignupTitle,
+        copy.missingSignupMessage,
+      );
 
       return;
     }
 
     try {
-      await sendPhoneOtp({
-        phone,
-        fullName,
-        preferredLanguage: language,
-        channel: nextChannel,
-      });
+      if (isLoginMode) {
+        await sendPhoneLoginOtp({
+          phone,
+          channel: nextChannel,
+        });
+      } else {
+        await sendPhoneOtp({
+          phone,
+          fullName,
+          preferredLanguage:
+            language,
+          channel:
+            nextChannel,
+        });
+      }
 
       setVerificationChannel(nextChannel);
       setCode("");

@@ -21,6 +21,7 @@ import {
 } from "../constants/theme";
 import { useLanguage } from "../context/languagecontext";
 import { useSession } from "../context/session-context";
+import { markOnboardingCompleted } from "../services/onboarding-state";
 
 type UserRole =
   | "customer"
@@ -85,7 +86,7 @@ export default function RoleSelectionScreen() {
   ];
 
   const handleContinue =
-    (): void => {
+    async (): Promise<void> => {
       if (
         !selectedRole ||
         isContinuing
@@ -95,22 +96,33 @@ export default function RoleSelectionScreen() {
 
       setIsContinuing(true);
 
-      if (
-        selectedRole ===
-        "customer"
-      ) {
-        enterCustomerWorkspace();
+      try {
+        await markOnboardingCompleted();
 
-        router.replace(
-          "/(tabs)",
+        if (
+          selectedRole ===
+          "customer"
+        ) {
+          enterCustomerWorkspace();
+
+          router.replace(
+            "/(tabs)",
+          );
+
+          return;
+        }
+
+        router.push(
+          "/provider-account-selection",
+        );
+      } catch (error) {
+        console.error(
+          "Failed to persist onboarding completion:",
+          error,
         );
 
-        return;
+        setIsContinuing(false);
       }
-
-      router.push(
-        "/provider-account-selection",
-      );
     };
 
   return (

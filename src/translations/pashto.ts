@@ -359,6 +359,41 @@ const pashto = {
   contactSupportPolicySectionBody: "د دې تګلارو په اړه پوښتنې د اړیکې له ملاتړ پاڼې څخه د واتساپ یا برېښنالیک له لارې لېږلی شئ.",
   policyUpdateNotice: "دا تګلارې کېدای شي د خدمتونو او ځانګړتیاوو د پراختیا سره سم تازه شي.",
 
+  // Returning user login
+  loginTitle: "بېرته ښه راغلاست",
+  loginSubtitle: "خدمت ته د دوام لپاره خپل حساب ته ننوځئ",
+  loginPhoneLabel: "د ټیلیفون شمېره",
+  loginPhonePlaceholderAfghanistan: "۷۰۱۲۳۴۵۶۷",
+  loginPhonePlaceholderIndia: "۹۸۷۶۵۴۳۲۱۰",
+  loginContinue: "دوام",
+  loginSendingCode: "کوډ لېږل کېږي...",
+  loginNoAccount: "حساب نه لرئ؟",
+  loginCreateAccount: "حساب جوړ کړئ",
+  loginOr: "یا",
+  loginGoogle: "ګوګل",
+  loginApple: "اپل",
+  loginErrorTitle: "ننوتل بریالي نه شول",
+  loginOtpError: "د ننوتلو کوډ ونه لېږل شو. د ټیلیفون شمېره وګورئ او بیا هڅه وکړئ.",
+  loginAccountNotFound: "د دې ټیلیفون شمېرې لپاره حساب ونه موندل شو. لومړی حساب جوړ کړئ.",
+
+  // Logout feedback
+  logoutFailedTitle: "له حسابه وتل بریالي نه شول",
+  logoutFailedMessage: "خدمت ونه شو کولای تاسو له حسابه وباسي. مهرباني وکړئ بیا هڅه وکړئ.",
+
+  // Workspace switching
+  switchToProviderTitle: "د خدمت وړاندې کوونکي حساب ته لاړ شئ",
+  switchToProviderSubtitle: "خپل د خدمت وړاندې کوونکي حساب پرانیزئ یا نوی حساب جوړ کړئ",
+  switchWorkspaceFailedTitle: "د حساب بدلول بریالي نه شول",
+  switchWorkspaceFailedMessage: "خدمت ونه شو کولای ستاسو د خدمت وړاندې کوونکي حسابونه پورته کړي. مهرباني وکړئ بیا هڅه وکړئ.",
+
+  // Customer workspace switching
+  switchToCustomerTitle: "د پیرودونکي حساب ته لاړ شئ",
+  switchToCustomerSubtitle: "خپل د پیرودونکي حساب پرانیزئ",
+
+  // Provider onboarding entry
+  becomeProviderTitle: "د خدمت وړاندې کوونکی شئ",
+  becomeProviderSubtitle: "خپل د خدمت وړاندې کوونکي پروفایل جوړ کړئ او د خدمتونو وړاندې کول پیل کړئ",
+
 } satisfies Record<TranslationKeys, string>;
 
 export default pashto;
