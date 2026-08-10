@@ -1,9 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { ComponentProps, useEffect, useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import {
+  ComponentProps,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   Alert,
   Pressable,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -64,7 +71,7 @@ export default function ProviderDashboardScreen() {
 
   const { width } = useWindowDimensions();
 
-  const { bookings } = useBooking();
+  const { bookings, isRefreshing, refreshBookings } = useBooking();
 
   const { language } = useLanguage();
 
@@ -81,6 +88,26 @@ export default function ProviderDashboardScreen() {
   } = useActiveProvider();
 
   const providerId = provider?.id ?? "";
+
+  /*
+   * Dashboard statistics are derived from bookings. Refresh the provider
+   * booking scope whenever this tab gains focus so request counts, active
+   * jobs, today's work and revenue reflect the latest Supabase state.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      if (!providerId) {
+        return;
+      }
+
+      void refreshBookings().catch((refreshError) => {
+        console.warn(
+          "Could not refresh provider dashboard bookings:",
+          refreshError,
+        );
+      });
+    }, [providerId, refreshBookings]),
+  );
 
   const [availableNow, setAvailableNow] = useState(false);
 
@@ -316,6 +343,20 @@ export default function ProviderDashboardScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => {
+              void refreshBookings().catch((refreshError) => {
+                console.warn(
+                  "Could not refresh provider dashboard bookings:",
+                  refreshError,
+                );
+              });
+            }}
+            tintColor={KhedmatPalette.blue500}
+          />
+        }
       >
         <View
           style={[
