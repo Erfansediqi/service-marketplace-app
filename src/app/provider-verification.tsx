@@ -21,7 +21,6 @@ import {
   createLocalProviderProfile,
   type ProviderRegistrationData,
 } from "../services/provider-profile-factory";
-import { addLocalProvider } from "../services/provider-storage";
 import { ProviderVerificationStorage } from "../services/provider-verification-storage";
 
 import {
@@ -285,11 +284,11 @@ export default function ProviderVerificationScreen() {
       };
 
       /*
-       * Build the existing local ProviderProfile first so the current provider
-       * workspace can keep using the same UI/data shape while Supabase becomes
-       * the authoritative backend.
+       * Reuse the existing ProviderProfile factory only as a pure mapping helper
+       * for the registration form values. Nothing from this draft is persisted
+       * to AsyncStorage; Supabase is the authoritative provider data source.
        */
-      const localProviderDraft = createLocalProviderProfile(registration);
+      const providerDraftInput = createLocalProviderProfile(registration);
 
       const serviceModes = registration.serviceModes
         .split(",")
@@ -299,38 +298,38 @@ export default function ProviderVerificationScreen() {
       const remoteDraft = await ProviderAccountRepository.createProviderDraft({
         ownerUserId: user.id,
 
-        businessName: localProviderDraft.name,
-        profession: localProviderDraft.profession,
-        description: localProviderDraft.description,
+        businessName: providerDraftInput.name,
+        profession: providerDraftInput.profession,
+        description: providerDraftInput.description,
 
-        categoryId: localProviderDraft.categoryId,
+        categoryId: providerDraftInput.categoryId,
 
-        provinceId: localProviderDraft.provinceId,
-        provinceName: localProviderDraft.provinceName,
+        provinceId: providerDraftInput.provinceId,
+        provinceName: providerDraftInput.provinceName,
 
-        districtId: localProviderDraft.districtId,
-        districtName: localProviderDraft.districtName,
+        districtId: providerDraftInput.districtId,
+        districtName: providerDraftInput.districtName,
 
-        locationLabel: localProviderDraft.locationLabel,
+        locationLabel: providerDraftInput.locationLabel,
 
-        latitude: localProviderDraft.latitude,
-        longitude: localProviderDraft.longitude,
+        latitude: providerDraftInput.latitude,
+        longitude: providerDraftInput.longitude,
 
-        availableToday: localProviderDraft.availableToday,
-        acceptsUrgentRequests: localProviderDraft.acceptsUrgentRequests,
-        instantBooking: localProviderDraft.instantBooking,
+        availableToday: providerDraftInput.availableToday,
+        acceptsUrgentRequests: providerDraftInput.acceptsUrgentRequests,
+        instantBooking: providerDraftInput.instantBooking,
 
-        yearsExperience: localProviderDraft.yearsExperience,
+        yearsExperience: providerDraftInput.yearsExperience,
 
-        serviceRadiusKm: localProviderDraft.serviceRadiusKm,
-        workingDays: localProviderDraft.workingDays,
+        serviceRadiusKm: providerDraftInput.serviceRadiusKm,
+        workingDays: providerDraftInput.workingDays,
 
-        startTime: localProviderDraft.startTime,
-        endTime: localProviderDraft.endTime,
+        startTime: providerDraftInput.startTime,
+        endTime: providerDraftInput.endTime,
 
         serviceModes,
 
-        services: localProviderDraft.services.map((service) => ({
+        services: providerDraftInput.services.map((service) => ({
           serviceId: service.id,
           estimatedPrice: service.estimatedPrice,
         })),
@@ -392,24 +391,6 @@ export default function ProviderVerificationScreen() {
           remoteDraft.provider.id,
         );
 
-      /*
-       * Keep a local mirror temporarily because the existing provider workspace
-       * still reads ProviderProfile from AsyncStorage. The Supabase UUID becomes
-       * the shared provider ID across local UI state and the remote database.
-       */
-      const provider = {
-        ...localProviderDraft,
-        id: submittedProvider.id,
-        verified: submittedProvider.verification_status === "verified",
-      };
-
-      await addLocalProvider(provider);
-
-      /*
-       * Sensitive verification data is intentionally never copied into
-       * AsyncStorage. The local mirror contains only marketplace-facing provider
-       * data; identity metadata and evidence remain in private Supabase storage.
-       */
       router.replace({
         pathname: "/provider-submitted",
         params: {
