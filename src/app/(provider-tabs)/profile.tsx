@@ -176,7 +176,7 @@ function ProviderAccountContent({ provider }: { provider: ProviderProfile }) {
           localizedDigits,
         ),
         onPress: () => {
-          console.log("Open provider services settings");
+          router.push("/provider-services-management" as never);
         },
       },
       {

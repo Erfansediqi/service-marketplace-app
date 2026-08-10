@@ -622,6 +622,28 @@ export type Database = {
         }
       }
       current_user_is_admin: { Args: never; Returns: boolean }
+      save_provider_services: {
+        Args: { p_provider_id: string; p_services: Json }
+        Returns: {
+          created_at: string
+          currency: string
+          description_override: string | null
+          estimated_price: number
+          id: string
+          is_active: boolean
+          provider_id: string
+          service_id: string
+          sync_version: number
+          title_override: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "provider_services"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       submit_provider_account: {
         Args: { p_provider_id: string }
         Returns: {

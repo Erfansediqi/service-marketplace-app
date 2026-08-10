@@ -7,6 +7,7 @@ import {
   listOwnedProviderAccounts,
   listProviderServices,
   listServices,
+  saveProviderServicesAtomic,
   updateProviderAccount,
 } from "../repositories/provider-account-repository";
 import { mapProviderAccountToProfile } from "./provider-profile-mapper";
@@ -167,6 +168,67 @@ export async function updateProviderAvailability(
   } catch (error) {
     console.warn(
       "Provider availability was updated in Supabase, but the local fallback mirror could not be updated:",
+      error,
+    );
+  }
+
+  return mappedProvider;
+}
+
+export type ProviderServiceOfferingInput = {
+  serviceId: string;
+  estimatedPrice: number;
+};
+
+export async function saveProviderServiceOffering(
+  providerId: string,
+  services: ProviderServiceOfferingInput[],
+): Promise<ProviderProfile> {
+  const normalizedProviderId = providerId.trim();
+
+  if (!normalizedProviderId) {
+    throw new Error("Provider ID is required.");
+  }
+
+  if (!looksLikeUuid(normalizedProviderId)) {
+    throw new Error(
+      "Service management is available only for Supabase provider accounts.",
+    );
+  }
+
+  await saveProviderServicesAtomic(normalizedProviderId, services);
+
+  const provider = await getProviderAccount(normalizedProviderId);
+
+  if (!provider) {
+    throw new Error(
+      `Provider "${normalizedProviderId}" was not found after saving services.`,
+    );
+  }
+
+  const [providerServices, catalogServices] = await Promise.all([
+    listProviderServices(provider.id),
+    listServices(provider.category_id),
+  ]);
+
+  const mappedProvider = mapProviderAccountToProfile(
+    provider,
+    providerServices,
+    catalogServices,
+  );
+
+  try {
+    const localProvider = await getLocalProviderById(normalizedProviderId);
+
+    if (localProvider) {
+      await updateLocalProvider(normalizedProviderId, {
+        services: mappedProvider.services,
+        minimumPrice: mappedProvider.minimumPrice,
+      });
+    }
+  } catch (error) {
+    console.warn(
+      "Provider services were updated in Supabase, but the local fallback mirror could not be updated:",
       error,
     );
   }

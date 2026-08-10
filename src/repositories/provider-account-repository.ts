@@ -1,5 +1,10 @@
 import { supabase } from "../lib/supabase";
-import type { Tables, TablesInsert, TablesUpdate } from "../types/database";
+import type {
+  Json,
+  Tables,
+  TablesInsert,
+  TablesUpdate,
+} from "../types/database";
 
 export type ProviderAccountRow = Tables<"provider_accounts">;
 
@@ -61,6 +66,11 @@ export type CreateProviderDraftInput = {
 export type ProviderDraftResult = {
   provider: ProviderAccountRow;
   services: ProviderServiceRow[];
+};
+
+export type SaveProviderServiceInput = {
+  serviceId: string;
+  estimatedPrice: number;
 };
 
 function normalizeRequiredText(value: string, fieldName: string): string {
@@ -358,6 +368,29 @@ export async function updateProviderService(
   return data;
 }
 
+export async function saveProviderServicesAtomic(
+  providerId: string,
+  services: SaveProviderServiceInput[],
+): Promise<ProviderServiceRow[]> {
+  const normalizedProviderId = normalizeRequiredText(providerId, "Provider ID");
+
+  const payload: Json = services.map((service) => ({
+    service_id: normalizeRequiredText(service.serviceId, "Service ID"),
+    estimated_price: normalizePrice(service.estimatedPrice),
+  }));
+
+  const { data, error } = await supabase.rpc("save_provider_services", {
+    p_provider_id: normalizedProviderId,
+    p_services: payload,
+  });
+
+  if (error) {
+    throw new Error(`Failed to save provider services: ${error.message}`);
+  }
+
+  return data ?? [];
+}
+
 export async function submitProviderAccount(
   providerId: string,
 ): Promise<ProviderAccountRow> {
@@ -387,5 +420,6 @@ export const ProviderAccountRepository = {
   createProviderDraft,
   updateProviderAccount,
   updateProviderService,
+  saveProviderServicesAtomic,
   submitProviderAccount,
 };
