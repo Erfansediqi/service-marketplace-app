@@ -192,14 +192,12 @@ export default function BookingsScreen() {
   };
 
   const openBooking = (booking: BookingRecord) => {
-    /*
-     * There is not yet a dedicated route for
-     * viewing an existing BookingRecord.
-     *
-     * Keep this action safe until a booking-record
-     * details screen is added.
-     */
-    console.log("Open booking:", booking.id);
+    router.push({
+      pathname: "/booking-record-details",
+      params: {
+        bookingId: booking.id,
+      },
+    } as never);
   };
 
   return (

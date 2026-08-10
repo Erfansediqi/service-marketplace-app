@@ -65,13 +65,11 @@ function AppNavigator({ fontsReady }: AppNavigatorProps) {
 
   const { isHydrated: customerProfileIsHydrated } = useCustomerProfile();
 
-  const { isHydrated: customerAddressesAreHydrated } =
-    useCustomerAddresses();
+  const { isHydrated: customerAddressesAreHydrated } = useCustomerAddresses();
 
   const { isHydrated: bookingIsHydrated } = useBooking();
 
-  const { isHydrated: biometricSecurityIsHydrated } =
-    useBiometricSecurity();
+  const { isHydrated: biometricSecurityIsHydrated } = useBiometricSecurity();
 
   const appIsReady =
     fontsReady &&
@@ -135,6 +133,7 @@ function AppNavigator({ fontsReady }: AppNavigatorProps) {
       <Stack.Screen name="booking-create" />
       <Stack.Screen name="booking-schedule" />
       <Stack.Screen name="booking-details" />
+      <Stack.Screen name="booking-record-details" />
       <Stack.Screen name="booking-summary" />
       <Stack.Screen name="booking-success" />
 
@@ -165,17 +164,17 @@ export default function RootLayout() {
           <SyncEngineLifecycle />
 
           <CustomerProfileProvider>
-          <CustomerAddressProvider>
-            <BookingProvider>
-              <LanguageProvider>
-                <NotificationProvider>
-                  <BiometricAppLock>
-                    <AppNavigator fontsReady={fontsReady} />
-                  </BiometricAppLock>
-                </NotificationProvider>
-              </LanguageProvider>
-            </BookingProvider>
-          </CustomerAddressProvider>
+            <CustomerAddressProvider>
+              <BookingProvider>
+                <LanguageProvider>
+                  <NotificationProvider>
+                    <BiometricAppLock>
+                      <AppNavigator fontsReady={fontsReady} />
+                    </BiometricAppLock>
+                  </NotificationProvider>
+                </LanguageProvider>
+              </BookingProvider>
+            </CustomerAddressProvider>
           </CustomerProfileProvider>
         </SessionProvider>
       </BiometricSecurityProvider>
