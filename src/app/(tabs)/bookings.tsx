@@ -1,12 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import {
-  ComponentProps,
-  useMemo,
-  useState,
-} from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { ComponentProps, useCallback, useMemo, useState } from "react";
 import {
   Pressable,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -29,19 +26,11 @@ import {
   useBooking,
 } from "../../context/booking-context";
 import { useLanguage } from "../../context/languagecontext";
-type IconName =
-  ComponentProps<typeof Ionicons>["name"];
+type IconName = ComponentProps<typeof Ionicons>["name"];
 
-type LanguageName =
-  | "English"
-  | "Dari"
-  | "Pashto";
+type LanguageName = "English" | "Dari" | "Pashto";
 
-type BookingFilter =
-  | "active"
-  | "pending"
-  | "completed"
-  | "cancelled";
+type BookingFilter = "active" | "pending" | "completed" | "cancelled";
 
 type LocalizedText = {
   English: string;
@@ -96,176 +85,113 @@ const FILTERS: FilterDefinition[] = [
 
 export default function BookingsScreen() {
   const router = useRouter();
-  const { bookings } = useBooking();
+
+  const { bookings, isRefreshing, refreshBookings } = useBooking();
   const { language } = useLanguage();
 
-  const activeLanguage =
-    normalizeLanguage(language);
+  const activeLanguage = normalizeLanguage(language);
 
-  const isRtl =
-    activeLanguage === "Dari" ||
-    activeLanguage === "Pashto";
+  const isRtl = activeLanguage === "Dari" || activeLanguage === "Pashto";
 
-  const copy =
-    getBookingsCopy(activeLanguage);
+  const copy = getBookingsCopy(activeLanguage);
 
-  const [
-    selectedFilter,
-    setSelectedFilter,
-  ] = useState<BookingFilter>(
-    "active",
+  const [selectedFilter, setSelectedFilter] = useState<BookingFilter>("active");
+
+  const localizedFilters = useMemo(
+    () =>
+      FILTERS.map((filter) => ({
+        ...filter,
+        localizedLabel: filter.label[activeLanguage],
+      })),
+    [activeLanguage],
   );
 
-  const localizedFilters =
-    useMemo(
-      () =>
-        FILTERS.map((filter) => ({
-          ...filter,
-          localizedLabel:
-            filter.label[
-              activeLanguage
-            ],
-        })),
-      [activeLanguage],
-    );
+  /*
+   * Provider status changes are written to Supabase. Refresh whenever the
+   * customer re-enters this tab so Pending / Active / Completed / Cancelled
+   * reflects the current server state.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      void refreshBookings().catch((error) => {
+        console.warn("Could not refresh customer bookings:", error);
+      });
+    }, [refreshBookings]),
+  );
 
-  const filteredBookings =
-    useMemo(() => {
-      const results =
-        bookings.filter((booking) => {
-          if (
-            selectedFilter ===
-            "active"
-          ) {
-            return (
-              booking.status ===
-                "confirmed" ||
-              booking.status ===
-                "in-progress"
-            );
-          }
+  const filteredBookings = useMemo(() => {
+    const results = bookings.filter((booking) => {
+      if (selectedFilter === "active") {
+        return (
+          booking.status === "confirmed" || booking.status === "in-progress"
+        );
+      }
 
-          if (
-            selectedFilter ===
-            "pending"
-          ) {
-            return (
-              booking.status ===
-              "pending"
-            );
-          }
+      if (selectedFilter === "pending") {
+        return booking.status === "pending";
+      }
 
-          if (
-            selectedFilter ===
-            "completed"
-          ) {
-            return (
-              booking.status ===
-              "completed"
-            );
-          }
+      if (selectedFilter === "completed") {
+        return booking.status === "completed";
+      }
 
-          return (
-            booking.status ===
-            "cancelled"
-          );
-        });
+      return booking.status === "cancelled";
+    });
 
-      return [...results].sort(
-        (first, second) => {
-          const firstTimestamp =
-            getBookingTimestamp(
-              first,
-            );
+    return [...results].sort((first, second) => {
+      const firstTimestamp = getBookingTimestamp(first);
 
-          const secondTimestamp =
-            getBookingTimestamp(
-              second,
-            );
+      const secondTimestamp = getBookingTimestamp(second);
 
-          if (
-            selectedFilter ===
-              "completed" ||
-            selectedFilter ===
-              "cancelled"
-          ) {
-            return (
-              secondTimestamp -
-              firstTimestamp
-            );
-          }
+      if (selectedFilter === "completed" || selectedFilter === "cancelled") {
+        return secondTimestamp - firstTimestamp;
+      }
 
-          return (
-            firstTimestamp -
-            secondTimestamp
-          );
-        },
-      );
-    }, [bookings, selectedFilter]);
+      return firstTimestamp - secondTimestamp;
+    });
+  }, [bookings, selectedFilter]);
 
   const statusCounts = useMemo(
     () => ({
       active: bookings.filter(
         (booking) =>
-          booking.status ===
-            "confirmed" ||
-          booking.status ===
-            "in-progress",
+          booking.status === "confirmed" || booking.status === "in-progress",
       ).length,
 
-      pending: bookings.filter(
-        (booking) =>
-          booking.status ===
-          "pending",
-      ).length,
+      pending: bookings.filter((booking) => booking.status === "pending")
+        .length,
 
-      completed: bookings.filter(
-        (booking) =>
-          booking.status ===
-          "completed",
-      ).length,
+      completed: bookings.filter((booking) => booking.status === "completed")
+        .length,
 
-      cancelled: bookings.filter(
-        (booking) =>
-          booking.status ===
-          "cancelled",
-      ).length,
+      cancelled: bookings.filter((booking) => booking.status === "cancelled")
+        .length,
     }),
     [bookings],
   );
 
-  const openMessages = (
-    booking: BookingRecord,
-  ) => {
+  const openMessages = (booking: BookingRecord) => {
     router.push({
       pathname: "/(tabs)/messages",
       params: {
-        providerId:
-          booking.providerId,
-        providerName:
-          booking.providerName,
+        providerId: booking.providerId,
+        providerName: booking.providerName,
         bookingId: booking.id,
       },
     });
   };
 
-  const repeatBooking = (
-    booking: BookingRecord,
-  ) => {
+  const repeatBooking = (booking: BookingRecord) => {
     router.push({
       pathname: "/booking-create",
       params: {
-        providerId:
-          booking.providerId,
-        serviceId:
-          booking.serviceId,
+        providerId: booking.providerId,
+        serviceId: booking.serviceId,
       },
     });
   };
 
-  const openBooking = (
-    booking: BookingRecord,
-  ) => {
+  const openBooking = (booking: BookingRecord) => {
     /*
      * There is not yet a dedicated route for
      * viewing an existing BookingRecord.
@@ -273,161 +199,113 @@ export default function BookingsScreen() {
      * Keep this action safe until a booking-record
      * details screen is added.
      */
-    console.log(
-      "Open booking:",
-      booking.id,
-    );
+    console.log("Open booking:", booking.id);
   };
 
   return (
-    <SafeAreaView
-      style={styles.safeArea}
-    >
+    <SafeAreaView style={styles.safeArea}>
       <ScrollView
-        showsVerticalScrollIndicator={
-          false
-        }
-        contentContainerStyle={
-          styles.scrollContent
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => {
+              void refreshBookings().catch((error) => {
+                console.warn("Could not refresh customer bookings:", error);
+              });
+            }}
+            tintColor={KhedmatPalette.blue500}
+          />
         }
       >
         <View style={styles.header}>
-          <Text
-            style={[
-              styles.eyebrow,
-              directionStyle(isRtl),
-            ]}
-          >
+          <Text style={[styles.eyebrow, directionStyle(isRtl)]}>
             {copy.eyebrow}
           </Text>
 
-          <Text
-            style={[
-              styles.title,
-              directionStyle(isRtl),
-            ]}
-          >
+          <Text style={[styles.title, directionStyle(isRtl)]}>
             {copy.title}
           </Text>
 
-          <Text
-            style={[
-              styles.subtitle,
-              directionStyle(isRtl),
-            ]}
-          >
+          <Text style={[styles.subtitle, directionStyle(isRtl)]}>
             {copy.subtitle}
           </Text>
-                </View>
+        </View>
         <ScrollView
           horizontal
-          showsHorizontalScrollIndicator={
-            false
-          }
-          contentContainerStyle={
-            styles.filtersRow
-          }
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtersRow}
           style={{
-            direction: isRtl
-              ? "rtl"
-              : "ltr",
+            direction: isRtl ? "rtl" : "ltr",
           }}
         >
-          {localizedFilters.map(
-            (filter) => {
-              const selected =
-                selectedFilter ===
-                filter.id;
+          {localizedFilters.map((filter) => {
+            const selected = selectedFilter === filter.id;
 
-              const count =
-                statusCounts[
-                  filter.id
-                ];
+            const count = statusCounts[filter.id];
 
-              return (
-                <Pressable
-                  key={filter.id}
-                  accessibilityRole="button"
-                  accessibilityState={{
-                    selected,
-                  }}
-                  accessibilityLabel={
-                    filter.localizedLabel
+            return (
+              <Pressable
+                key={filter.id}
+                accessibilityRole="button"
+                accessibilityState={{
+                  selected,
+                }}
+                accessibilityLabel={filter.localizedLabel}
+                onPress={() => setSelectedFilter(filter.id)}
+                style={({ pressed }) => [
+                  styles.filterChip,
+                  selected && styles.filterChipSelected,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Ionicons
+                  name={filter.icon}
+                  size={17}
+                  color={
+                    selected ? KhedmatPalette.white : KhedmatPalette.navy700
                   }
-                  onPress={() =>
-                    setSelectedFilter(
-                      filter.id,
-                    )
-                  }
-                  style={({ pressed }) => [
-                    styles.filterChip,
-                    selected &&
-                      styles.filterChipSelected,
-                    pressed &&
-                      styles.pressed,
+                />
+
+                <Text
+                  style={[
+                    styles.filterText,
+                    selected && styles.filterTextSelected,
+                    directionStyle(isRtl),
                   ]}
                 >
-                  <Ionicons
-                    name={filter.icon}
-                    size={17}
-                    color={
-                      selected
-                        ? KhedmatPalette
-                            .white
-                        : KhedmatPalette
-                            .navy700
-                    }
-                  />
+                  {filter.localizedLabel}
+                </Text>
 
+                <View
+                  style={[
+                    styles.filterCount,
+                    selected && styles.filterCountSelected,
+                  ]}
+                >
                   <Text
                     style={[
-                      styles.filterText,
-                      selected &&
-                        styles.filterTextSelected,
-                      directionStyle(
-                        isRtl,
-                      ),
+                      styles.filterCountText,
+                      selected && styles.filterCountTextSelected,
                     ]}
                   >
-                    {
-                      filter.localizedLabel
-                    }
+                    {formatDigits(
+                      count.toString(),
+                      activeLanguage !== "English",
+                    )}
                   </Text>
-
-                  <View
-                    style={[
-                      styles.filterCount,
-                      selected &&
-                        styles.filterCountSelected,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.filterCountText,
-                        selected &&
-                          styles.filterCountTextSelected,
-                      ]}
-                    >
-                      {formatDigits(
-                        count.toString(),
-                        activeLanguage !==
-                          "English",
-                      )}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            },
-          )}
+                </View>
+              </Pressable>
+            );
+          })}
         </ScrollView>
 
         <View
           style={[
             styles.summaryRow,
             {
-              flexDirection: isRtl
-                ? "row-reverse"
-                : "row",
+              flexDirection: isRtl ? "row-reverse" : "row",
             },
           ]}
         >
@@ -435,85 +313,50 @@ export default function BookingsScreen() {
             style={[
               styles.summaryCopy,
               {
-                alignItems: isRtl
-                  ? "flex-end"
-                  : "flex-start",
+                alignItems: isRtl ? "flex-end" : "flex-start",
               },
             ]}
           >
-            <Text
-              style={[
-                styles.summaryTitle,
-                directionStyle(isRtl),
-              ]}
-            >
-              {getFilterTitle(
-                selectedFilter,
-                activeLanguage,
-              )}
+            <Text style={[styles.summaryTitle, directionStyle(isRtl)]}>
+              {getFilterTitle(selectedFilter, activeLanguage)}
             </Text>
 
-            <Text
-              style={[
-                styles.summarySubtitle,
-                directionStyle(isRtl),
-              ]}
-            >
+            <Text style={[styles.summarySubtitle, directionStyle(isRtl)]}>
               {formatDigits(
                 filteredBookings.length.toString(),
-                activeLanguage !==
-                  "English",
+                activeLanguage !== "English",
               )}{" "}
               {copy.bookingsCount}
             </Text>
           </View>
 
-          <View
-            style={styles.summaryIcon}
-          >
+          <View style={styles.summaryIcon}>
             <Ionicons
               name="calendar-outline"
               size={23}
-              color={
-                KhedmatPalette.blue500
-              }
+              color={KhedmatPalette.blue500}
             />
           </View>
         </View>
 
-        <View
-          style={styles.bookingsList}
-        >
-          {filteredBookings.map(
-            (booking) => (
-              <BookingCard
-                key={booking.id}
-                booking={booking}
-                language={
-                  activeLanguage
-                }
-                isRtl={isRtl}
-                copy={copy}
-                onOpen={() =>
-                  openBooking(booking)
-                }
-                onMessage={() =>
-                  openMessages(booking)
-                }
-                onRepeat={() =>
-                  repeatBooking(booking)
-                }
-              />
-            ),
-          )}
+        <View style={styles.bookingsList}>
+          {filteredBookings.map((booking) => (
+            <BookingCard
+              key={booking.id}
+              booking={booking}
+              language={activeLanguage}
+              isRtl={isRtl}
+              copy={copy}
+              onOpen={() => openBooking(booking)}
+              onMessage={() => openMessages(booking)}
+              onRepeat={() => repeatBooking(booking)}
+            />
+          ))}
 
-          {filteredBookings.length ===
-          0 ? (
+          {filteredBookings.length === 0 ? (
             <EmptyBookings
               filter={selectedFilter}
-              language={
-                activeLanguage
-              }
+              language={activeLanguage}
               isRtl={isRtl}
             />
           ) : null}
@@ -527,9 +370,7 @@ type BookingCardProps = {
   booking: BookingRecord;
   language: LanguageName;
   isRtl: boolean;
-  copy: ReturnType<
-    typeof getBookingsCopy
-  >;
+  copy: ReturnType<typeof getBookingsCopy>;
   onOpen: () => void;
   onMessage: () => void;
   onRepeat: () => void;
@@ -544,42 +385,20 @@ function BookingCard({
   onMessage,
   onRepeat,
 }: BookingCardProps) {
-  const status = getStatusConfig(
-    booking.status,
-    language,
-  );
+  const status = getStatusConfig(booking.status, language);
 
-  const providerInitials =
-    getInitials(
-      booking.providerName,
-    );
+  const providerInitials = getInitials(booking.providerName);
 
-  const serviceIcon =
-    getServiceIcon(
-      booking.serviceId,
-    );
+  const serviceIcon = getServiceIcon(booking.serviceId);
 
-  const formattedDate =
-    formatBookingDate(
-      booking.date,
-      language,
-    );
+  const formattedDate = formatBookingDate(booking.date, language);
 
-  const formattedTime =
-    formatBookingTime(
-      booking.time,
-      language,
-    );
+  const formattedTime = formatBookingTime(booking.time, language);
 
   const showMessageButton =
-    booking.status ===
-      "confirmed" ||
-    booking.status ===
-      "in-progress";
+    booking.status === "confirmed" || booking.status === "in-progress";
 
-  const showRepeatButton =
-    booking.status ===
-    "completed";
+  const showRepeatButton = booking.status === "completed";
 
   return (
     <View style={styles.bookingCard}>
@@ -587,21 +406,15 @@ function BookingCard({
         style={[
           styles.bookingHeader,
           {
-            flexDirection: isRtl
-              ? "row-reverse"
-              : "row",
+            flexDirection: isRtl ? "row-reverse" : "row",
           },
         ]}
       >
-        <View
-          style={styles.bookingIcon}
-        >
+        <View style={styles.bookingIcon}>
           <Ionicons
             name={serviceIcon}
             size={25}
-            color={
-              KhedmatPalette.blue500
-            }
+            color={KhedmatPalette.blue500}
           />
         </View>
 
@@ -609,32 +422,22 @@ function BookingCard({
           style={[
             styles.bookingMainCopy,
             {
-              alignItems: isRtl
-                ? "flex-end"
-                : "flex-start",
+              alignItems: isRtl ? "flex-end" : "flex-start",
             },
           ]}
         >
           <Text
             numberOfLines={2}
-            style={[
-              styles.bookingService,
-              directionStyle(isRtl),
-            ]}
+            style={[styles.bookingService, directionStyle(isRtl)]}
           >
             {booking.serviceName}
           </Text>
 
           <Text
             numberOfLines={1}
-            style={[
-              styles.bookingCategory,
-              directionStyle(isRtl),
-            ]}
+            style={[styles.bookingCategory, directionStyle(isRtl)]}
           >
-            {
-              booking.providerProfession
-            }
+            {booking.providerProfession}
           </Text>
         </View>
 
@@ -642,8 +445,7 @@ function BookingCard({
           style={[
             styles.statusBadge,
             {
-              backgroundColor:
-                status.backgroundColor,
+              backgroundColor: status.backgroundColor,
             },
           ]}
         >
@@ -665,37 +467,15 @@ function BookingCard({
         style={[
           styles.providerRow,
           {
-            flexDirection: isRtl
-              ? "row-reverse"
-              : "row",
+            flexDirection: isRtl ? "row-reverse" : "row",
           },
         ]}
       >
-        <View
-          style={
-            styles.providerAvatar
-          }
-        >
-          <Text
-            style={
-              styles.providerInitials
-            }
-          >
-            {providerInitials}
-          </Text>
+        <View style={styles.providerAvatar}>
+          <Text style={styles.providerInitials}>{providerInitials}</Text>
 
-          <View
-            style={
-              styles.verifiedBadge
-            }
-          >
-            <Ionicons
-              name="checkmark"
-              size={10}
-              color={
-                KhedmatPalette.white
-              }
-            />
+          <View style={styles.verifiedBadge}>
+            <Ionicons name="checkmark" size={10} color={KhedmatPalette.white} />
           </View>
         </View>
 
@@ -703,27 +483,17 @@ function BookingCard({
           style={[
             styles.providerCopy,
             {
-              alignItems: isRtl
-                ? "flex-end"
-                : "flex-start",
+              alignItems: isRtl ? "flex-end" : "flex-start",
             },
           ]}
         >
-          <Text
-            style={[
-              styles.providerLabel,
-              directionStyle(isRtl),
-            ]}
-          >
+          <Text style={[styles.providerLabel, directionStyle(isRtl)]}>
             {copy.provider}
           </Text>
 
           <Text
             numberOfLines={1}
-            style={[
-              styles.providerName,
-              directionStyle(isRtl),
-            ]}
+            style={[styles.providerName, directionStyle(isRtl)]}
           >
             {booking.providerName}
           </Text>
@@ -748,20 +518,14 @@ function BookingCard({
         <BookingDetail
           icon="location-outline"
           label={copy.address}
-          value={
-            booking.address
-              .fullAddress
-          }
+          value={booking.address.fullAddress}
           isRtl={isRtl}
         />
 
         <BookingDetail
           icon="cash-outline"
           label={copy.amount}
-          value={formatCurrency(
-            booking.total,
-            language,
-          )}
+          value={formatCurrency(booking.total, language)}
           isRtl={isRtl}
         />
       </View>
@@ -770,9 +534,7 @@ function BookingCard({
         style={[
           styles.cardActions,
           {
-            flexDirection: isRtl
-              ? "row-reverse"
-              : "row",
+            flexDirection: isRtl ? "row-reverse" : "row",
           },
         ]}
       >
@@ -815,60 +577,33 @@ type BookingDetailProps = {
   isRtl: boolean;
 };
 
-function BookingDetail({
-  icon,
-  label,
-  value,
-  isRtl,
-}: BookingDetailProps) {
+function BookingDetail({ icon, label, value, isRtl }: BookingDetailProps) {
   return (
     <View
       style={[
         styles.detailItem,
         {
-          flexDirection: isRtl
-            ? "row-reverse"
-            : "row",
+          flexDirection: isRtl ? "row-reverse" : "row",
         },
       ]}
     >
-      <View
-        style={styles.detailIcon}
-      >
-        <Ionicons
-          name={icon}
-          size={18}
-          color={
-            KhedmatPalette.blue500
-          }
-        />
+      <View style={styles.detailIcon}>
+        <Ionicons name={icon} size={18} color={KhedmatPalette.blue500} />
       </View>
 
       <View
         style={[
           styles.detailCopy,
           {
-            flexDirection: isRtl
-              ? "row-reverse"
-              : "row",
+            flexDirection: isRtl ? "row-reverse" : "row",
           },
         ]}
       >
-        <Text
-          style={[
-            styles.detailLabel,
-            directionStyle(isRtl),
-          ]}
-        >
-          {label}
-        </Text>
+        <Text style={[styles.detailLabel, directionStyle(isRtl)]}>{label}</Text>
 
         <Text
           numberOfLines={3}
-          style={[
-            styles.detailValue,
-            directionStyle(isRtl),
-          ]}
+          style={[styles.detailValue, directionStyle(isRtl)]}
         >
           {value}
         </Text>
@@ -880,9 +615,7 @@ function BookingDetail({
 type ActionButtonProps = {
   label: string;
   icon: IconName;
-  variant:
-    | "primary"
-    | "secondary";
+  variant: "primary" | "secondary";
   isRtl: boolean;
   onPress: () => void;
 };
@@ -894,8 +627,7 @@ function ActionButton({
   isRtl,
   onPress,
 }: ActionButtonProps) {
-  const primary =
-    variant === "primary";
+  const primary = variant === "primary";
 
   return (
     <Pressable
@@ -904,9 +636,7 @@ function ActionButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.actionButton,
-        primary
-          ? styles.actionButtonPrimary
-          : styles.actionButtonSecondary,
+        primary ? styles.actionButtonPrimary : styles.actionButtonSecondary,
         pressed && styles.pressed,
       ]}
     >
@@ -914,21 +644,14 @@ function ActionButton({
         style={[
           styles.actionButtonContent,
           {
-            flexDirection: isRtl
-              ? "row-reverse"
-              : "row",
+            flexDirection: isRtl ? "row-reverse" : "row",
           },
         ]}
       >
         <Ionicons
           name={icon}
           size={17}
-          color={
-            primary
-              ? KhedmatPalette.white
-              : KhedmatPalette
-                  .navy700
-          }
+          color={primary ? KhedmatPalette.white : KhedmatPalette.navy700}
         />
 
         <Text
@@ -956,58 +679,29 @@ type EmptyBookingsProps = {
   isRtl: boolean;
 };
 
-function EmptyBookings({
-  filter,
-  language,
-  isRtl,
-}: EmptyBookingsProps) {
+function EmptyBookings({ filter, language, isRtl }: EmptyBookingsProps) {
   return (
     <View style={styles.emptyState}>
-      <View
-        style={
-          styles.emptyIconContainer
-        }
-      >
+      <View style={styles.emptyIconContainer}>
         <Ionicons
           name="calendar-clear-outline"
           size={35}
-          color={
-            KhedmatPalette.blue500
-          }
+          color={KhedmatPalette.blue500}
         />
       </View>
 
-      <Text
-        style={[
-          styles.emptyTitle,
-          directionStyle(isRtl),
-        ]}
-      >
-        {getEmptyTitle(
-          filter,
-          language,
-        )}
+      <Text style={[styles.emptyTitle, directionStyle(isRtl)]}>
+        {getEmptyTitle(filter, language)}
       </Text>
 
-      <Text
-        style={[
-          styles.emptySubtitle,
-          directionStyle(isRtl),
-        ]}
-      >
-        {getEmptySubtitle(
-          filter,
-          language,
-        )}
+      <Text style={[styles.emptySubtitle, directionStyle(isRtl)]}>
+        {getEmptySubtitle(filter, language)}
       </Text>
     </View>
   );
 }
 
-function getFilterTitle(
-  filter: BookingFilter,
-  language: LanguageName,
-): string {
+function getFilterTitle(filter: BookingFilter, language: LanguageName): string {
   if (language === "English") {
     if (filter === "active") {
       return "Active bookings";
@@ -1055,10 +749,7 @@ function getFilterTitle(
   return "رزروهای لغوشده";
 }
 
-function getEmptyTitle(
-  filter: BookingFilter,
-  language: LanguageName,
-): string {
+function getEmptyTitle(filter: BookingFilter, language: LanguageName): string {
   if (language === "English") {
     if (filter === "active") {
       return "No active bookings";
@@ -1157,52 +848,38 @@ function getEmptySubtitle(
   return "رزروهایی که لغو شده‌اند در این قسمت نمایش داده خواهند شد.";
 }
 
-function getStatusConfig(
-  status: BookingStatus,
-  language: LanguageName,
-) {
-  const labels =
-    getStatusLabels(language);
+function getStatusConfig(status: BookingStatus, language: LanguageName) {
+  const labels = getStatusLabels(language);
 
   if (status === "confirmed") {
     return {
       label: labels.confirmed,
-      color:
-        KhedmatPalette.blue500,
-      backgroundColor:
-        "#E1F2F7",
+      color: KhedmatPalette.blue500,
+      backgroundColor: "#E1F2F7",
     };
   }
 
-  if (
-    status === "in-progress"
-  ) {
+  if (status === "in-progress") {
     return {
       label: labels.inProgress,
-      color:
-        KhedmatPalette.navy700,
-      backgroundColor:
-        KhedmatPalette.blue050,
+      color: KhedmatPalette.navy700,
+      backgroundColor: KhedmatPalette.blue050,
     };
   }
 
   if (status === "completed") {
     return {
       label: labels.completed,
-      color:
-        KhedmatPalette.success,
-      backgroundColor:
-        KhedmatPalette.successSoft,
+      color: KhedmatPalette.success,
+      backgroundColor: KhedmatPalette.successSoft,
     };
   }
 
   if (status === "cancelled") {
     return {
       label: labels.cancelled,
-      color:
-        KhedmatPalette.error,
-      backgroundColor:
-        KhedmatPalette.errorSoft,
+      color: KhedmatPalette.error,
+      backgroundColor: KhedmatPalette.errorSoft,
     };
   }
 
@@ -1213,9 +890,7 @@ function getStatusConfig(
   };
 }
 
-function getStatusLabels(
-  language: LanguageName,
-) {
+function getStatusLabels(language: LanguageName) {
   if (language === "English") {
     return {
       confirmed: "Confirmed",
@@ -1245,25 +920,18 @@ function getStatusLabels(
   };
 }
 
-function getInitials(
-  name: string,
-): string {
+function getInitials(name: string): string {
   return name
     .trim()
     .split(/\s+/)
     .filter(Boolean)
-    .map((part) =>
-      part.charAt(0),
-    )
+    .map((part) => part.charAt(0))
     .join("")
     .slice(0, 2);
 }
 
-function getServiceIcon(
-  serviceId: string,
-): IconName {
-  const normalized =
-    serviceId.toLowerCase();
+function getServiceIcon(serviceId: string): IconName {
+  const normalized = serviceId.toLowerCase();
 
   if (
     normalized.includes("wiring") ||
@@ -1285,9 +953,7 @@ function getServiceIcon(
     return "water-outline";
   }
 
-  if (
-    normalized.includes("clean")
-  ) {
+  if (normalized.includes("clean")) {
     return "sparkles-outline";
   }
 
@@ -1311,28 +977,17 @@ function getServiceIcon(
   return "construct-outline";
 }
 
-function getBookingTimestamp(
-  booking: BookingRecord,
-): number {
-  const date =
-    booking.date || "1970-01-01";
+function getBookingTimestamp(booking: BookingRecord): number {
+  const date = booking.date || "1970-01-01";
 
-  const time =
-    booking.time || "00:00";
+  const time = booking.time || "00:00";
 
-  const timestamp = new Date(
-    `${date}T${time}:00`,
-  ).getTime();
+  const timestamp = new Date(`${date}T${time}:00`).getTime();
 
-  return Number.isFinite(timestamp)
-    ? timestamp
-    : 0;
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
-function formatBookingDate(
-  value: string,
-  language: LanguageName,
-): string {
+function formatBookingDate(value: string, language: LanguageName): string {
   if (!value) {
     if (language === "English") {
       return "Date unavailable";
@@ -1345,57 +1000,32 @@ function formatBookingDate(
     return "تاریخ نامشخص";
   }
 
-  const [year, month, day] =
-    value.split("-").map(Number);
+  const [year, month, day] = value.split("-").map(Number);
 
   if (!year || !month || !day) {
-    return language === "English"
-      ? value
-      : formatDigits(value, true);
+    return language === "English" ? value : formatDigits(value, true);
   }
 
-  const date = new Date(
-    year,
-    month - 1,
-    day,
-  );
+  const date = new Date(year, month - 1, day);
 
-  const locale =
-    language === "English"
-      ? "en-US"
-      : "fa-AF";
+  const locale = language === "English" ? "en-US" : "fa-AF";
 
   try {
-    const formatted =
-      new Intl.DateTimeFormat(
-        locale,
-        {
-          weekday: "short",
-          day: "numeric",
-          month: "short",
-        },
-      ).format(date);
+    const formatted = new Intl.DateTimeFormat(locale, {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    }).format(date);
 
-    return language === "English"
-      ? formatted
-      : formatDigits(
-          formatted,
-          true,
-        );
+    return language === "English" ? formatted : formatDigits(formatted, true);
   } catch {
     return language === "English"
       ? `${day}/${month}/${year}`
-      : formatDigits(
-          `${day}/${month}/${year}`,
-          true,
-        );
+      : formatDigits(`${day}/${month}/${year}`, true);
   }
 }
 
-function formatBookingTime(
-  value: string,
-  language: LanguageName,
-): string {
+function formatBookingTime(value: string, language: LanguageName): string {
   if (!value) {
     if (language === "English") {
       return "Time unavailable";
@@ -1408,90 +1038,52 @@ function formatBookingTime(
     return "زمان نامشخص";
   }
 
-  const [hoursRaw, minutesRaw] =
-    value.split(":");
+  const [hoursRaw, minutesRaw] = value.split(":");
 
-  const hours =
-    Number(hoursRaw);
+  const hours = Number(hoursRaw);
 
-  const minutes =
-    Number(minutesRaw);
+  const minutes = Number(minutesRaw);
 
-  if (
-    !Number.isFinite(hours) ||
-    !Number.isFinite(minutes)
-  ) {
-    return language === "English"
-      ? value
-      : formatDigits(value, true);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    return language === "English" ? value : formatDigits(value, true);
   }
 
   const date = new Date();
-  date.setHours(
-    hours,
-    minutes,
-    0,
-    0,
-  );
+  date.setHours(hours, minutes, 0, 0);
 
   try {
-    const formatted =
-      new Intl.DateTimeFormat(
-        language === "English"
-          ? "en-US"
-          : "fa-AF",
-        {
-          hour: "numeric",
-          minute: "2-digit",
-        },
-      ).format(date);
+    const formatted = new Intl.DateTimeFormat(
+      language === "English" ? "en-US" : "fa-AF",
+      {
+        hour: "numeric",
+        minute: "2-digit",
+      },
+    ).format(date);
 
-    return language === "English"
-      ? formatted
-      : formatDigits(
-          formatted,
-          true,
-        );
+    return language === "English" ? formatted : formatDigits(formatted, true);
   } catch {
-    return language === "English"
-      ? value
-      : formatDigits(value, true);
+    return language === "English" ? value : formatDigits(value, true);
   }
 }
 
-function formatCurrency(
-  amount: number,
-  language: LanguageName,
-): string {
-  const formatted =
-    new Intl.NumberFormat(
-      "en-US",
-    ).format(amount);
+function formatCurrency(amount: number, language: LanguageName): string {
+  const formatted = new Intl.NumberFormat("en-US").format(amount);
 
   if (language === "English") {
     return `${formatted} AFN`;
   }
 
-  const localized =
-    formatDigits(formatted, true);
+  const localized = formatDigits(formatted, true);
 
-  return language === "Dari"
-    ? `${localized} افغانی`
-    : `${localized} افغانۍ`;
+  return language === "Dari" ? `${localized} افغانی` : `${localized} افغانۍ`;
 }
 
-function formatDigits(
-  value: string,
-  localized: boolean,
-): string {
+function formatDigits(value: string, localized: boolean): string {
   if (!localized) {
     return value;
   }
 
-  const digits: Record<
-    string,
-    string
-  > = {
+  const digits: Record<string, string> = {
     "0": "۰",
     "1": "۱",
     "2": "۲",
@@ -1504,16 +1096,10 @@ function formatDigits(
     "9": "۹",
   };
 
-  return value.replace(
-    /\d/g,
-    (digit) =>
-      digits[digit] ?? digit,
-  );
+  return value.replace(/\d/g, (digit) => digits[digit] ?? digit);
 }
 
-function normalizeLanguage(
-  language: string,
-): LanguageName {
+function normalizeLanguage(language: string): LanguageName {
   if (language === "Dari") {
     return "Dari";
   }
@@ -1525,29 +1111,20 @@ function normalizeLanguage(
   return "English";
 }
 
-function directionStyle(
-  isRtl: boolean,
-) {
+function directionStyle(isRtl: boolean) {
   return {
-    textAlign: isRtl
-      ? ("right" as const)
-      : ("left" as const),
+    textAlign: isRtl ? ("right" as const) : ("left" as const),
 
-    writingDirection: isRtl
-      ? ("rtl" as const)
-      : ("ltr" as const),
+    writingDirection: isRtl ? ("rtl" as const) : ("ltr" as const),
   };
 }
 
-function getBookingsCopy(
-  language: LanguageName,
-) {
+function getBookingsCopy(language: LanguageName) {
   if (language === "Dari") {
     return {
       eyebrow: "مدیریت درخواست‌ها",
       title: "رزروهای شما",
-      subtitle:
-        "درخواست‌های فعال، در انتظار و تکمیل‌شدهٔ خود را مدیریت کنید.",
+      subtitle: "درخواست‌های فعال، در انتظار و تکمیل‌شدهٔ خود را مدیریت کنید.",
       bookingsCount: "رزرو",
       provider: "ارائه‌دهنده",
       date: "تاریخ",
@@ -1562,31 +1139,25 @@ function getBookingsCopy(
 
   if (language === "Pashto") {
     return {
-      eyebrow:
-        "د غوښتنو مدیریت",
+      eyebrow: "د غوښتنو مدیریت",
       title: "ستاسو رزرفونه",
-      subtitle:
-        "خپل فعال، په تمه او بشپړ شوي رزرفونه مدیریت کړئ.",
+      subtitle: "خپل فعال، په تمه او بشپړ شوي رزرفونه مدیریت کړئ.",
       bookingsCount: "رزرفونه",
-      provider:
-        "خدمت وړاندې کوونکی",
+      provider: "خدمت وړاندې کوونکی",
       date: "نېټه",
       time: "وخت",
       address: "پته",
       amount: "مبلغ",
-      viewDetails:
-        "تفصیل وګورئ",
+      viewDetails: "تفصیل وګورئ",
       message: "پیغام",
-      bookAgain:
-        "بیا رزرف کړئ",
+      bookAgain: "بیا رزرف کړئ",
     };
   }
 
   return {
     eyebrow: "Request management",
     title: "Your bookings",
-    subtitle:
-      "Manage your active, pending and completed service requests.",
+    subtitle: "Manage your active, pending and completed service requests.",
     bookingsCount: "bookings",
     provider: "Provider",
     date: "Date",
@@ -1597,24 +1168,19 @@ function getBookingsCopy(
     message: "Message",
     bookAgain: "Book again",
   };
-  
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor:
-      KhedmatPalette.blue050,
+    backgroundColor: KhedmatPalette.blue050,
   },
-  
 
   scrollContent: {
     width: "100%",
-    maxWidth:
-      Layout.contentMaxWidth,
+    maxWidth: Layout.contentMaxWidth,
     alignSelf: "center",
-    paddingHorizontal:
-      Layout.screenPadding,
+    paddingHorizontal: Layout.screenPadding,
     paddingTop: Spacing.lg,
     paddingBottom: 130,
   },
@@ -1627,16 +1193,14 @@ const styles = StyleSheet.create({
   eyebrow: {
     ...Typography.captionStyle,
     width: "100%",
-    color:
-      KhedmatPalette.blue500,
+    color: KhedmatPalette.blue500,
     fontFamily: Fonts.medium,
   },
 
   title: {
     ...Typography.screenTitle,
     width: "100%",
-    color:
-      KhedmatPalette.textPrimary,
+    color: KhedmatPalette.textPrimary,
     fontSize: 27,
     lineHeight: 34,
   },
@@ -1644,10 +1208,8 @@ const styles = StyleSheet.create({
   subtitle: {
     ...Typography.bodyStyle,
     width: "100%",
-    maxWidth:
-      Layout.readableTextMaxWidth,
-    color:
-      KhedmatPalette.textSecondary,
+    maxWidth: Layout.readableTextMaxWidth,
+    color: KhedmatPalette.textSecondary,
   },
 
   filtersRow: {
@@ -1664,28 +1226,22 @@ const styles = StyleSheet.create({
     gap: 7,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    borderColor:
-      KhedmatPalette.border,
-    backgroundColor:
-      KhedmatPalette.surface,
+    borderColor: KhedmatPalette.border,
+    backgroundColor: KhedmatPalette.surface,
   },
 
   filterChipSelected: {
-    borderColor:
-      KhedmatPalette.navy900,
-    backgroundColor:
-      KhedmatPalette.navy900,
+    borderColor: KhedmatPalette.navy900,
+    backgroundColor: KhedmatPalette.navy900,
   },
 
   filterText: {
     ...Typography.captionStyle,
-    color:
-      KhedmatPalette.textSecondary,
+    color: KhedmatPalette.textSecondary,
   },
 
   filterTextSelected: {
-    color:
-      KhedmatPalette.white,
+    color: KhedmatPalette.white,
     fontFamily: Fonts.medium,
   },
 
@@ -1696,33 +1252,28 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.surfaceSoft,
+    backgroundColor: KhedmatPalette.surfaceSoft,
   },
 
   filterCountSelected: {
-    backgroundColor:
-      "rgba(255,255,255,0.18)",
+    backgroundColor: "rgba(255,255,255,0.18)",
   },
 
   filterCountText: {
     fontFamily: Fonts.medium,
     fontSize: 11,
-    color:
-      KhedmatPalette.textMuted,
+    color: KhedmatPalette.textMuted,
   },
 
   filterCountTextSelected: {
-    color:
-      KhedmatPalette.white,
+    color: KhedmatPalette.white,
   },
 
   summaryRow: {
     width: "100%",
     marginTop: Spacing.section,
     alignItems: "center",
-    justifyContent:
-      "space-between",
+    justifyContent: "space-between",
   },
 
   summaryCopy: {
@@ -1733,8 +1284,7 @@ const styles = StyleSheet.create({
   summaryTitle: {
     ...Typography.sectionTitle,
     width: "100%",
-    color:
-      KhedmatPalette.textPrimary,
+    color: KhedmatPalette.textPrimary,
     fontSize: 21,
     lineHeight: 28,
   },
@@ -1742,8 +1292,7 @@ const styles = StyleSheet.create({
   summarySubtitle: {
     ...Typography.captionStyle,
     width: "100%",
-    color:
-      KhedmatPalette.textMuted,
+    color: KhedmatPalette.textMuted,
   },
 
   summaryIcon: {
@@ -1752,11 +1301,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.surface,
+    backgroundColor: KhedmatPalette.surface,
     borderWidth: 1,
-    borderColor:
-      KhedmatPalette.border,
+    borderColor: KhedmatPalette.border,
   },
 
   bookingsList: {
@@ -1770,10 +1317,8 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderRadius: Radius.xl,
     borderWidth: 1,
-    borderColor:
-      KhedmatPalette.border,
-    backgroundColor:
-      KhedmatPalette.surface,
+    borderColor: KhedmatPalette.border,
+    backgroundColor: KhedmatPalette.surface,
     ...Shadows.small,
   },
 
@@ -1790,8 +1335,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.surfaceSoft,
+    backgroundColor: KhedmatPalette.surfaceSoft,
   },
 
   bookingMainCopy: {
@@ -1802,8 +1346,7 @@ const styles = StyleSheet.create({
   bookingService: {
     ...Typography.sectionTitle,
     width: "100%",
-    color:
-      KhedmatPalette.textPrimary,
+    color: KhedmatPalette.textPrimary,
     fontSize: 18,
     lineHeight: 24,
   },
@@ -1811,8 +1354,7 @@ const styles = StyleSheet.create({
   bookingCategory: {
     ...Typography.captionStyle,
     width: "100%",
-    color:
-      KhedmatPalette.textMuted,
+    color: KhedmatPalette.textMuted,
   },
 
   statusBadge: {
@@ -1843,14 +1385,12 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.navy900,
+    backgroundColor: KhedmatPalette.navy900,
   },
 
   providerInitials: {
     fontFamily: Fonts.bold,
-    color:
-      KhedmatPalette.white,
+    color: KhedmatPalette.white,
     fontSize: 16,
   },
 
@@ -1863,11 +1403,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.blue500,
+    backgroundColor: KhedmatPalette.blue500,
     borderWidth: 2,
-    borderColor:
-      KhedmatPalette.surface,
+    borderColor: KhedmatPalette.surface,
   },
 
   providerCopy: {
@@ -1878,15 +1416,13 @@ const styles = StyleSheet.create({
   providerLabel: {
     ...Typography.captionStyle,
     width: "100%",
-    color:
-      KhedmatPalette.textMuted,
+    color: KhedmatPalette.textMuted,
   },
 
   providerName: {
     ...Typography.label,
     width: "100%",
-    color:
-      KhedmatPalette.textPrimary,
+    color: KhedmatPalette.textPrimary,
     fontSize: 16,
   },
 
@@ -1894,12 +1430,9 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: Spacing.lg,
     paddingVertical: Spacing.md,
-    borderTopWidth:
-      StyleSheet.hairlineWidth,
-    borderBottomWidth:
-      StyleSheet.hairlineWidth,
-    borderColor:
-      KhedmatPalette.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: KhedmatPalette.border,
     gap: Spacing.md,
   },
 
@@ -1916,30 +1449,26 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.surfaceSoft,
+    backgroundColor: KhedmatPalette.surfaceSoft,
   },
 
   detailCopy: {
     flex: 1,
     alignItems: "center",
-    justifyContent:
-      "space-between",
+    justifyContent: "space-between",
     gap: Spacing.md,
   },
 
   detailLabel: {
     ...Typography.captionStyle,
     flexShrink: 0,
-    color:
-      KhedmatPalette.textMuted,
+    color: KhedmatPalette.textMuted,
   },
 
   detailValue: {
     ...Typography.label,
     flex: 1,
-    color:
-      KhedmatPalette.textPrimary,
+    color: KhedmatPalette.textPrimary,
   },
 
   cardActions: {
@@ -1958,16 +1487,13 @@ const styles = StyleSheet.create({
   },
 
   actionButtonPrimary: {
-    backgroundColor:
-      KhedmatPalette.navy900,
+    backgroundColor: KhedmatPalette.navy900,
   },
 
   actionButtonSecondary: {
-    backgroundColor:
-      KhedmatPalette.surfaceSoft,
+    backgroundColor: KhedmatPalette.surfaceSoft,
     borderWidth: 1,
-    borderColor:
-      KhedmatPalette.border,
+    borderColor: KhedmatPalette.border,
   },
 
   actionButtonContent: {
@@ -1982,13 +1508,11 @@ const styles = StyleSheet.create({
   },
 
   actionButtonTextPrimary: {
-    color:
-      KhedmatPalette.white,
+    color: KhedmatPalette.white,
   },
 
   actionButtonTextSecondary: {
-    color:
-      KhedmatPalette.navy700,
+    color: KhedmatPalette.navy700,
   },
 
   emptyState: {
@@ -2005,26 +1529,22 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.surface,
+    backgroundColor: KhedmatPalette.surface,
     borderWidth: 1,
-    borderColor:
-      KhedmatPalette.border,
+    borderColor: KhedmatPalette.border,
   },
 
   emptyTitle: {
     ...Typography.sectionTitle,
     maxWidth: 340,
-    color:
-      KhedmatPalette.textPrimary,
+    color: KhedmatPalette.textPrimary,
     textAlign: "center",
   },
 
   emptySubtitle: {
     ...Typography.bodyStyle,
     maxWidth: 350,
-    color:
-      KhedmatPalette.textSecondary,
+    color: KhedmatPalette.textSecondary,
     textAlign: "center",
   },
 

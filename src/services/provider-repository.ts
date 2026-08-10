@@ -3,6 +3,10 @@ import {
   type ProviderProfile,
 } from "../data/providers";
 import {
+  listMarketplaceProviderAccounts,
+  listMarketplaceProviderServices,
+} from "../repositories/marketplace-provider-repository";
+import {
   getProviderAccount,
   listOwnedProviderAccounts,
   listProviderServices,
@@ -292,17 +296,60 @@ export async function renameProvider(
 }
 
 export async function getAllProviders(): Promise<ProviderProfile[]> {
-  const localProviders = await getLocalProviders();
+  /*
+   * Customer discovery is now remote-first and intentionally does not read
+   * provider-owner local mirrors. Local mirrors can contain draft/pending
+   * accounts and are only an offline fallback for the provider workspace.
+   */
+  try {
+    const providerAccounts = await listMarketplaceProviderAccounts();
 
-  const localProviderIds = new Set(
-    localProviders.map((provider) => provider.id),
-  );
+    /*
+     * Keep the existing demo marketplace usable while the development
+     * database has no verified providers. Production must never manufacture
+     * provider listings, so this fallback is development-only.
+     */
+    if (providerAccounts.length === 0) {
+      return __DEV__ ? mockProviders : [];
+    }
 
-  const filteredMockProviders = mockProviders.filter(
-    (provider) => !localProviderIds.has(provider.id),
-  );
+    const [providerServices, catalogServices] = await Promise.all([
+      listMarketplaceProviderServices(
+        providerAccounts.map((provider) => provider.id),
+      ),
+      listServices(),
+    ]);
 
-  return [...localProviders, ...filteredMockProviders];
+    const servicesByProviderId = new Map<string, typeof providerServices>();
+
+    for (const providerService of providerServices) {
+      const existing =
+        servicesByProviderId.get(providerService.provider_id) ?? [];
+
+      existing.push(providerService);
+
+      servicesByProviderId.set(providerService.provider_id, existing);
+    }
+
+    return providerAccounts.map((provider) =>
+      mapProviderAccountToProfile(
+        provider,
+        servicesByProviderId.get(provider.id) ?? [],
+        catalogServices,
+      ),
+    );
+  } catch (error) {
+    console.warn(
+      "Failed to load the live provider marketplace from Supabase:",
+      error,
+    );
+
+    if (__DEV__) {
+      return mockProviders;
+    }
+
+    throw error;
+  }
 }
 
 export async function getProviderById(
