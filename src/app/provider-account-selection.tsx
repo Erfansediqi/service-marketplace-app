@@ -1,50 +1,40 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import {
-    useFocusEffect,
-    useRouter,
-} from "expo-router";
-import {
-    useCallback,
-    useMemo,
-    useState,
-} from "react";
-import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import { KhedmatScreen } from "../components/khedmat/khedmat-screen";
 import { ProviderAccountCard } from "../components/provider-account/provider-account-card";
 import { RenameProviderModal } from "../components/provider-account/rename-provider-modal";
 import {
-    KhedmatPalette,
-    Layout,
-    Radius,
-    Spacing,
-    Typography
+  KhedmatPalette,
+  Layout,
+  Radius,
+  Spacing,
+  Typography,
 } from "../constants/theme";
 import { useLanguage } from "../context/languagecontext";
 import { useSession } from "../context/session-context";
+import { useSupabaseAuth } from "../context/supabase-auth-context";
 import type { ProviderProfile } from "../data/providers";
 import {
-    getLocalProviders,
-    renameLocalProvider,
-} from "../services/provider-storage";
+  getOwnedProviderProfiles,
+  renameProvider,
+} from "../services/provider-repository";
 
-type LanguageName =
-  | "English"
-  | "Dari"
-  | "Pashto";
+type LanguageName = "English" | "Dari" | "Pashto";
 
 export default function ProviderAccountSelectionScreen() {
   const router = useRouter();
 
-  const { language } =
-    useLanguage();
+  const { language } = useLanguage();
 
   const {
     activeProviderId,
@@ -54,156 +44,88 @@ export default function ProviderAccountSelectionScreen() {
     setDefaultProviderId,
   } = useSession();
 
-  const [
-    providers,
-    setProviders,
-  ] = useState<ProviderProfile[]>(
-    [],
-  );
+  const { user, isHydrated: authIsHydrated } = useSupabaseAuth();
 
-  const [
-    isLoading,
-    setIsLoading,
-  ] = useState(true);
+  const authenticatedUserId = user?.id ?? null;
 
-  const [
-    isOpeningProvider,
-    setIsOpeningProvider,
-  ] = useState(false);
+  const [providers, setProviders] = useState<ProviderProfile[]>([]);
 
-  const [
-    loadError,
-    setLoadError,
-  ] = useState<Error | null>(
-    null,
-  );
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [
-    providerBeingRenamed,
-    setProviderBeingRenamed,
-  ] = useState<ProviderProfile | null>(
-    null,
-  );
+  const [isOpeningProvider, setIsOpeningProvider] = useState(false);
 
-  const [
-    renameValue,
-    setRenameValue,
-  ] = useState("");
+  const [loadError, setLoadError] = useState<Error | null>(null);
 
-  const [
-    renameError,
-    setRenameError,
-  ] = useState<string | null>(
-    null,
-  );
+  const [providerBeingRenamed, setProviderBeingRenamed] =
+    useState<ProviderProfile | null>(null);
 
-  const [
-    isRenaming,
-    setIsRenaming,
-  ] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
 
-  const activeLanguage =
-    normalizeLanguage(language);
+  const [renameError, setRenameError] = useState<string | null>(null);
 
-  const isRtl =
-    activeLanguage === "Dari" ||
-    activeLanguage === "Pashto";
+  const [isRenaming, setIsRenaming] = useState(false);
 
-  const copy =
-    getAccountSelectionCopy(
-      activeLanguage,
-    );
+  const activeLanguage = normalizeLanguage(language);
 
-  const sortedProviders =
-    useMemo(
-      () =>
-        [...providers].sort(
-          (
-            first,
-            second,
-          ) => {
-            if (
-              first.id ===
-                defaultProviderId &&
-              second.id !==
-                defaultProviderId
-            ) {
-              return -1;
-            }
+  const isRtl = activeLanguage === "Dari" || activeLanguage === "Pashto";
 
-            if (
-              second.id ===
-                defaultProviderId &&
-              first.id !==
-                defaultProviderId
-            ) {
-              return 1;
-            }
+  const copy = getAccountSelectionCopy(activeLanguage);
 
-            if (
-              first.id ===
-                activeProviderId &&
-              second.id !==
-                activeProviderId
-            ) {
-              return -1;
-            }
-
-            if (
-              second.id ===
-                activeProviderId &&
-              first.id !==
-                activeProviderId
-            ) {
-              return 1;
-            }
-
-            return first.name.localeCompare(
-              second.name,
-            );
-          },
-        ),
-      [
-        activeProviderId,
-        defaultProviderId,
-        providers,
-      ],
-    );
-
-  const loadProviders =
-    useCallback(
-      async (): Promise<void> => {
-        setIsLoading(true);
-        setLoadError(null);
-
-        try {
-          const storedProviders =
-            await getLocalProviders();
-
-          setProviders(
-            storedProviders,
-          );
-        } catch (error) {
-          console.error(
-            "Failed to load provider accounts:",
-            error,
-          );
-
-          setProviders([]);
-
-          setLoadError(
-            error instanceof Error
-              ? error
-              : new Error(
-                  "Failed to load provider accounts.",
-                ),
-          );
-        } finally {
-          setIsLoading(false);
+  const sortedProviders = useMemo(
+    () =>
+      [...providers].sort((first, second) => {
+        if (first.id === defaultProviderId && second.id !== defaultProviderId) {
+          return -1;
         }
-      },
-      [],
-    );
+
+        if (second.id === defaultProviderId && first.id !== defaultProviderId) {
+          return 1;
+        }
+
+        if (first.id === activeProviderId && second.id !== activeProviderId) {
+          return -1;
+        }
+
+        if (second.id === activeProviderId && first.id !== activeProviderId) {
+          return 1;
+        }
+
+        return first.name.localeCompare(second.name);
+      }),
+    [activeProviderId, defaultProviderId, providers],
+  );
+
+  const loadProviders = useCallback(async (): Promise<void> => {
+    setIsLoading(true);
+    setLoadError(null);
+
+    try {
+      if (!authIsHydrated) {
+        return;
+      }
+
+      if (!authenticatedUserId) {
+        throw new Error("Sign in is required to load provider accounts.");
+      }
+
+      const availableProviders =
+        await getOwnedProviderProfiles(authenticatedUserId);
+
+      setProviders(availableProviders);
+    } catch (error) {
+      console.error("Failed to load provider accounts:", error);
+
+      setProviders([]);
+
+      setLoadError(
+        error instanceof Error
+          ? error
+          : new Error("Failed to load provider accounts."),
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [authenticatedUserId, authIsHydrated]);
 
   useFocusEffect(
     useCallback(() => {
@@ -211,551 +133,305 @@ export default function ProviderAccountSelectionScreen() {
     }, [loadProviders]),
   );
 
-  const openProvider =
-    async (
-      providerId: string,
-    ): Promise<void> => {
-      if (isOpeningProvider) {
-        return;
-      }
+  const openProvider = async (providerId: string): Promise<void> => {
+    if (isOpeningProvider) {
+      return;
+    }
 
-      setIsOpeningProvider(true);
+    setIsOpeningProvider(true);
 
-      try {
-        enterProviderWorkspace(
-          providerId,
-        );
+    try {
+      enterProviderWorkspace(providerId);
 
-        router.replace(
-          "/(provider-tabs)",
-        );
-      } catch (error) {
-        console.error(
-          "Failed to open provider workspace:",
-          error,
-        );
+      router.replace("/(provider-tabs)");
+    } catch (error) {
+      console.error("Failed to open provider workspace:", error);
 
-        Alert.alert(
-          copy.openFailedTitle,
-          copy.openFailedMessage,
-        );
-      } finally {
-        setIsOpeningProvider(false);
-      }
-    };
+      Alert.alert(copy.openFailedTitle, copy.openFailedMessage);
+    } finally {
+      setIsOpeningProvider(false);
+    }
+  };
 
-  const openRenameProvider =
-    (
-      provider: ProviderProfile,
-    ): void => {
-      setProviderBeingRenamed(
-        provider,
+  const openRenameProvider = (provider: ProviderProfile): void => {
+    setProviderBeingRenamed(provider);
+    setRenameValue(provider.name);
+    setRenameError(null);
+  };
+
+  const closeRenameProvider = (): void => {
+    if (isRenaming) {
+      return;
+    }
+
+    setProviderBeingRenamed(null);
+    setRenameValue("");
+    setRenameError(null);
+  };
+
+  const submitProviderRename = async (): Promise<void> => {
+    if (!providerBeingRenamed || isRenaming) {
+      return;
+    }
+
+    const normalizedName = renameValue.trim();
+
+    if (!normalizedName) {
+      setRenameError(copy.renameEmptyError);
+
+      return;
+    }
+
+    if (normalizedName === providerBeingRenamed.name) {
+      closeRenameProvider();
+
+      return;
+    }
+
+    setIsRenaming(true);
+    setRenameError(null);
+
+    try {
+      const updatedProvider = await renameProvider(
+        providerBeingRenamed.id,
+        normalizedName,
       );
-      setRenameValue(
-        provider.name,
-      );
-      setRenameError(null);
-    };
 
-  const closeRenameProvider =
-    (): void => {
-      if (isRenaming) {
-        return;
-      }
-
-      setProviderBeingRenamed(
-        null,
+      setProviders((currentProviders) =>
+        currentProviders.map((provider) =>
+          provider.id === updatedProvider.id ? updatedProvider : provider,
+        ),
       );
+
+      setProviderBeingRenamed(null);
       setRenameValue("");
-      setRenameError(null);
-    };
+    } catch (error) {
+      console.error("Failed to rename provider account:", error);
 
-  const submitProviderRename =
-    async (): Promise<void> => {
-      if (
-        !providerBeingRenamed ||
-        isRenaming
-      ) {
-        return;
-      }
+      setRenameError(copy.renameFailedMessage);
+    } finally {
+      setIsRenaming(false);
+    }
+  };
 
-      const normalizedName =
-        renameValue.trim();
+  const setProviderAsDefault = (providerId: string): void => {
+    if (providerId === defaultProviderId) {
+      return;
+    }
 
-      if (!normalizedName) {
-        setRenameError(
-          copy.renameEmptyError,
-        );
+    setDefaultProviderId(providerId);
+  };
 
-        return;
-      }
+  const createProvider = (): void => {
+    beginProviderRegistration();
 
-      if (
-        normalizedName ===
-        providerBeingRenamed.name
-      ) {
-        closeRenameProvider();
-
-        return;
-      }
-
-      setIsRenaming(true);
-      setRenameError(null);
-
-      try {
-        const updatedProvider =
-          await renameLocalProvider(
-            providerBeingRenamed.id,
-            normalizedName,
-          );
-
-        setProviders(
-          (currentProviders) =>
-            currentProviders.map(
-              (provider) =>
-                provider.id ===
-                  updatedProvider.id
-                  ? updatedProvider
-                  : provider,
-            ),
-        );
-
-        setProviderBeingRenamed(
-          null,
-        );
-        setRenameValue("");
-      } catch (error) {
-        console.error(
-          "Failed to rename provider account:",
-          error,
-        );
-
-        setRenameError(
-          copy.renameFailedMessage,
-        );
-      } finally {
-        setIsRenaming(false);
-      }
-    };
-
-  const setProviderAsDefault =
-    (
-      providerId: string,
-    ): void => {
-      if (
-        providerId ===
-        defaultProviderId
-      ) {
-        return;
-      }
-
-      setDefaultProviderId(
-        providerId,
-      );
-    };
-
-  const createProvider =
-    (): void => {
-      beginProviderRegistration();
-
-      router.push(
-        "/provider-welcome",
-      );
-    };
+    router.push("/provider-welcome");
+  };
 
   return (
     <>
-      <KhedmatScreen
-      scrollable
-      contentStyle={
-        styles.screenContent
-      }
-    >
-      <View
-        style={[
-          styles.header,
-          {
-            alignItems: isRtl
-              ? "flex-end"
-              : "flex-start",
-          },
-        ]}
-      >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={
-            copy.back
-          }
-          hitSlop={10}
-          onPress={() =>
-            router.back()
-          }
-          style={({ pressed }) => [
-            styles.backButton,
-            pressed &&
-              styles.pressed,
-          ]}
-        >
-          <Ionicons
-            name={
-              isRtl
-                ? "arrow-forward"
-                : "arrow-back"
-            }
-            size={22}
-            color={
-              KhedmatPalette.navy900
-            }
-          />
-        </Pressable>
-
+      <KhedmatScreen scrollable contentStyle={styles.screenContent}>
         <View
           style={[
-            styles.headingBlock,
+            styles.header,
             {
-              alignItems: isRtl
-                ? "flex-end"
-                : "flex-start",
+              alignItems: isRtl ? "flex-end" : "flex-start",
             },
           ]}
         >
-          <Text
-            style={[
-              styles.title,
-              directionStyle(isRtl),
-            ]}
-          >
-            {copy.title}
-          </Text>
-
-          <Text
-            style={[
-              styles.subtitle,
-              directionStyle(isRtl),
-            ]}
-          >
-            {copy.subtitle}
-          </Text>
-        </View>
-      </View>
-
-      {isLoading ? (
-        <View
-          style={
-            styles.stateContainer
-          }
-        >
-          <ActivityIndicator
-            size="large"
-            color={
-              KhedmatPalette.blue500
-            }
-          />
-
-          <Text
-            style={[
-              styles.stateText,
-              directionStyle(isRtl),
-            ]}
-          >
-            {copy.loading}
-          </Text>
-        </View>
-      ) : loadError ? (
-        <View
-          style={
-            styles.stateContainer
-          }
-        >
-          <Ionicons
-            name="cloud-offline-outline"
-            size={48}
-            color={
-              KhedmatPalette.textMuted
-            }
-          />
-
-          <Text
-            style={[
-              styles.stateTitle,
-              directionStyle(isRtl),
-            ]}
-          >
-            {copy.errorTitle}
-          </Text>
-
-          <Text
-            style={[
-              styles.stateText,
-              directionStyle(isRtl),
-            ]}
-          >
-            {copy.errorMessage}
-          </Text>
-
           <Pressable
             accessibilityRole="button"
-            onPress={() => {
-              void loadProviders();
-            }}
+            accessibilityLabel={copy.back}
+            hitSlop={10}
+            onPress={() => router.back()}
             style={({ pressed }) => [
-              styles.primaryButton,
-              pressed &&
-                styles.pressed,
-            ]}
-          >
-            <Text
-              style={
-                styles.primaryButtonText
-              }
-            >
-              {copy.tryAgain}
-            </Text>
-          </Pressable>
-        </View>
-      ) : providers.length === 0 ? (
-        <View
-          style={
-            styles.stateContainer
-          }
-        >
-          <View
-            style={
-              styles.emptyIcon
-            }
-          >
-            <Ionicons
-              name="briefcase-outline"
-              size={32}
-              color={
-                KhedmatPalette.blue500
-              }
-            />
-          </View>
-
-          <Text
-            style={[
-              styles.stateTitle,
-              directionStyle(isRtl),
-            ]}
-          >
-            {copy.emptyTitle}
-          </Text>
-
-          <Text
-            style={[
-              styles.stateText,
-              directionStyle(isRtl),
-            ]}
-          >
-            {copy.emptyMessage}
-          </Text>
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={
-              createProvider
-            }
-            style={({ pressed }) => [
-              styles.primaryButton,
-              pressed &&
-                styles.pressed,
+              styles.backButton,
+              pressed && styles.pressed,
             ]}
           >
             <Ionicons
-              name="add-circle-outline"
-              size={20}
-              color={
-                KhedmatPalette.white
-              }
+              name={isRtl ? "arrow-forward" : "arrow-back"}
+              size={22}
+              color={KhedmatPalette.navy900}
+            />
+          </Pressable>
+
+          <View
+            style={[
+              styles.headingBlock,
+              {
+                alignItems: isRtl ? "flex-end" : "flex-start",
+              },
+            ]}
+          >
+            <Text style={[styles.title, directionStyle(isRtl)]}>
+              {copy.title}
+            </Text>
+
+            <Text style={[styles.subtitle, directionStyle(isRtl)]}>
+              {copy.subtitle}
+            </Text>
+          </View>
+        </View>
+
+        {isLoading ? (
+          <View style={styles.stateContainer}>
+            <ActivityIndicator size="large" color={KhedmatPalette.blue500} />
+
+            <Text style={[styles.stateText, directionStyle(isRtl)]}>
+              {copy.loading}
+            </Text>
+          </View>
+        ) : loadError ? (
+          <View style={styles.stateContainer}>
+            <Ionicons
+              name="cloud-offline-outline"
+              size={48}
+              color={KhedmatPalette.textMuted}
             />
 
-            <Text
-              style={
-                styles.primaryButtonText
-              }
-            >
-              {copy.createProvider}
-            </Text>
-          </Pressable>
-        </View>
-      ) : (
-        <>
-          <View
-            style={
-              styles.accountsSection
-            }
-          >
-            <Text
-              style={[
-                styles.sectionTitle,
-                directionStyle(isRtl),
-              ]}
-            >
-              {copy.accountsTitle}
+            <Text style={[styles.stateTitle, directionStyle(isRtl)]}>
+              {copy.errorTitle}
             </Text>
 
-            <View
-              style={
-                styles.accountsList
-              }
-            >
-              {sortedProviders.map(
-                (provider) => (
-                  <ProviderAccountCard
-                    key={provider.id}
-                    provider={
-                      provider
-                    }
-                    isActive={
-                      provider.id ===
-                      activeProviderId
-                    }
-                    isDefault={
-                      provider.id ===
-                      defaultProviderId
-                    }
-                    isRtl={isRtl}
-                    activeLabel={
-                      copy.lastUsed
-                    }
-                    defaultLabel={
-                      copy.defaultAccount
-                    }
-                    setDefaultLabel={
-                      copy.setAsDefault
-                    }
-                    openLabel={
-                      copy.openAccount
-                    }
-                    renameLabel={
-                      copy.renameAccount
-                    }
-                    disabled={
-                      isOpeningProvider ||
-                      isRenaming
-                    }
-                    onPress={() => {
-                      void openProvider(
-                        provider.id,
-                      );
-                    }}
-                    onSetDefault={() => {
-                      setProviderAsDefault(
-                        provider.id,
-                      );
-                    }}
-                    onRename={() => {
-                      openRenameProvider(
-                        provider,
-                      );
-                    }}
-                  />
-                ),
-              )}
-            </View>
-          </View>
+            <Text style={[styles.stateText, directionStyle(isRtl)]}>
+              {copy.errorMessage}
+            </Text>
 
-          <View
-            style={
-              styles.createSection
-            }
-          >
             <Pressable
               accessibilityRole="button"
-              disabled={
-                isOpeningProvider
-              }
-              onPress={
-                createProvider
-              }
+              onPress={() => {
+                void loadProviders();
+              }}
               style={({ pressed }) => [
-                styles.createButton,
-                pressed &&
-                  styles.pressed,
-                isOpeningProvider &&
-                  styles.disabled,
+                styles.primaryButton,
+                pressed && styles.pressed,
               ]}
             >
-              <View
-                style={
-                  styles.createIcon
-                }
-              >
-                <Ionicons
-                  name="add"
-                  size={22}
-                  color={
-                    KhedmatPalette.blue500
-                  }
-                />
-              </View>
-
-              <View
-                style={
-                  styles.createContent
-                }
-              >
-                <Text
-                  style={[
-                    styles.createTitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {
-                    copy.createProvider
-                  }
-                </Text>
-
-                <Text
-                  style={[
-                    styles.createSubtitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {
-                    copy.createProviderSubtitle
-                  }
-                </Text>
-              </View>
-
-              <Ionicons
-                name={
-                  isRtl
-                    ? "chevron-back"
-                    : "chevron-forward"
-                }
-                size={20}
-                color={
-                  KhedmatPalette.textMuted
-                }
-              />
+              <Text style={styles.primaryButtonText}>{copy.tryAgain}</Text>
             </Pressable>
           </View>
-        </>
-      )}
+        ) : providers.length === 0 ? (
+          <View style={styles.stateContainer}>
+            <View style={styles.emptyIcon}>
+              <Ionicons
+                name="briefcase-outline"
+                size={32}
+                color={KhedmatPalette.blue500}
+              />
+            </View>
+
+            <Text style={[styles.stateTitle, directionStyle(isRtl)]}>
+              {copy.emptyTitle}
+            </Text>
+
+            <Text style={[styles.stateText, directionStyle(isRtl)]}>
+              {copy.emptyMessage}
+            </Text>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={createProvider}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Ionicons
+                name="add-circle-outline"
+                size={20}
+                color={KhedmatPalette.white}
+              />
+
+              <Text style={styles.primaryButtonText}>
+                {copy.createProvider}
+              </Text>
+            </Pressable>
+          </View>
+        ) : (
+          <>
+            <View style={styles.accountsSection}>
+              <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
+                {copy.accountsTitle}
+              </Text>
+
+              <View style={styles.accountsList}>
+                {sortedProviders.map((provider) => (
+                  <ProviderAccountCard
+                    key={provider.id}
+                    provider={provider}
+                    isActive={provider.id === activeProviderId}
+                    isDefault={provider.id === defaultProviderId}
+                    isRtl={isRtl}
+                    activeLabel={copy.lastUsed}
+                    defaultLabel={copy.defaultAccount}
+                    setDefaultLabel={copy.setAsDefault}
+                    openLabel={copy.openAccount}
+                    renameLabel={copy.renameAccount}
+                    disabled={isOpeningProvider || isRenaming}
+                    onPress={() => {
+                      void openProvider(provider.id);
+                    }}
+                    onSetDefault={() => {
+                      setProviderAsDefault(provider.id);
+                    }}
+                    onRename={() => {
+                      openRenameProvider(provider);
+                    }}
+                  />
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.createSection}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isOpeningProvider}
+                onPress={createProvider}
+                style={({ pressed }) => [
+                  styles.createButton,
+                  pressed && styles.pressed,
+                  isOpeningProvider && styles.disabled,
+                ]}
+              >
+                <View style={styles.createIcon}>
+                  <Ionicons
+                    name="add"
+                    size={22}
+                    color={KhedmatPalette.blue500}
+                  />
+                </View>
+
+                <View style={styles.createContent}>
+                  <Text style={[styles.createTitle, directionStyle(isRtl)]}>
+                    {copy.createProvider}
+                  </Text>
+
+                  <Text style={[styles.createSubtitle, directionStyle(isRtl)]}>
+                    {copy.createProviderSubtitle}
+                  </Text>
+                </View>
+
+                <Ionicons
+                  name={isRtl ? "chevron-back" : "chevron-forward"}
+                  size={20}
+                  color={KhedmatPalette.textMuted}
+                />
+              </Pressable>
+            </View>
+          </>
+        )}
       </KhedmatScreen>
 
       <RenameProviderModal
-        visible={
-          providerBeingRenamed !==
-          null
-        }
+        visible={providerBeingRenamed !== null}
         isRtl={isRtl}
         value={renameValue}
         error={renameError}
         isSaving={isRenaming}
         title={copy.renameTitle}
-        subtitle={
-          copy.renameSubtitle
-        }
-        placeholder={
-          copy.renamePlaceholder
-        }
+        subtitle={copy.renameSubtitle}
+        placeholder={copy.renamePlaceholder}
         cancelLabel={copy.cancel}
         saveLabel={copy.save}
         onChangeValue={(value) => {
@@ -765,9 +441,7 @@ export default function ProviderAccountSelectionScreen() {
             setRenameError(null);
           }
         }}
-        onCancel={
-          closeRenameProvider
-        }
+        onCancel={closeRenameProvider}
         onSave={() => {
           void submitProviderRename();
         }}
@@ -776,9 +450,7 @@ export default function ProviderAccountSelectionScreen() {
   );
 }
 
-function normalizeLanguage(
-  language: string,
-): LanguageName {
+function normalizeLanguage(language: string): LanguageName {
   if (language === "Dari") {
     return "Dari";
   }
@@ -790,189 +462,117 @@ function normalizeLanguage(
   return "English";
 }
 
-function directionStyle(
-  isRtl: boolean,
-) {
+function directionStyle(isRtl: boolean) {
   return {
-    textAlign: isRtl
-      ? ("right" as const)
-      : ("left" as const),
+    textAlign: isRtl ? ("right" as const) : ("left" as const),
 
-    writingDirection: isRtl
-      ? ("rtl" as const)
-      : ("ltr" as const),
+    writingDirection: isRtl ? ("rtl" as const) : ("ltr" as const),
   };
 }
 
-function getAccountSelectionCopy(
-  language: LanguageName,
-) {
+function getAccountSelectionCopy(language: LanguageName) {
   if (language === "Dari") {
     return {
       back: "بازگشت",
-      title:
-        "انتخاب حساب ارائه‌دهنده",
+      title: "انتخاب حساب ارائه‌دهنده",
       subtitle:
         "حسابی را که می‌خواهید مدیریت کنید انتخاب نمایید یا حساب جدید بسازید.",
-      loading:
-        "حساب‌های ارائه‌دهنده در حال بارگذاری است...",
-      errorTitle:
-        "بارگذاری حساب‌ها ناموفق بود",
-      errorMessage:
-        "لطفاً دوباره تلاش کنید.",
+      loading: "حساب‌های ارائه‌دهنده در حال بارگذاری است...",
+      errorTitle: "بارگذاری حساب‌ها ناموفق بود",
+      errorMessage: "لطفاً دوباره تلاش کنید.",
       tryAgain: "تلاش دوباره",
-      emptyTitle:
-        "هنوز حساب ارائه‌دهنده ندارید",
+      emptyTitle: "هنوز حساب ارائه‌دهنده ندارید",
       emptyMessage:
         "برای ارائه خدمات، نخستین حساب ارائه‌دهنده خود را ایجاد کنید.",
-      accountsTitle:
-        "حساب‌های ارائه‌دهنده",
-      lastUsed:
-        "آخرین حساب",
-      defaultAccount:
-        "پیش‌فرض",
-      setAsDefault:
-        "تنظیم به‌عنوان حساب پیش‌فرض",
-      openAccount:
-        "باز کردن حساب",
-      renameAccount:
-        "تغییر نام حساب",
-      renameTitle:
-        "تغییر نام حساب ارائه‌دهنده",
-      renameSubtitle:
-        "یک نام واضح برای تشخیص این حساب وارد کنید.",
-      renamePlaceholder:
-        "نام حساب ارائه‌دهنده",
-      renameEmptyError:
-        "نام حساب نمی‌تواند خالی باشد.",
-      renameFailedMessage:
-        "تغییر نام حساب ناموفق بود. دوباره تلاش کنید.",
+      accountsTitle: "حساب‌های ارائه‌دهنده",
+      lastUsed: "آخرین حساب",
+      defaultAccount: "پیش‌فرض",
+      setAsDefault: "تنظیم به‌عنوان حساب پیش‌فرض",
+      openAccount: "باز کردن حساب",
+      renameAccount: "تغییر نام حساب",
+      renameTitle: "تغییر نام حساب ارائه‌دهنده",
+      renameSubtitle: "یک نام واضح برای تشخیص این حساب وارد کنید.",
+      renamePlaceholder: "نام حساب ارائه‌دهنده",
+      renameEmptyError: "نام حساب نمی‌تواند خالی باشد.",
+      renameFailedMessage: "تغییر نام حساب ناموفق بود. دوباره تلاش کنید.",
       cancel: "لغو",
       save: "ذخیره",
-      createProvider:
-        "ایجاد حساب جدید ارائه‌دهنده",
-      createProviderSubtitle:
-        "یک مهارت، حرفه یا کسب‌وکار دیگر اضافه کنید.",
-      openFailedTitle:
-        "باز کردن حساب ناموفق بود",
-      openFailedMessage:
-        "لطفاً دوباره تلاش کنید.",
+      createProvider: "ایجاد حساب جدید ارائه‌دهنده",
+      createProviderSubtitle: "یک مهارت، حرفه یا کسب‌وکار دیگر اضافه کنید.",
+      openFailedTitle: "باز کردن حساب ناموفق بود",
+      openFailedMessage: "لطفاً دوباره تلاش کنید.",
     };
   }
 
   if (language === "Pashto") {
     return {
       back: "شاته",
-      title:
-        "د خدمت چمتو کوونکي حساب وټاکئ",
-      subtitle:
-        "هغه حساب وټاکئ چې اداره کول یې غواړئ، یا نوی حساب جوړ کړئ.",
-      loading:
-        "د خدمت چمتو کوونکي حسابونه بارېږي...",
-      errorTitle:
-        "د حسابونو بارول ناکام شول",
-      errorMessage:
-        "مهرباني وکړئ بیا هڅه وکړئ.",
+      title: "د خدمت چمتو کوونکي حساب وټاکئ",
+      subtitle: "هغه حساب وټاکئ چې اداره کول یې غواړئ، یا نوی حساب جوړ کړئ.",
+      loading: "د خدمت چمتو کوونکي حسابونه بارېږي...",
+      errorTitle: "د حسابونو بارول ناکام شول",
+      errorMessage: "مهرباني وکړئ بیا هڅه وکړئ.",
       tryAgain: "بیا هڅه",
-      emptyTitle:
-        "تر اوسه د خدمت چمتو کوونکي حساب نشته",
-      emptyMessage:
-        "د خدمتونو د وړاندې کولو لپاره خپل لومړی حساب جوړ کړئ.",
-      accountsTitle:
-        "د خدمت چمتو کوونکي حسابونه",
-      lastUsed:
-        "وروستی حساب",
-      defaultAccount:
-        "اصلي",
-      setAsDefault:
-        "د اصلي حساب په توګه ټاکل",
-      openAccount:
-        "حساب پرانیستل",
-      renameAccount:
-        "د حساب نوم بدلول",
-      renameTitle:
-        "د خدمت چمتو کوونکي د حساب نوم بدلول",
-      renameSubtitle:
-        "د دې حساب د پېژندلو لپاره روښانه نوم ولیکئ.",
-      renamePlaceholder:
-        "د خدمت چمتو کوونکي د حساب نوم",
-      renameEmptyError:
-        "د حساب نوم تش پاتې کېدای نه شي.",
-      renameFailedMessage:
-        "د حساب نوم بدلول ناکام شول. بیا هڅه وکړئ.",
+      emptyTitle: "تر اوسه د خدمت چمتو کوونکي حساب نشته",
+      emptyMessage: "د خدمتونو د وړاندې کولو لپاره خپل لومړی حساب جوړ کړئ.",
+      accountsTitle: "د خدمت چمتو کوونکي حسابونه",
+      lastUsed: "وروستی حساب",
+      defaultAccount: "اصلي",
+      setAsDefault: "د اصلي حساب په توګه ټاکل",
+      openAccount: "حساب پرانیستل",
+      renameAccount: "د حساب نوم بدلول",
+      renameTitle: "د خدمت چمتو کوونکي د حساب نوم بدلول",
+      renameSubtitle: "د دې حساب د پېژندلو لپاره روښانه نوم ولیکئ.",
+      renamePlaceholder: "د خدمت چمتو کوونکي د حساب نوم",
+      renameEmptyError: "د حساب نوم تش پاتې کېدای نه شي.",
+      renameFailedMessage: "د حساب نوم بدلول ناکام شول. بیا هڅه وکړئ.",
       cancel: "لغوه",
       save: "خوندي کول",
-      createProvider:
-        "نوی د خدمت چمتو کوونکي حساب جوړول",
-      createProviderSubtitle:
-        "بله وړتیا، مسلک یا کاروبار ورزیات کړئ.",
-      openFailedTitle:
-        "حساب پرانیستل ناکام شول",
-      openFailedMessage:
-        "مهرباني وکړئ بیا هڅه وکړئ.",
+      createProvider: "نوی د خدمت چمتو کوونکي حساب جوړول",
+      createProviderSubtitle: "بله وړتیا، مسلک یا کاروبار ورزیات کړئ.",
+      openFailedTitle: "حساب پرانیستل ناکام شول",
+      openFailedMessage: "مهرباني وکړئ بیا هڅه وکړئ.",
     };
   }
 
   return {
     back: "Back",
-    title:
-      "Choose a provider account",
+    title: "Choose a provider account",
     subtitle:
       "Select the provider account you want to manage, or create a new one.",
-    loading:
-      "Loading provider accounts...",
-    errorTitle:
-      "Unable to load accounts",
-    errorMessage:
-      "Please try again.",
+    loading: "Loading provider accounts...",
+    errorTitle: "Unable to load accounts",
+    errorMessage: "Please try again.",
     tryAgain: "Try again",
-    emptyTitle:
-      "No provider accounts yet",
+    emptyTitle: "No provider accounts yet",
     emptyMessage:
       "Create your first provider account to start offering services.",
-    accountsTitle:
-      "Provider accounts",
-    lastUsed:
-      "Last used",
-    defaultAccount:
-      "Default",
-    setAsDefault:
-      "Set as default provider",
-    openAccount:
-      "Open account",
-    renameAccount:
-      "Rename account",
-    renameTitle:
-      "Rename provider account",
-    renameSubtitle:
-      "Enter a clear name that helps you identify this account.",
-    renamePlaceholder:
-      "Provider account name",
-    renameEmptyError:
-      "The account name cannot be empty.",
-    renameFailedMessage:
-      "Unable to rename the account. Please try again.",
+    accountsTitle: "Provider accounts",
+    lastUsed: "Last used",
+    defaultAccount: "Default",
+    setAsDefault: "Set as default provider",
+    openAccount: "Open account",
+    renameAccount: "Rename account",
+    renameTitle: "Rename provider account",
+    renameSubtitle: "Enter a clear name that helps you identify this account.",
+    renamePlaceholder: "Provider account name",
+    renameEmptyError: "The account name cannot be empty.",
+    renameFailedMessage: "Unable to rename the account. Please try again.",
     cancel: "Cancel",
     save: "Save",
-    createProvider:
-      "Create new provider account",
-    createProviderSubtitle:
-      "Add another skill, profession, or business.",
-    openFailedTitle:
-      "Unable to open account",
-    openFailedMessage:
-      "Please try again.",
+    createProvider: "Create new provider account",
+    createProviderSubtitle: "Add another skill, profession, or business.",
+    openFailedTitle: "Unable to open account",
+    openFailedMessage: "Please try again.",
   };
 }
 
 const styles = StyleSheet.create({
   screenContent: {
     width: "100%",
-    maxWidth:
-      Layout.contentMaxWidth,
+    maxWidth: Layout.contentMaxWidth,
     alignSelf: "center",
-    paddingHorizontal:
-      Layout.screenPadding,
+    paddingHorizontal: Layout.screenPadding,
     paddingTop: Spacing.lg,
     paddingBottom: 120,
   },
@@ -982,19 +582,15 @@ const styles = StyleSheet.create({
   },
 
   backButton: {
-    width:
-      Layout.minimumTouchTarget,
-    height:
-      Layout.minimumTouchTarget,
+    width: Layout.minimumTouchTarget,
+    height: Layout.minimumTouchTarget,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: Spacing.lg,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    borderColor:
-      KhedmatPalette.border,
-    backgroundColor:
-      KhedmatPalette.surface,
+    borderColor: KhedmatPalette.border,
+    backgroundColor: KhedmatPalette.surface,
   },
 
   headingBlock: {
@@ -1004,16 +600,14 @@ const styles = StyleSheet.create({
   title: {
     ...Typography.screenTitle,
     width: "100%",
-    color:
-      KhedmatPalette.textPrimary,
+    color: KhedmatPalette.textPrimary,
   },
 
   subtitle: {
     ...Typography.bodyStyle,
     width: "100%",
     marginTop: Spacing.sm,
-    color:
-      KhedmatPalette.textSecondary,
+    color: KhedmatPalette.textSecondary,
   },
 
   stateContainer: {
@@ -1027,18 +621,15 @@ const styles = StyleSheet.create({
   stateTitle: {
     ...Typography.sectionTitle,
     width: "100%",
-    color:
-      KhedmatPalette.textPrimary,
+    color: KhedmatPalette.textPrimary,
     textAlign: "center",
   },
 
   stateText: {
     ...Typography.bodyStyle,
     width: "100%",
-    maxWidth:
-      Layout.readableTextMaxWidth,
-    color:
-      KhedmatPalette.textMuted,
+    maxWidth: Layout.readableTextMaxWidth,
+    color: KhedmatPalette.textMuted,
     textAlign: "center",
   },
 
@@ -1048,8 +639,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: Radius.pill,
-    backgroundColor:
-      KhedmatPalette.surfaceSoft,
+    backgroundColor: KhedmatPalette.surfaceSoft,
   },
 
   primaryButton: {
@@ -1061,14 +651,12 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     paddingHorizontal: Spacing.xl,
     borderRadius: Radius.lg,
-    backgroundColor:
-      KhedmatPalette.navy900,
+    backgroundColor: KhedmatPalette.navy900,
   },
 
   primaryButtonText: {
     ...Typography.buttonLabel,
-    color:
-      KhedmatPalette.white,
+    color: KhedmatPalette.white,
   },
 
   accountsSection: {
@@ -1077,8 +665,7 @@ const styles = StyleSheet.create({
 
   sectionTitle: {
     ...Typography.sectionTitle,
-    color:
-      KhedmatPalette.textPrimary,
+    color: KhedmatPalette.textPrimary,
     marginBottom: Spacing.md,
   },
 
@@ -1086,27 +673,9 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
 
-
-
-
   rowReverse: {
     flexDirection: "row-reverse",
   },
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   createSection: {
     marginTop: Spacing.xxl,
@@ -1120,11 +689,9 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor:
-      KhedmatPalette.blue500,
+    borderColor: KhedmatPalette.blue500,
     borderRadius: Radius.xl,
-    backgroundColor:
-      KhedmatPalette.surface,
+    backgroundColor: KhedmatPalette.surface,
   },
 
   createIcon: {
@@ -1133,8 +700,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: Radius.pill,
-    backgroundColor:
-      KhedmatPalette.surfaceSoft,
+    backgroundColor: KhedmatPalette.surfaceSoft,
   },
 
   createContent: {
@@ -1143,31 +709,14 @@ const styles = StyleSheet.create({
 
   createTitle: {
     ...Typography.label,
-    color:
-      KhedmatPalette.navy900,
+    color: KhedmatPalette.navy900,
   },
 
   createSubtitle: {
     ...Typography.captionStyle,
     marginTop: Spacing.xs,
-    color:
-      KhedmatPalette.textMuted,
+    color: KhedmatPalette.textMuted,
   },
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   pressed: {
     opacity: 0.72,
