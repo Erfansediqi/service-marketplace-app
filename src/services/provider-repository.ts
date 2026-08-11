@@ -15,12 +15,6 @@ import {
   updateProviderAccount,
 } from "../repositories/provider-account-repository";
 import { mapProviderAccountToProfile } from "./provider-profile-mapper";
-import {
-  getLocalProviderById,
-  getLocalProviders,
-  renameLocalProvider,
-  updateLocalProvider,
-} from "./provider-storage";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -79,12 +73,9 @@ export async function getOwnedProviderProfiles(
       }),
     );
   } catch (error) {
-    console.warn(
-      "Failed to load owned providers from Supabase; using local provider mirrors:",
-      error,
-    );
+    console.warn("Failed to load owned providers from Supabase:", error);
 
-    return getLocalProviders();
+    throw error;
   }
 }
 
@@ -116,18 +107,10 @@ export async function updateProviderAvailability(
     return existingProvider;
   }
 
-  const localUpdates: Partial<ProviderProfile> = {};
-
-  if (updates.availableToday !== undefined) {
-    localUpdates.availableToday = updates.availableToday;
-  }
-
-  if (updates.acceptsUrgentRequests !== undefined) {
-    localUpdates.acceptsUrgentRequests = updates.acceptsUrgentRequests;
-  }
-
   if (!looksLikeUuid(normalizedProviderId)) {
-    return updateLocalProvider(normalizedProviderId, localUpdates);
+    throw new Error(
+      "Provider availability can be updated only for Supabase provider accounts.",
+    );
   }
 
   const databaseUpdates: {
@@ -158,23 +141,6 @@ export async function updateProviderAvailability(
     providerServices,
     services,
   );
-
-  /*
-   * Keep the temporary local mirror aligned after the authoritative Supabase
-   * write. A missing mirror is fine; this is only an offline fallback.
-   */
-  try {
-    const localProvider = await getLocalProviderById(normalizedProviderId);
-
-    if (localProvider) {
-      await updateLocalProvider(normalizedProviderId, localUpdates);
-    }
-  } catch (error) {
-    console.warn(
-      "Provider availability was updated in Supabase, but the local fallback mirror could not be updated:",
-      error,
-    );
-  }
 
   return mappedProvider;
 }
@@ -221,22 +187,6 @@ export async function saveProviderServiceOffering(
     catalogServices,
   );
 
-  try {
-    const localProvider = await getLocalProviderById(normalizedProviderId);
-
-    if (localProvider) {
-      await updateLocalProvider(normalizedProviderId, {
-        services: mappedProvider.services,
-        minimumPrice: mappedProvider.minimumPrice,
-      });
-    }
-  } catch (error) {
-    console.warn(
-      "Provider services were updated in Supabase, but the local fallback mirror could not be updated:",
-      error,
-    );
-  }
-
   return mappedProvider;
 }
 
@@ -256,7 +206,9 @@ export async function renameProvider(
   }
 
   if (!looksLikeUuid(normalizedProviderId)) {
-    return renameLocalProvider(normalizedProviderId, normalizedName);
+    throw new Error(
+      "Provider names can be updated only for Supabase provider accounts.",
+    );
   }
 
   const provider = await updateProviderAccount(normalizedProviderId, {
@@ -273,24 +225,6 @@ export async function renameProvider(
     providerServices,
     services,
   );
-
-  /*
-   * Keep the temporary local mirror aligned after a successful remote write.
-   * The mirror is only an offline fallback and is never treated as the
-   * authoritative provider account.
-   */
-  try {
-    const localProvider = await getLocalProviderById(normalizedProviderId);
-
-    if (localProvider) {
-      await renameLocalProvider(normalizedProviderId, normalizedName);
-    }
-  } catch (error) {
-    console.warn(
-      "Provider was renamed in Supabase, but the local fallback mirror could not be updated:",
-      error,
-    );
-  }
 
   return mappedProvider;
 }
@@ -355,32 +289,31 @@ export async function getAllProviders(): Promise<ProviderProfile[]> {
 export async function getProviderById(
   providerId: string,
 ): Promise<ProviderProfile | null> {
+  const normalizedProviderId = providerId.trim();
+
+  if (!normalizedProviderId) {
+    return null;
+  }
+
   /*
-   * Provider accounts created through the Supabase onboarding flow use UUIDs.
-   * Prefer the remote row so the provider workspace reflects the authoritative
-   * account/service state. If the network is unavailable, fall back to the
-   * temporary local mirror created during registration.
+   * Real provider accounts use Supabase UUIDs. Supabase is the sole source of
+   * truth for those accounts; do not fall back to stale AsyncStorage mirrors.
    */
-  if (looksLikeUuid(providerId)) {
-    try {
-      const remoteProvider = await getRemoteProviderById(providerId);
-
-      if (remoteProvider) {
-        return remoteProvider;
-      }
-    } catch (error) {
-      console.warn(
-        "Failed to load provider from Supabase; using local fallback if available:",
-        error,
-      );
-    }
+  if (looksLikeUuid(normalizedProviderId)) {
+    return getRemoteProviderById(normalizedProviderId);
   }
 
-  const localProvider = await getLocalProviderById(providerId);
-
-  if (localProvider) {
-    return localProvider;
+  /*
+   * Legacy demo provider IDs remain available only during development so older
+   * demo routes/screens can keep functioning while the remaining mock fixtures
+   * are removed incrementally. Production never exposes fabricated providers.
+   */
+  if (__DEV__) {
+    return (
+      mockProviders.find((provider) => provider.id === normalizedProviderId) ??
+      null
+    );
   }
 
-  return mockProviders.find((provider) => provider.id === providerId) ?? null;
+  return null;
 }
