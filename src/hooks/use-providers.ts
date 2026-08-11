@@ -4,7 +4,7 @@ import {
     useState,
 } from "react";
 
-import type { ProviderProfile } from "../data/providers";
+import type { ProviderProfile } from "../types/provider";
 import { getAllProviders } from "../services/provider-repository";
 
 type UseProvidersResult = {

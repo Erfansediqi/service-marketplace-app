@@ -28,7 +28,7 @@ import {
   Typography,
 } from "../../constants/theme";
 import { useLanguage } from "../../context/languagecontext";
-import type { ProviderCategoryId, ProviderProfile } from "../../data/providers";
+import type { ProviderCategoryId, ProviderProfile } from "../../types/provider";
 import { useProviders } from "../../hooks/use-providers";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];

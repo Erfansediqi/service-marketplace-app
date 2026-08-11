@@ -1,7 +1,4 @@
-import {
-  providers as mockProviders,
-  type ProviderProfile,
-} from "../data/providers";
+import type { ProviderProfile } from "../types/provider";
 import {
   listMarketplaceProviderAccounts,
   listMarketplaceProviderServices,
@@ -238,13 +235,8 @@ export async function getAllProviders(): Promise<ProviderProfile[]> {
   try {
     const providerAccounts = await listMarketplaceProviderAccounts();
 
-    /*
-     * Keep the existing demo marketplace usable while the development
-     * database has no verified providers. Production must never manufacture
-     * provider listings, so this fallback is development-only.
-     */
     if (providerAccounts.length === 0) {
-      return __DEV__ ? mockProviders : [];
+      return [];
     }
 
     const [providerServices, catalogServices] = await Promise.all([
@@ -278,10 +270,6 @@ export async function getAllProviders(): Promise<ProviderProfile[]> {
       error,
     );
 
-    if (__DEV__) {
-      return mockProviders;
-    }
-
     throw error;
   }
 }
@@ -296,24 +284,12 @@ export async function getProviderById(
   }
 
   /*
-   * Real provider accounts use Supabase UUIDs. Supabase is the sole source of
-   * truth for those accounts; do not fall back to stale AsyncStorage mirrors.
+   * Provider accounts are now Supabase-backed UUIDs. Non-UUID legacy/demo
+   * provider IDs are no longer resolved by the runtime repository.
    */
-  if (looksLikeUuid(normalizedProviderId)) {
-    return getRemoteProviderById(normalizedProviderId);
+  if (!looksLikeUuid(normalizedProviderId)) {
+    return null;
   }
 
-  /*
-   * Legacy demo provider IDs remain available only during development so older
-   * demo routes/screens can keep functioning while the remaining mock fixtures
-   * are removed incrementally. Production never exposes fabricated providers.
-   */
-  if (__DEV__) {
-    return (
-      mockProviders.find((provider) => provider.id === normalizedProviderId) ??
-      null
-    );
-  }
-
-  return null;
+  return getRemoteProviderById(normalizedProviderId);
 }

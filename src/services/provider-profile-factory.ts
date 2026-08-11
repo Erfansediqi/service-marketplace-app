@@ -5,7 +5,7 @@ import type {
     ProviderCategoryId,
     ProviderProfile,
     ProviderService,
-} from "../data/providers";
+} from "../types/provider";
 import {
     serviceProfessions,
 } from "../data/service-professions";

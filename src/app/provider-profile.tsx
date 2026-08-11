@@ -21,7 +21,7 @@ import {
   Typography,
 } from "../constants/theme";
 import { useLanguage } from "../context/languagecontext";
-import type { ProviderProfile, ProviderReview } from "../data/providers";
+import type { ProviderProfile, ProviderReview } from "../types/provider";
 import { useProviderById } from "../hooks/use-provider-by-id";
 import { useProviders } from "../hooks/use-providers";
 

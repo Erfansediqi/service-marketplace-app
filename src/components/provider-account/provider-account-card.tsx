@@ -17,7 +17,7 @@ import {
     Spacing,
     Typography,
 } from "../../constants/theme";
-import type { ProviderProfile } from "../../data/providers";
+import type { ProviderProfile } from "../../types/provider";
 
 export type ProviderAccountCardProps = {
   provider: ProviderProfile;

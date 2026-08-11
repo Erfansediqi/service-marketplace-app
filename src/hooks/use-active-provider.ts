@@ -4,7 +4,7 @@ import {
 } from "react";
 
 import { useSession } from "../context/session-context";
-import type { ProviderProfile } from "../data/providers";
+import type { ProviderProfile } from "../types/provider";
 import { getProviderById } from "../services/provider-repository";
 
 type UseActiveProviderResult = {

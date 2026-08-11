@@ -27,7 +27,7 @@ import {
   useBooking,
 } from "../../context/booking-context";
 import { useLanguage } from "../../context/languagecontext";
-import type { ProviderProfile } from "../../data/providers";
+import type { ProviderProfile } from "../../types/provider";
 import { useActiveProvider } from "../../hooks/use-active-provider";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];

@@ -26,7 +26,7 @@ import {
 } from "../constants/theme";
 import { useBooking } from "../context/booking-context";
 import { useLanguage } from "../context/languagecontext";
-import type { ProviderProfile } from "../data/providers";
+import type { ProviderProfile } from "../types/provider";
 import { getProviderById } from "../services/provider-repository";
 
 type IconName =

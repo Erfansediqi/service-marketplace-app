@@ -32,7 +32,7 @@ import { useLanguage } from "../context/languagecontext";
 import type {
   ProviderProfile,
   ProviderService,
-} from "../data/providers";
+} from "../types/provider";
 import { getProviderById } from "../services/provider-repository";
 
 type IconName =

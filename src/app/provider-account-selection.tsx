@@ -23,7 +23,7 @@ import {
 import { useLanguage } from "../context/languagecontext";
 import { useSession } from "../context/session-context";
 import { useSupabaseAuth } from "../context/supabase-auth-context";
-import type { ProviderProfile } from "../data/providers";
+import type { ProviderProfile } from "../types/provider";
 import {
   getOwnedProviderProfiles,
   renameProvider,
