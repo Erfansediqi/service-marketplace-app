@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { ComponentProps, useCallback, useMemo, useState } from "react";
 import {
   Pressable,
@@ -27,8 +27,8 @@ import {
   useBooking,
 } from "../../context/booking-context";
 import { useLanguage } from "../../context/languagecontext";
-import type { ProviderProfile } from "../../types/provider";
 import { useActiveProvider } from "../../hooks/use-active-provider";
+import type { ProviderProfile } from "../../types/provider";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -52,7 +52,7 @@ type ScheduleSlot = {
   unavailable: boolean;
 };
 
-type CalendarCopy = ReturnType<typeof getCalendarCopy>;
+type TranslationFunction = ReturnType<typeof useLanguage>["t"];
 
 type ScheduleStatusConfig = {
   label: string;
@@ -76,6 +76,7 @@ const ERROR_SOFT = "#FCE8E6";
 const INFO_SOFT = "#E5F4F8";
 
 export default function ProviderCalendarScreen() {
+  const { t } = useLanguage();
   const { provider, isLoading, error } = useActiveProvider();
 
   if (isLoading) {
@@ -83,7 +84,7 @@ export default function ProviderCalendarScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.providerState}>
           <Text style={styles.providerStateTitle}>
-            Loading provider calendar...
+            {t("providerCalendarLoading")}
           </Text>
         </View>
       </SafeAreaView>
@@ -101,11 +102,11 @@ export default function ProviderCalendarScreen() {
           />
 
           <Text style={styles.providerStateTitle}>
-            No active provider account
+            {t("providerAccountLoadError")}
           </Text>
 
           <Text style={styles.providerStateBody}>
-            Complete provider registration and try again.
+            {t("providerAccountLoadErrorBody")}
           </Text>
         </View>
       </SafeAreaView>
@@ -118,7 +119,7 @@ export default function ProviderCalendarScreen() {
 function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
   const { width } = useWindowDimensions();
 
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   const { bookings, isRefreshing, refreshBookings } = useBooking();
 
@@ -129,8 +130,6 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
   const isRtl = activeLanguage === "Dari" || activeLanguage === "Pashto";
 
   const localizedDigits = activeLanguage !== "English";
-
-  const copy = getCalendarCopy(activeLanguage);
 
   /*
    * Provider calendar data is server-backed. Refresh whenever the Calendar
@@ -179,14 +178,50 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
     [providerBookings, selectedDateId],
   );
 
+  const selectedDateAvailable = useMemo(() => {
+    if (!selectedDate) {
+      return false;
+    }
+
+    const workingDay = isProviderWorkingDate(
+      selectedDate.date,
+      provider.workingDays,
+    );
+
+    if (!workingDay) {
+      return false;
+    }
+
+    const todayId = formatDateId(new Date());
+
+    if (
+      selectedDate.id === todayId &&
+      !provider.availableToday
+    ) {
+      return false;
+    }
+
+    return true;
+  }, [
+    provider.availableToday,
+    provider.workingDays,
+    selectedDate,
+  ]);
+
   const scheduleSlots = useMemo(
     () =>
       buildScheduleSlots(
         provider.startTime,
         provider.endTime,
         selectedDayBookings,
+        selectedDateAvailable,
       ),
-    [provider.endTime, provider.startTime, selectedDayBookings],
+    [
+      provider.endTime,
+      provider.startTime,
+      selectedDateAvailable,
+      selectedDayBookings,
+    ],
   );
 
   const bookingCountsByDate = useMemo(() => {
@@ -208,13 +243,6 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
     (booking) => booking.status === "pending",
   ).length;
 
-  const expectedRevenue = selectedDayBookings
-    .filter(
-      (booking) =>
-        booking.status === "confirmed" || booking.status === "in-progress",
-    )
-    .reduce((total, booking) => total + booking.servicePrice, 0);
-
   const freeSlots = scheduleSlots.filter(
     (slot) => !slot.booking && !slot.unavailable,
   ).length;
@@ -230,9 +258,10 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
     activeLanguage,
   );
 
-  const workingHoursText = copy.timeRange(
+  const workingHoursText = formatCalendarTimeRange(
     formatTime(provider.startTime, activeLanguage),
     formatTime(provider.endTime, activeLanguage),
+    activeLanguage,
   );
 
   return (
@@ -257,15 +286,15 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
       >
         <View style={styles.header}>
           <Text style={[styles.eyebrow, directionStyle(isRtl)]}>
-            {copy.eyebrow}
+            {t("providerCalendarEyebrow")}
           </Text>
 
           <Text style={[styles.title, directionStyle(isRtl)]}>
-            {copy.title}
+            {t("providerCalendarTitle")}
           </Text>
 
           <Text style={[styles.subtitle, directionStyle(isRtl)]}>
-            {copy.subtitle}
+            {t("providerCalendarSubtitle")}
           </Text>
         </View>
 
@@ -294,7 +323,7 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
             ]}
           >
             <Text style={[styles.selectedDateLabel, directionStyle(isRtl)]}>
-              {copy.selectedDay}
+              {t("providerCalendarSelectedDay")}
             </Text>
 
             <Text
@@ -302,12 +331,13 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
               style={[styles.selectedDateTitle, directionStyle(isRtl)]}
             >
               {selectedDate
-                ? copy.fullDate(
+                ? formatCalendarFullDate(
                     selectedDate.weekday,
                     selectedDate.day,
                     selectedDate.month,
+                    activeLanguage,
                   )
-                : copy.unknown}
+                : t("providerCalendarUnknown")}
             </Text>
 
             <View
@@ -343,7 +373,7 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
             <Text
               style={[styles.selectedDateCountLabel, directionStyle(isRtl)]}
             >
-              {copy.bookings}
+              {t("providerCalendarBookings")}
             </Text>
           </View>
         </View>
@@ -366,11 +396,11 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
               ]}
             >
               <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
-                {copy.chooseDay}
+                {t("providerCalendarChooseDay")}
               </Text>
 
               <Text style={[styles.sectionSubtitle, directionStyle(isRtl)]}>
-                {copy.nextFourteenDays}
+                {t("providerCalendarNextFourteenDays")}
               </Text>
             </View>
 
@@ -407,10 +437,11 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
                   accessibilityState={{
                     selected,
                   }}
-                  accessibilityLabel={copy.fullDate(
+                  accessibilityLabel={formatCalendarFullDate(
                     option.weekday,
                     option.day,
                     option.month,
+                    activeLanguage,
                   )}
                   onPress={() => setSelectedDateId(option.id)}
                   style={({ pressed }) => [
@@ -509,7 +540,7 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
         <View style={styles.metricsGrid}>
           <MetricCard
             icon="checkmark-circle-outline"
-            label={copy.confirmed}
+            label={t("providerCalendarConfirmed")}
             value={formatDigits(confirmedCount.toString(), localizedDigits)}
             color={SUCCESS}
             backgroundColor={SUCCESS_SOFT}
@@ -519,7 +550,7 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
 
           <MetricCard
             icon="time-outline"
-            label={copy.pending}
+            label={t("providerCalendarPending")}
             value={formatDigits(pendingCount.toString(), localizedDigits)}
             color={WARNING}
             backgroundColor={WARNING_SOFT}
@@ -529,7 +560,7 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
 
           <MetricCard
             icon="calendar-clear-outline"
-            label={copy.freeSlots}
+            label={t("providerCalendarFreeSlots")}
             value={formatDigits(freeSlots.toString(), localizedDigits)}
             color={KhedmatPalette.blue500}
             backgroundColor={INFO_SOFT}
@@ -537,15 +568,6 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
             compact={compactLayout}
           />
 
-          <MetricCard
-            icon="cash-outline"
-            label={copy.expectedRevenue}
-            value={formatCurrency(expectedRevenue, activeLanguage)}
-            color={KhedmatPalette.navy700}
-            backgroundColor={KhedmatPalette.blue050}
-            isRtl={isRtl}
-            compact={compactLayout}
-          />
         </View>
 
         <View style={styles.section}>
@@ -566,13 +588,22 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
               ]}
             >
               <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
-                {copy.dailySchedule}
+                {t("providerCalendarDailySchedule")}
               </Text>
 
               <Text style={[styles.sectionSubtitle, directionStyle(isRtl)]}>
-                {copy.scheduleSummary(
-                  formatDigits(occupiedSlots.toString(), localizedDigits),
-                  formatDigits(freeSlots.toString(), localizedDigits),
+                {formatCalendarScheduleSummary(
+                  formatDigits(
+                    occupiedSlots.toString(),
+                    localizedDigits,
+                  ),
+                  formatDigits(
+                    freeSlots.toString(),
+                    localizedDigits,
+                  ),
+                  activeLanguage,
+                  t("providerCalendarBookings"),
+                  t("providerCalendarFreeSlots"),
                 )}
               </Text>
             </View>
@@ -585,17 +616,17 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
                 },
               ]}
             >
-              <LegendItem color={SUCCESS} label={copy.booked} isRtl={isRtl} />
+              <LegendItem color={SUCCESS} label={t("providerCalendarBooked")} isRtl={isRtl} />
 
               <LegendItem
                 color={WARNING}
-                label={copy.temporary}
+                label={t("providerCalendarUnavailable")}
                 isRtl={isRtl}
               />
 
               <LegendItem
                 color={KhedmatPalette.blue500}
-                label={copy.available}
+                label={t("providerCalendarAvailable")}
                 isRtl={isRtl}
               />
             </View>
@@ -611,12 +642,11 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
                   index={index}
                   language={activeLanguage}
                   isRtl={isRtl}
-                  copy={copy}
                   isLast={index === scheduleSlots.length - 1}
                 />
               ))
             ) : (
-              <EmptySchedule copy={copy} isRtl={isRtl} />
+              <EmptySchedule isRtl={isRtl} />
             )}
           </View>
         </View>
@@ -639,11 +669,11 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
               ]}
             >
               <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
-                {copy.workingHours}
+                {t("providerCalendarWorkingHours")}
               </Text>
 
               <Text style={[styles.sectionSubtitle, directionStyle(isRtl)]}>
-                {copy.workingHoursSubtitle}
+                {t("providerCalendarWorkingHoursSubtitle")}
               </Text>
             </View>
 
@@ -659,7 +689,7 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
           <View style={styles.workingHoursCard}>
             <WorkingHoursRow
               icon="calendar-outline"
-              label={copy.workingDays}
+              label={t("providerCalendarWorkingDays")}
               value={workingDaysText}
               isRtl={isRtl}
             />
@@ -668,7 +698,7 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
 
             <WorkingHoursRow
               icon="time-outline"
-              label={copy.dailyHours}
+              label={t("providerCalendarDailyHours")}
               value={workingHoursText}
               isRtl={isRtl}
             />
@@ -676,20 +706,9 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
             <View style={styles.workingHoursDivider} />
 
             <WorkingHoursRow
-              icon="hourglass-outline"
-              label={copy.slotDuration}
-              value={copy.minutes(
-                formatDigits(SLOT_DURATION_MINUTES.toString(), localizedDigits),
-              )}
-              isRtl={isRtl}
-            />
-
-            <View style={styles.workingHoursDivider} />
-
-            <WorkingHoursRow
               icon="flash-outline"
-              label={copy.sameDayRequests}
-              value={provider.availableToday ? copy.enabled : copy.disabled}
+              label={t("providerAvailabilityAvailableToday")}
+              value={provider.availableToday ? t("providerCalendarEnabled") : t("providerCalendarDisabled")}
               isRtl={isRtl}
               valueColor={
                 provider.availableToday ? SUCCESS : KhedmatPalette.textMuted
@@ -698,39 +717,6 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
           </View>
         </View>
 
-        <View
-          style={[
-            styles.noticeCard,
-            {
-              flexDirection: isRtl ? "row-reverse" : "row",
-            },
-          ]}
-        >
-          <View style={styles.noticeIcon}>
-            <Ionicons
-              name="information-circle-outline"
-              size={23}
-              color={KhedmatPalette.blue500}
-            />
-          </View>
-
-          <View
-            style={[
-              styles.noticeCopy,
-              {
-                alignItems: isRtl ? "flex-end" : "flex-start",
-              },
-            ]}
-          >
-            <Text style={[styles.noticeTitle, directionStyle(isRtl)]}>
-              {copy.noticeTitle}
-            </Text>
-
-            <Text style={[styles.noticeText, directionStyle(isRtl)]}>
-              {copy.noticeText}
-            </Text>
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -822,7 +808,6 @@ type ScheduleSlotCardProps = {
   index: number;
   language: LanguageName;
   isRtl: boolean;
-  copy: CalendarCopy;
   isLast: boolean;
 };
 
@@ -831,16 +816,16 @@ function ScheduleSlotCard({
   index,
   language,
   isRtl,
-  copy,
   isLast,
 }: ScheduleSlotCardProps) {
+  const { t } = useLanguage();
   const booking = slot.booking;
 
   const statusConfig = booking
-    ? getScheduleStatusConfig(booking.status, language)
+    ? getScheduleStatusConfig(booking.status, t)
     : null;
 
-  const slotState = getSlotState(slot, language);
+  const slotState = getSlotState(slot, t);
 
   const timelineColor =
     booking?.status === "in-progress"
@@ -903,9 +888,8 @@ function ScheduleSlotCard({
             booking={booking}
             language={language}
             isRtl={isRtl}
-            copy={copy}
             statusConfig={
-              statusConfig ?? getScheduleStatusConfig("pending", language)
+              statusConfig ?? getScheduleStatusConfig("pending", t)
             }
           />
         ) : (
@@ -991,7 +975,7 @@ function ScheduleSlotCard({
                 <Text
                   style={[styles.availableSlotBadgeText, directionStyle(isRtl)]}
                 >
-                  {copy.availableForBooking}
+                  {t("providerCalendarAvailableForBooking")}
                 </Text>
               </View>
             ) : null}
@@ -1006,7 +990,6 @@ type BookingScheduleCardProps = {
   booking: BookingRecord;
   language: LanguageName;
   isRtl: boolean;
-  copy: CalendarCopy;
   statusConfig: ScheduleStatusConfig;
 };
 
@@ -1014,16 +997,29 @@ function BookingScheduleCard({
   booking,
   language,
   isRtl,
-  copy,
   statusConfig,
 }: BookingScheduleCardProps) {
+  const router = useRouter();
+  const { t } = useLanguage();
+
   return (
-    <View
-      style={[
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={booking.serviceName}
+      onPress={() =>
+        router.push({
+          pathname: "/provider-request-details",
+          params: {
+            bookingId: booking.id,
+          },
+        })
+      }
+      style={({ pressed }) => [
         styles.bookingCard,
         {
           borderColor: statusConfig.borderColor,
         },
+        pressed && styles.cardPressed,
       ]}
     >
       <View
@@ -1068,7 +1064,10 @@ function BookingScheduleCard({
             numberOfLines={1}
             style={[styles.bookingReference, directionStyle(isRtl)]}
           >
-            {copy.bookingReference(getShortBookingId(booking.id, language))}
+            {formatCalendarBookingReference(
+              getShortBookingId(booking.id, language),
+              t("providerCalendarBooking"),
+            )}
           </Text>
         </View>
 
@@ -1117,50 +1116,23 @@ function BookingScheduleCard({
 
       <View
         style={[
-          styles.bookingAddressRow,
+          styles.bookingOpenRow,
           {
             flexDirection: isRtl ? "row-reverse" : "row",
           },
         ]}
       >
-        <Ionicons
-          name="navigate-outline"
-          size={15}
-          color={KhedmatPalette.textMuted}
-        />
-
-        <Text
-          numberOfLines={2}
-          style={[styles.bookingAddress, directionStyle(isRtl)]}
-        >
-          {booking.address.fullAddress}
+        <Text style={[styles.bookingOpenText, directionStyle(isRtl)]}>
+          {t("providerRequestsViewDetails")}
         </Text>
+
+        <Ionicons
+          name={isRtl ? "chevron-back" : "chevron-forward"}
+          size={17}
+          color={KhedmatPalette.blue500}
+        />
       </View>
-
-      {booking.notes?.trim() ? (
-        <View
-          style={[
-            styles.bookingNotes,
-            {
-              flexDirection: isRtl ? "row-reverse" : "row",
-            },
-          ]}
-        >
-          <Ionicons
-            name="document-text-outline"
-            size={15}
-            color={KhedmatPalette.blue500}
-          />
-
-          <Text
-            numberOfLines={3}
-            style={[styles.bookingNotesText, directionStyle(isRtl)]}
-          >
-            {booking.notes}
-          </Text>
-        </View>
-      ) : null}
-    </View>
+    </Pressable>
   );
 }
 
@@ -1252,11 +1224,12 @@ function WorkingHoursRow({
 }
 
 type EmptyScheduleProps = {
-  copy: CalendarCopy;
   isRtl: boolean;
 };
 
-function EmptySchedule({ copy, isRtl }: EmptyScheduleProps) {
+function EmptySchedule({ isRtl }: EmptyScheduleProps) {
+  const { t } = useLanguage();
+
   return (
     <View style={styles.emptySchedule}>
       <View style={styles.emptyScheduleIcon}>
@@ -1268,11 +1241,11 @@ function EmptySchedule({ copy, isRtl }: EmptyScheduleProps) {
       </View>
 
       <Text style={[styles.emptyScheduleTitle, directionStyle(isRtl)]}>
-        {copy.noScheduleTitle}
+        {t("providerCalendarNoScheduleTitle")}
       </Text>
 
       <Text style={[styles.emptyScheduleSubtitle, directionStyle(isRtl)]}>
-        {copy.noScheduleSubtitle}
+        {t("providerCalendarNoScheduleSubtitle")}
       </Text>
     </View>
   );
@@ -1305,10 +1278,83 @@ function createDateOptions(
   );
 }
 
+function isProviderWorkingDate(
+  date: Date,
+  workingDays: string[],
+): boolean {
+  if (
+    !workingDays ||
+    workingDays.length === 0
+  ) {
+    return false;
+  }
+
+  const target =
+    getWeekdayKey(date);
+
+  return workingDays.some(
+    (day) =>
+      normalizeWorkingDayKey(day) ===
+      target,
+  );
+}
+
+function getWeekdayKey(
+  date: Date,
+):
+  | "sunday"
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday" {
+  const keys = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ] as const;
+
+  return keys[date.getDay()];
+}
+
+function normalizeWorkingDayKey(
+  value: string,
+): string {
+  const normalized =
+    value
+      .trim()
+      .toLowerCase();
+
+  const aliases: Record<
+    string,
+    string
+  > = {
+    sun: "sunday",
+    mon: "monday",
+    tue: "tuesday",
+    tues: "tuesday",
+    wed: "wednesday",
+    thu: "thursday",
+    thur: "thursday",
+    thurs: "thursday",
+    fri: "friday",
+    sat: "saturday",
+  };
+
+  return aliases[normalized] ??
+    normalized;
+}
+
 function buildScheduleSlots(
   startTime: string,
   endTime: string,
   bookings: BookingRecord[],
+  availableForBooking: boolean,
 ): ScheduleSlot[] {
   const startMinutes = timeToMinutes(startTime);
 
@@ -1343,7 +1389,9 @@ function buildScheduleSlots(
       endTime: slotEndTime,
       label: `${slotStartTime}-${slotEndTime}`,
       booking,
-      unavailable: false,
+      unavailable:
+        booking === null &&
+        !availableForBooking,
     });
   }
 
@@ -1370,51 +1418,30 @@ function findBookingForSlot(
   );
 }
 
-function getSlotState(slot: ScheduleSlot, language: LanguageName) {
-  if (language === "Dari") {
-    return slot.unavailable
-      ? {
-          title: "زمان غیرقابل رزرو",
-          subtitle: "این بازه برای دریافت درخواست بسته است.",
-        }
-      : {
-          title: "زمان آزاد",
-          subtitle: "این بازه برای دریافت درخواست جدید باز است.",
-        };
+function getSlotState(
+  slot: ScheduleSlot,
+  t: TranslationFunction,
+) {
+  if (slot.unavailable) {
+    return {
+      title: t("providerCalendarUnavailableSlotTitle"),
+      subtitle: t("providerCalendarUnavailableSlotSubtitle"),
+    };
   }
 
-  if (language === "Pashto") {
-    return slot.unavailable
-      ? {
-          title: "د رزرف لپاره تړلی",
-          subtitle: "دا وخت د نوې غوښتنې لپاره شتون نه لري.",
-        }
-      : {
-          title: "خالي وخت",
-          subtitle: "دا وخت د نوې غوښتنې لپاره خلاص دی.",
-        };
-  }
-
-  return slot.unavailable
-    ? {
-        title: "Unavailable slot",
-        subtitle: "This period is closed to new requests.",
-      }
-    : {
-        title: "Available slot",
-        subtitle: "This period is open for a new request.",
-      };
+  return {
+    title: t("providerCalendarAvailableSlotTitle"),
+    subtitle: t("providerCalendarAvailableSlotSubtitle"),
+  };
 }
 
 function getScheduleStatusConfig(
   status: BookingStatus,
-  language: LanguageName,
+  t: TranslationFunction,
 ): ScheduleStatusConfig {
-  const labels = getStatusLabels(language);
-
   if (status === "confirmed") {
     return {
-      label: labels.confirmed,
+      label: t("providerRequestsStatusAccepted"),
       color: KhedmatPalette.blue500,
       backgroundColor: INFO_SOFT,
       borderColor: KhedmatPalette.blue200,
@@ -1423,7 +1450,7 @@ function getScheduleStatusConfig(
 
   if (status === "in-progress") {
     return {
-      label: labels.inProgress,
+      label: t("providerRequestsStatusInProgress"),
       color: KhedmatPalette.navy700,
       backgroundColor: KhedmatPalette.blue050,
       borderColor: KhedmatPalette.blue200,
@@ -1432,7 +1459,7 @@ function getScheduleStatusConfig(
 
   if (status === "completed") {
     return {
-      label: labels.completed,
+      label: t("providerRequestsStatusCompleted"),
       color: SUCCESS,
       backgroundColor: SUCCESS_SOFT,
       borderColor: "#A9D9BD",
@@ -1441,7 +1468,7 @@ function getScheduleStatusConfig(
 
   if (status === "cancelled") {
     return {
-      label: labels.cancelled,
+      label: t("providerRequestsStatusCancelled"),
       color: ERROR,
       backgroundColor: ERROR_SOFT,
       borderColor: "#E7B1AD",
@@ -1449,40 +1476,10 @@ function getScheduleStatusConfig(
   }
 
   return {
-    label: labels.pending,
+    label: t("providerRequestsStatusNew"),
     color: WARNING,
     backgroundColor: WARNING_SOFT,
-    borderColor: "#E5C875",
-  };
-}
-
-function getStatusLabels(language: LanguageName) {
-  if (language === "English") {
-    return {
-      pending: "Pending",
-      confirmed: "Confirmed",
-      inProgress: "In progress",
-      completed: "Completed",
-      cancelled: "Cancelled",
-    };
-  }
-
-  if (language === "Pashto") {
-    return {
-      pending: "په تمه",
-      confirmed: "تایید شوی",
-      inProgress: "روان",
-      completed: "بشپړ شوی",
-      cancelled: "لغوه شوی",
-    };
-  }
-
-  return {
-    pending: "در انتظار",
-    confirmed: "تأییدشده",
-    inProgress: "در حال انجام",
-    completed: "تکمیل‌شده",
-    cancelled: "لغوشده",
+    borderColor: "#E4C77A",
   };
 }
 
@@ -1919,233 +1916,65 @@ function directionStyle(isRtl: boolean) {
   };
 }
 
-function getCalendarCopy(language: LanguageName) {
+function formatCalendarFullDate(
+  weekday: string,
+  day: string,
+  month: string,
+  language: LanguageName,
+): string {
+  if (language === "English") {
+    return `${weekday}, ${month} ${day}`;
+  }
+
+  return `${weekday}، ${day} ${month}`;
+}
+
+function formatCalendarTimeRange(
+  start: string,
+  end: string,
+  language: LanguageName,
+): string {
   if (language === "Dari") {
-    return {
-      eyebrow: "برنامهٔ کاری",
-
-      title: "تقویم",
-
-      subtitle: "رزروها، ساعت‌های آزاد و برنامهٔ کاری خود را مدیریت کنید.",
-
-      selectedDay: "روز انتخاب‌شده",
-
-      bookings: "رزرو",
-
-      chooseDay: "انتخاب روز",
-
-      nextFourteenDays: "برنامهٔ چهارده روز آینده",
-
-      confirmed: "تأییدشده",
-
-      pending: "در انتظار",
-
-      freeSlots: "زمان آزاد",
-
-      expectedRevenue: "درآمد مورد انتظار",
-
-      dailySchedule: "برنامهٔ روز",
-
-      booked: "رزروشده",
-
-      temporary: "غیرفعال",
-
-      available: "آزاد",
-
-      availableForBooking: "قابل رزرو",
-
-      workingHours: "ساعت‌های کاری",
-
-      workingHoursSubtitle: "برنامهٔ عادی فعالیت حرفه‌ای شما",
-
-      workingDays: "روزهای کاری",
-
-      dailyHours: "ساعت روزانه",
-
-      slotDuration: "مدت هر بازه",
-
-      sameDayRequests: "درخواست همان‌روز",
-
-      enabled: "فعال",
-
-      disabled: "غیرفعال",
-
-      noScheduleTitle: "برنامه‌ای برای این روز موجود نیست",
-
-      noScheduleSubtitle:
-        "ساعت‌های کاری یا رزروهای آینده برای این روز ثبت نشده‌اند.",
-
-      noticeTitle: "برنامهٔ خود را به‌روز نگه دارید",
-
-      noticeText:
-        "زمان‌های آزاد و ساعت‌های کاری دقیق، از رزروهای هم‌زمان و تأخیر در پاسخ‌گویی جلوگیری می‌کند.",
-
-      unknown: "نامشخص",
-
-      fullDate: (weekday: string, day: string, month: string) =>
-        `${weekday}، ${day} ${month}`,
-
-      timeRange: (start: string, end: string) => `${start} تا ${end}`,
-
-      minutes: (value: string) => `${value} دقیقه`,
-
-      scheduleSummary: (occupied: string, free: string) =>
-        `${occupied} رزرو و ${free} زمان آزاد`,
-
-      bookingReference: (value: string) => `رزرو ${value}`,
-    };
+    return `${start} تا ${end}`;
   }
 
   if (language === "Pashto") {
-    return {
-      eyebrow: "کاري مهال‌وېش",
-
-      title: "کلیز",
-
-      subtitle: "خپل رزرفونه، خالي وختونه او کاري مهال‌وېش مدیریت کړئ.",
-
-      selectedDay: "ټاکل شوې ورځ",
-
-      bookings: "رزرفونه",
-
-      chooseDay: "ورځ وټاکئ",
-
-      nextFourteenDays: "د راتلونکو څوارلسو ورځو مهال‌وېش",
-
-      confirmed: "تایید شوي",
-
-      pending: "په تمه",
-
-      freeSlots: "خالي وختونه",
-
-      expectedRevenue: "اټکلی عاید",
-
-      dailySchedule: "د ورځې مهال‌وېش",
-
-      booked: "رزرف شوی",
-
-      temporary: "بند",
-
-      available: "خالي",
-
-      availableForBooking: "د رزرف لپاره خلاص",
-
-      workingHours: "کاري ساعتونه",
-
-      workingHoursSubtitle: "ستاسو عادي مسلکي کاري مهال‌وېش",
-
-      workingDays: "کاري ورځې",
-
-      dailyHours: "ورځني ساعتونه",
-
-      slotDuration: "د وخت موده",
-
-      sameDayRequests: "د همدې ورځې غوښتنې",
-
-      enabled: "فعال",
-
-      disabled: "غیرفعال",
-
-      noScheduleTitle: "د دې ورځې مهال‌وېش نشته",
-
-      noScheduleSubtitle:
-        "د دې ورځې لپاره کاري ساعتونه یا راتلونکي رزرفونه نه دي ثبت شوي.",
-
-      noticeTitle: "خپل مهال‌وېش تازه وساتئ",
-
-      noticeText:
-        "دقیق خالي وختونه او کاري ساعتونه د هم‌مهاله رزرفونو او ځنډ مخه نیسي.",
-
-      unknown: "نامعلوم",
-
-      fullDate: (weekday: string, day: string, month: string) =>
-        `${weekday}، ${day} ${month}`,
-
-      timeRange: (start: string, end: string) => `${start} تر ${end}`,
-
-      minutes: (value: string) => `${value} دقیقې`,
-
-      scheduleSummary: (occupied: string, free: string) =>
-        `${occupied} رزرفونه او ${free} خالي وختونه`,
-
-      bookingReference: (value: string) => `رزرف ${value}`,
-    };
+    return `${start} تر ${end}`;
   }
 
-  return {
-    eyebrow: "Work schedule",
+  return `${start} to ${end}`;
+}
 
-    title: "Calendar",
+function formatCalendarMinutes(
+  value: string,
+  minutesLabel: string,
+): string {
+  return `${value} ${minutesLabel}`;
+}
 
-    subtitle:
-      "Manage your bookings, available slots and normal working schedule.",
+function formatCalendarScheduleSummary(
+  occupied: string,
+  free: string,
+  language: LanguageName,
+  bookingsLabel: string,
+  freeSlotsLabel: string,
+): string {
+  if (language === "Dari") {
+    return `${occupied} ${bookingsLabel} و ${free} ${freeSlotsLabel}`;
+  }
 
-    selectedDay: "Selected day",
+  if (language === "Pashto") {
+    return `${occupied} ${bookingsLabel} او ${free} ${freeSlotsLabel}`;
+  }
 
-    bookings: "bookings",
+  return `${occupied} ${bookingsLabel} and ${free} ${freeSlotsLabel}`;
+}
 
-    chooseDay: "Choose a day",
-
-    nextFourteenDays: "Your next fourteen days",
-
-    confirmed: "Confirmed",
-
-    pending: "Pending",
-
-    freeSlots: "Free slots",
-
-    expectedRevenue: "Expected revenue",
-
-    dailySchedule: "Daily schedule",
-
-    booked: "Booked",
-
-    temporary: "Unavailable",
-
-    available: "Available",
-
-    availableForBooking: "Open for booking",
-
-    workingHours: "Working hours",
-
-    workingHoursSubtitle: "Your normal professional schedule",
-
-    workingDays: "Working days",
-
-    dailyHours: "Daily hours",
-
-    slotDuration: "Slot duration",
-
-    sameDayRequests: "Same-day requests",
-
-    enabled: "Enabled",
-
-    disabled: "Disabled",
-
-    noScheduleTitle: "No schedule for this day",
-
-    noScheduleSubtitle:
-      "No working hours or upcoming bookings are available for this date.",
-
-    noticeTitle: "Keep your schedule updated",
-
-    noticeText:
-      "Accurate availability and working hours help prevent overlapping bookings and delayed responses.",
-
-    unknown: "Unknown",
-
-    fullDate: (weekday: string, day: string, month: string) =>
-      `${weekday}, ${month} ${day}`,
-
-    timeRange: (start: string, end: string) => `${start} to ${end}`,
-
-    minutes: (value: string) => `${value} minutes`,
-
-    scheduleSummary: (occupied: string, free: string) =>
-      `${occupied} bookings and ${free} free slots`,
-
-    bookingReference: (value: string) => `Booking ${value}`,
-  };
+function formatCalendarBookingReference(
+  value: string,
+  bookingLabel: string,
+): string {
+  return `${bookingLabel} ${value}`;
 }
 
 const styles = StyleSheet.create({
@@ -2175,7 +2004,7 @@ const styles = StyleSheet.create({
 
   safeArea: {
     flex: 1,
-    backgroundColor: KhedmatPalette.blue050,
+    backgroundColor: KhedmatPalette.white,
   },
 
   scrollContent: {
@@ -2927,6 +2756,23 @@ const styles = StyleSheet.create({
     width: "100%",
     color: KhedmatPalette.textSecondary,
     lineHeight: 19,
+  },
+
+  bookingOpenRow: {
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: KhedmatPalette.blue200,
+  },
+
+  bookingOpenText: {
+    ...Typography.label,
+    color: KhedmatPalette.blue500,
+    fontSize: 13,
   },
 
   cardPressed: {

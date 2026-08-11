@@ -61,6 +61,8 @@ export type BookingRecord = {
   id: string;
 
   customerId: string;
+  customerName?: string;
+  customerPhone?: string | null;
 
   providerId: string;
   providerName: string;
@@ -198,6 +200,8 @@ function mapBookingRow(row: BookingRow): BookingRecord {
     id: row.id,
 
     customerId: row.customer_id ?? "",
+    customerName: row.customer_name_snapshot,
+    customerPhone: row.customer_phone_snapshot,
 
     providerId: row.provider_id,
 

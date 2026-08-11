@@ -43,18 +43,6 @@ type ProviderRoute =
   | "/(provider-tabs)/messages"
   | "/(provider-tabs)/profile";
 
-type DashboardActionId = "requests" | "calendar" | "messages" | "profile";
-
-type DashboardAction = {
-  id: DashboardActionId;
-  title: string;
-  subtitle: string;
-  icon: IconName;
-  route: ProviderRoute;
-};
-
-type DashboardCopy = ReturnType<typeof getDashboardCopy>;
-
 const SUCCESS = "#268A57";
 const SUCCESS_SOFT = "#E8F6EE";
 
@@ -73,13 +61,11 @@ export default function ProviderDashboardScreen() {
 
   const { bookings, isRefreshing, refreshBookings } = useBooking();
 
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   const activeLanguage = normalizeLanguage(language);
 
   const isRtl = activeLanguage === "Dari" || activeLanguage === "Pashto";
-
-  const copy = getDashboardCopy(activeLanguage);
 
   const {
     provider,
@@ -142,8 +128,8 @@ export default function ProviderDashboardScreen() {
       setAvailableNow(previousValue);
 
       Alert.alert(
-        "Could not update availability",
-        "Your availability was not saved. Please try again.",
+        t("providerDashboardAvailabilityErrorTitle"),
+        t("providerDashboardAvailabilityErrorMessage"),
       );
     } finally {
       setIsSavingAvailability(false);
@@ -157,20 +143,6 @@ export default function ProviderDashboardScreen() {
 
   const pendingBookings = useMemo(
     () => providerBookings.filter((booking) => booking.status === "pending"),
-    [providerBookings],
-  );
-
-  const activeBookings = useMemo(
-    () =>
-      providerBookings.filter(
-        (booking) =>
-          booking.status === "confirmed" || booking.status === "in-progress",
-      ),
-    [providerBookings],
-  );
-
-  const completedBookings = useMemo(
-    () => providerBookings.filter((booking) => booking.status === "completed"),
     [providerBookings],
   );
 
@@ -200,15 +172,6 @@ export default function ProviderDashboardScreen() {
     [providerBookings],
   );
 
-  const completedRevenue = useMemo(
-    () =>
-      completedBookings.reduce(
-        (total, booking) => total + booking.servicePrice,
-        0,
-      ),
-    [completedBookings],
-  );
-
   const todayRevenue = useMemo(
     () =>
       todayBookings
@@ -217,58 +180,12 @@ export default function ProviderDashboardScreen() {
     [todayBookings],
   );
 
-  const actions = useMemo<DashboardAction[]>(
-    () => [
-      {
-        id: "requests",
-        title: copy.quickRequests,
-        subtitle: copy.quickRequestsSubtitle,
-        icon: "briefcase-outline",
-        route: "/(provider-tabs)/requests",
-      },
-      {
-        id: "calendar",
-        title: copy.quickCalendar,
-        subtitle: copy.quickCalendarSubtitle,
-        icon: "calendar-outline",
-        route: "/(provider-tabs)/calendar",
-      },
-      {
-        id: "messages",
-        title: copy.quickMessages,
-        subtitle: copy.quickMessagesSubtitle,
-        icon: "chatbubble-outline",
-        route: "/(provider-tabs)/messages",
-      },
-      {
-        id: "profile",
-        title: copy.quickProfile,
-        subtitle: copy.quickProfileSubtitle,
-        icon: "person-outline",
-        route: "/(provider-tabs)/profile",
-      },
-    ],
-    [copy],
-  );
-
   const compactLayout = width < 370;
 
   const localizedDigits = activeLanguage !== "English";
 
   const openRoute = (route: ProviderRoute) => {
     router.push(route);
-  };
-
-  const getActionBadge = (actionId: DashboardActionId) => {
-    if (actionId === "requests") {
-      return pendingBookings.length;
-    }
-
-    if (actionId === "messages") {
-      return activeBookings.length;
-    }
-
-    return 0;
   };
 
   if (providerIsLoading) {
@@ -283,11 +200,7 @@ export default function ProviderDashboardScreen() {
               },
             ]}
           >
-            {activeLanguage === "Dari"
-              ? "در حال بارگذاری پروفایل..."
-              : activeLanguage === "Pashto"
-                ? "پروفایل پورته کېږي..."
-                : "Loading provider profile..."}
+{t("providerAccountLoading")}
           </Text>
         </View>
       </SafeAreaView>
@@ -312,11 +225,7 @@ export default function ProviderDashboardScreen() {
               },
             ]}
           >
-            {activeLanguage === "Dari"
-              ? "پروفایل ارائه‌دهنده پیدا نشد"
-              : activeLanguage === "Pashto"
-                ? "د خدمت چمتو کوونکي پروفایل ونه موندل شو"
-                : "Provider profile not found"}
+{t("providerAccountLoadError")}
           </Text>
 
           <Text
@@ -327,11 +236,7 @@ export default function ProviderDashboardScreen() {
               },
             ]}
           >
-            {activeLanguage === "Dari"
-              ? "لطفاً دوباره وارد فضای کاری ارائه‌دهنده شوید."
-              : activeLanguage === "Pashto"
-                ? "مهرباني وکړئ د خدمت چمتو کوونکي کاري ځای ته بیا ننوځئ."
-                : "Please enter the provider workspace again."}
+{t("providerAccountLoadErrorBody")}
           </Text>
         </View>
       </SafeAreaView>
@@ -376,7 +281,7 @@ export default function ProviderDashboardScreen() {
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={copy.openProfile}
+              accessibilityLabel={t("providerDashboardOpenProfile")}
               onPress={() => openRoute("/(provider-tabs)/profile")}
               style={({ pressed }) => [
                 styles.providerAvatar,
@@ -407,23 +312,23 @@ export default function ProviderDashboardScreen() {
               ]}
             >
               <Text style={[styles.eyebrow, directionStyle(isRtl)]}>
-                {copy.eyebrow}
+                {t("providerDashboardEyebrow")}
               </Text>
 
               <Text
                 numberOfLines={1}
                 style={[styles.greeting, directionStyle(isRtl)]}
               >
-                {copy.greeting}, {provider.name}
+                {t("providerDashboardGreeting")}, {provider.name}
               </Text>
             </View>
           </View>
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={copy.notifications}
+            accessibilityLabel={t("providerDashboardNotifications")}
             onPress={() => {
-              console.log("Open provider notifications");
+              router.push("/provider-notifications");
             }}
             style={({ pressed }) => [
               styles.notificationButton,
@@ -451,11 +356,11 @@ export default function ProviderDashboardScreen() {
 
         <View style={styles.hero}>
           <Text style={[styles.heroTitle, directionStyle(isRtl)]}>
-            {copy.heroTitle}
+            {t("providerDashboardHeroTitle")}
           </Text>
 
           <Text style={[styles.heroSubtitle, directionStyle(isRtl)]}>
-            {copy.heroSubtitle}
+            {t("providerDashboardHeroSubtitle")}
           </Text>
         </View>
 
@@ -493,21 +398,21 @@ export default function ProviderDashboardScreen() {
             ]}
           >
             <Text style={[styles.availabilityLabel, directionStyle(isRtl)]}>
-              {copy.currentStatus}
+              {t("providerDashboardCurrentStatus")}
             </Text>
 
             <Text style={[styles.availabilityTitle, directionStyle(isRtl)]}>
-              {availableNow ? copy.availableTitle : copy.unavailableTitle}
+              {availableNow ? t("providerDashboardAvailableTitle") : t("providerDashboardUnavailableTitle")}
             </Text>
 
             <Text style={[styles.availabilitySubtitle, directionStyle(isRtl)]}>
-              {availableNow ? copy.availableSubtitle : copy.unavailableSubtitle}
+              {availableNow ? t("providerDashboardAvailableSubtitle") : t("providerDashboardUnavailableSubtitle")}
             </Text>
           </View>
 
           <Pressable
             accessibilityRole="switch"
-            accessibilityLabel={copy.availabilityControl}
+            accessibilityLabel={t("providerDashboardAvailabilityControl")}
             accessibilityState={{
               checked: availableNow,
               disabled: isSavingAvailability,
@@ -545,7 +450,7 @@ export default function ProviderDashboardScreen() {
         <View style={styles.metricsGrid}>
           <MetricCard
             icon="cash-outline"
-            label={copy.todayRevenue}
+            label={t("providerDashboardTodayRevenue")}
             value={formatCurrency(todayRevenue, activeLanguage)}
             iconColor={SUCCESS}
             iconBackground={SUCCESS_SOFT}
@@ -555,7 +460,7 @@ export default function ProviderDashboardScreen() {
 
           <MetricCard
             icon="briefcase-outline"
-            label={copy.todayJobs}
+            label={t("providerDashboardTodayJobs")}
             value={formatDigits(
               todayBookings.length.toString(),
               localizedDigits,
@@ -568,7 +473,7 @@ export default function ProviderDashboardScreen() {
 
           <MetricCard
             icon="time-outline"
-            label={copy.newRequests}
+            label={t("providerDashboardNewRequests")}
             value={formatDigits(
               pendingBookings.length.toString(),
               localizedDigits,
@@ -579,34 +484,23 @@ export default function ProviderDashboardScreen() {
             isRtl={isRtl}
           />
 
-          <MetricCard
-            icon="checkmark-circle-outline"
-            label={copy.completedJobs}
-            value={formatDigits(
-              completedBookings.length.toString(),
-              localizedDigits,
-            )}
-            iconColor={KhedmatPalette.navy700}
-            iconBackground={KhedmatPalette.blue050}
-            compact={compactLayout}
-            isRtl={isRtl}
-          />
         </View>
 
         <View style={styles.section}>
           <SectionHeader
-            title={copy.newRequestsTitle}
+            title={t("providerDashboardNewRequestsTitle")}
             subtitle={
               pendingBookings.length > 0
-                ? copy.newRequestsCount(
+                ? formatDashboardCountMessage(
                     formatDigits(
                       pendingBookings.length.toString(),
                       localizedDigits,
                     ),
+                    t("providerDashboardNewRequestsCount"),
                   )
-                : copy.noNewRequestsSubtitle
+                : t("providerDashboardNoNewRequestsSubtitle")
             }
-            actionLabel={pendingBookings.length > 0 ? copy.viewAll : undefined}
+            actionLabel={pendingBookings.length > 0 ? t("providerDashboardViewAll") : undefined}
             isRtl={isRtl}
             onPress={() => openRoute("/(provider-tabs)/requests")}
           />
@@ -619,8 +513,14 @@ export default function ProviderDashboardScreen() {
                   booking={booking}
                   language={activeLanguage}
                   isRtl={isRtl}
-                  copy={copy}
-                  onPress={() => openRoute("/(provider-tabs)/requests")}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/provider-request-details",
+                      params: {
+                        bookingId: booking.id,
+                      },
+                    })
+                  }
                 />
               ))}
             </View>
@@ -650,13 +550,13 @@ export default function ProviderDashboardScreen() {
                 ]}
               >
                 <Text style={[styles.emptyRequestTitle, directionStyle(isRtl)]}>
-                  {copy.noNewRequestsTitle}
+                  {t("providerDashboardNoNewRequestsTitle")}
                 </Text>
 
                 <Text
                   style={[styles.emptyRequestSubtitle, directionStyle(isRtl)]}
                 >
-                  {copy.noNewRequestsSubtitle}
+                  {t("providerDashboardNoNewRequestsSubtitle")}
                 </Text>
               </View>
             </View>
@@ -665,31 +565,9 @@ export default function ProviderDashboardScreen() {
 
         <View style={styles.section}>
           <SectionHeader
-            title={copy.quickAccess}
-            subtitle={copy.quickAccessSubtitle}
-            isRtl={isRtl}
-          />
-
-          <View style={styles.quickActionsGrid}>
-            {actions.map((action) => (
-              <QuickActionCard
-                key={action.id}
-                action={action}
-                badgeCount={getActionBadge(action.id)}
-                localizedDigits={localizedDigits}
-                isRtl={isRtl}
-                compact={compactLayout}
-                onPress={() => openRoute(action.route)}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <SectionHeader
-            title={copy.upcomingTitle}
-            subtitle={copy.upcomingSubtitle}
-            actionLabel={copy.calendar}
+            title={t("providerDashboardUpcomingTitle")}
+            subtitle={t("providerDashboardUpcomingSubtitle")}
+            actionLabel={t("providerDashboardCalendar")}
             isRtl={isRtl}
             onPress={() => openRoute("/(provider-tabs)/calendar")}
           />
@@ -702,102 +580,14 @@ export default function ProviderDashboardScreen() {
                   booking={booking}
                   language={activeLanguage}
                   isRtl={isRtl}
-                  copy={copy}
                 />
               ))
             ) : (
-              <EmptyUpcoming copy={copy} isRtl={isRtl} />
+              <EmptyUpcoming isRtl={isRtl} />
             )}
           </View>
         </View>
 
-        <View style={styles.section}>
-          <SectionHeader
-            title={copy.performance}
-            subtitle={copy.performanceSubtitle}
-            isRtl={isRtl}
-          />
-
-          <View style={styles.performanceCard}>
-            <PerformanceRow
-              icon="star-outline"
-              label={copy.customerRating}
-              value={copy.ratingValue(
-                formatDigits(provider.rating.toFixed(1), localizedDigits),
-              )}
-              isRtl={isRtl}
-            />
-
-            <View style={styles.performanceDivider} />
-
-            <PerformanceRow
-              icon="chatbubble-ellipses-outline"
-              label={copy.averageResponse}
-              value={copy.minutesValue(
-                formatDigits(
-                  provider.averageResponseMinutes.toString(),
-                  localizedDigits,
-                ),
-              )}
-              isRtl={isRtl}
-            />
-
-            <View style={styles.performanceDivider} />
-
-            <PerformanceRow
-              icon="stats-chart-outline"
-              label={copy.responseRate}
-              value={`${formatDigits(
-                provider.responseRate.toString(),
-                localizedDigits,
-              )}%`}
-              isRtl={isRtl}
-            />
-
-            <View style={styles.performanceDivider} />
-
-            <PerformanceRow
-              icon="wallet-outline"
-              label={copy.totalRevenue}
-              value={formatCurrency(completedRevenue, activeLanguage)}
-              isRtl={isRtl}
-            />
-          </View>
-        </View>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={copy.improveProfile}
-          onPress={() => openRoute("/(provider-tabs)/profile")}
-          style={({ pressed }) => [
-            styles.tipCard,
-            {
-              flexDirection: isRtl ? "row-reverse" : "row",
-            },
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <View style={styles.tipIcon}>
-            <Ionicons name="bulb-outline" size={23} color={WARNING} />
-          </View>
-
-          <View
-            style={[
-              styles.tipCopy,
-              {
-                alignItems: isRtl ? "flex-end" : "flex-start",
-              },
-            ]}
-          >
-            <Text style={[styles.tipTitle, directionStyle(isRtl)]}>
-              {copy.tipTitle}
-            </Text>
-
-            <Text style={[styles.tipSubtitle, directionStyle(isRtl)]}>
-              {copy.tipSubtitle}
-            </Text>
-          </View>
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -918,7 +708,6 @@ type NewRequestCardProps = {
   booking: BookingRecord;
   language: LanguageName;
   isRtl: boolean;
-  copy: DashboardCopy;
   onPress: () => void;
 };
 
@@ -926,9 +715,10 @@ function NewRequestCard({
   booking,
   language,
   isRtl,
-  copy,
   onPress,
 }: NewRequestCardProps) {
+  const { t } = useLanguage();
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -964,7 +754,7 @@ function NewRequestCard({
           ]}
         >
           <Text style={[styles.requestEyebrow, directionStyle(isRtl)]}>
-            {copy.freshRequest}
+            {t("providerDashboardFreshRequest")}
           </Text>
 
           <Text
@@ -984,7 +774,7 @@ function NewRequestCard({
           ]}
         >
           <Text style={[styles.requestPriceLabel, directionStyle(isRtl)]}>
-            {copy.estimated}
+            {t("providerDashboardEstimated")}
           </Text>
 
           <Text
@@ -1069,81 +859,23 @@ function RequestMeta({ icon, value, isRtl }: RequestMetaProps) {
   );
 }
 
-type QuickActionCardProps = {
-  action: DashboardAction;
-  badgeCount: number;
-  localizedDigits: boolean;
-  isRtl: boolean;
-  compact: boolean;
-  onPress: () => void;
-};
-
-function QuickActionCard({
-  action,
-  badgeCount,
-  localizedDigits,
-  isRtl,
-  compact,
-  onPress,
-}: QuickActionCardProps) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={action.title}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.quickActionCard,
-        compact && styles.quickActionCardCompact,
-        pressed && styles.cardPressed,
-      ]}
-    >
-      <View style={styles.quickActionIcon}>
-        <Ionicons name={action.icon} size={23} color={KhedmatPalette.blue500} />
-
-        {badgeCount > 0 ? (
-          <View style={styles.quickActionBadge}>
-            <Text style={styles.quickActionBadgeText}>
-              {formatDigits(badgeCount.toString(), localizedDigits)}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-
-      <Text
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.82}
-        style={[styles.quickActionTitle, directionStyle(isRtl)]}
-      >
-        {action.title}
-      </Text>
-
-      <Text
-        numberOfLines={2}
-        style={[styles.quickActionSubtitle, directionStyle(isRtl)]}
-      >
-        {action.subtitle}
-      </Text>
-    </Pressable>
-  );
-}
-
 type UpcomingJobCardProps = {
   booking: BookingRecord;
   language: LanguageName;
   isRtl: boolean;
-  copy: DashboardCopy;
 };
 
 function UpcomingJobCard({
   booking,
   language,
   isRtl,
-  copy,
 }: UpcomingJobCardProps) {
+  const { t } = useLanguage();
   const confirmed = booking.status === "confirmed";
 
-  const statusLabel = confirmed ? copy.confirmed : copy.pending;
+  const statusLabel = confirmed
+    ? t("providerDashboardConfirmed")
+    : t("providerDashboardPending");
 
   return (
     <View
@@ -1183,7 +915,7 @@ function UpcomingJobCard({
           numberOfLines={1}
           style={[styles.upcomingCustomer, directionStyle(isRtl)]}
         >
-          {copy.customer} · {booking.address.label}
+          {t("providerDashboardCustomer")} · {booking.address.label}
         </Text>
 
         <View
@@ -1231,11 +963,12 @@ function UpcomingJobCard({
 }
 
 type EmptyUpcomingProps = {
-  copy: DashboardCopy;
   isRtl: boolean;
 };
 
-function EmptyUpcoming({ copy, isRtl }: EmptyUpcomingProps) {
+function EmptyUpcoming({ isRtl }: EmptyUpcomingProps) {
+  const { t } = useLanguage();
+
   return (
     <View style={styles.emptyUpcomingCard}>
       <View style={styles.emptyUpcomingIcon}>
@@ -1247,58 +980,12 @@ function EmptyUpcoming({ copy, isRtl }: EmptyUpcomingProps) {
       </View>
 
       <Text style={[styles.emptyUpcomingTitle, directionStyle(isRtl)]}>
-        {copy.noUpcomingTitle}
+        {t("providerDashboardNoUpcomingTitle")}
       </Text>
 
       <Text style={[styles.emptyUpcomingSubtitle, directionStyle(isRtl)]}>
-        {copy.noUpcomingSubtitle}
+        {t("providerDashboardNoUpcomingSubtitle")}
       </Text>
-    </View>
-  );
-}
-
-type PerformanceRowProps = {
-  icon: IconName;
-  label: string;
-  value: string;
-  isRtl: boolean;
-};
-
-function PerformanceRow({ icon, label, value, isRtl }: PerformanceRowProps) {
-  return (
-    <View
-      style={[
-        styles.performanceRow,
-        {
-          flexDirection: isRtl ? "row-reverse" : "row",
-        },
-      ]}
-    >
-      <View style={styles.performanceIcon}>
-        <Ionicons name={icon} size={19} color={KhedmatPalette.blue500} />
-      </View>
-
-      <View
-        style={[
-          styles.performanceCopy,
-          {
-            flexDirection: isRtl ? "row-reverse" : "row",
-          },
-        ]}
-      >
-        <Text style={[styles.performanceLabel, directionStyle(isRtl)]}>
-          {label}
-        </Text>
-
-        <Text
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.75}
-          style={[styles.performanceValue, directionStyle(isRtl)]}
-        >
-          {value}
-        </Text>
-      </View>
     </View>
   );
 }
@@ -1500,6 +1187,13 @@ function formatDigits(value: string, localized: boolean): string {
   return value.replace(/\d/g, (digit) => digits[digit] ?? digit);
 }
 
+function formatDashboardCountMessage(
+  count: string,
+  suffix: string,
+): string {
+  return `${count} ${suffix}`;
+}
+
 function normalizeLanguage(language: string): LanguageName {
   if (language === "Dari") {
     return "Dari";
@@ -1520,343 +1214,11 @@ function directionStyle(isRtl: boolean) {
   };
 }
 
-function getDashboardCopy(language: LanguageName) {
-  if (language === "Dari") {
-    return {
-      eyebrow: "پنل ارائه‌دهنده",
-      greeting: "سلام",
-
-      heroTitle: "امروز کارهای خود را مدیریت کنید",
-
-      heroSubtitle:
-        "درخواست‌های تازه، برنامهٔ کاری و عملکرد حرفه‌ای خود را در یک‌جا ببینید.",
-
-      notifications: "اعلان‌ها",
-      openProfile: "باز کردن پروفایل",
-
-      currentStatus: "وضعیت فعلی",
-
-      availableTitle: "آمادهٔ دریافت کار",
-
-      unavailableTitle: "موقتاً در دسترس نیستید",
-
-      availableSubtitle: "مشتریان می‌توانند شما را در نتایج فعال ببینند.",
-
-      unavailableSubtitle: "تا فعال‌سازی دوباره، درخواست جدید دریافت نمی‌کنید.",
-
-      availabilityControl: "وضعیت آمادگی",
-
-      todayRevenue: "درآمد امروز",
-
-      todayJobs: "کارهای امروز",
-
-      newRequests: "درخواست جدید",
-
-      completedJobs: "کار تکمیل‌شده",
-
-      newRequestsTitle: "درخواست‌های جدید",
-
-      newRequestsCount: (count: string) =>
-        `${count} درخواست منتظر پاسخ شما است.`,
-
-      noNewRequestsTitle: "درخواست تازه‌ای ندارید",
-
-      noNewRequestsSubtitle:
-        "درخواست‌های تازهٔ مشتریان در این بخش نمایش داده می‌شوند.",
-
-      viewAll: "مشاهده همه",
-
-      freshRequest: "درخواست تازه",
-
-      estimated: "تخمینی",
-
-      quickAccess: "دسترسی سریع",
-
-      quickAccessSubtitle: "ابزارهای اصلی مدیریت کار",
-
-      quickRequests: "درخواست‌ها",
-
-      quickRequestsSubtitle: "بررسی کارهای تازه",
-
-      quickCalendar: "تقویم کاری",
-
-      quickCalendarSubtitle: "مدیریت برنامه",
-
-      quickMessages: "پیام‌ها",
-
-      quickMessagesSubtitle: "گفتگو با مشتریان",
-
-      quickProfile: "پروفایل حرفه‌ای",
-
-      quickProfileSubtitle: "خدمات و معلومات",
-
-      upcomingTitle: "برنامهٔ آینده",
-
-      upcomingSubtitle: "درخواست‌ها و کارهای نزدیک",
-
-      calendar: "تقویم",
-
-      confirmed: "تأییدشده",
-
-      pending: "در انتظار",
-
-      customer: "مشتری",
-
-      noUpcomingTitle: "برنامه‌ای ثبت نشده است",
-
-      noUpcomingSubtitle:
-        "درخواست‌های پذیرفته‌شده و آینده در این بخش نمایش داده می‌شوند.",
-
-      performance: "عملکرد شما",
-
-      performanceSubtitle: "خلاصهٔ فعالیت حساب حرفه‌ای",
-
-      customerRating: "امتیاز مشتریان",
-
-      averageResponse: "میانگین زمان پاسخ",
-
-      responseRate: "نرخ پاسخ‌گویی",
-
-      totalRevenue: "مجموع درآمد ثبت‌شده",
-
-      ratingValue: (value: string) => `${value} از ۵`,
-
-      minutesValue: (value: string) => `${value} دقیقه`,
-
-      tipTitle: "پروفایل کامل، درخواست بیشتر",
-
-      tipSubtitle:
-        "افزودن نمونه‌کار، توضیحات دقیق و قیمت روشن می‌تواند اعتماد مشتریان را افزایش دهد.",
-
-      improveProfile: "تکمیل پروفایل حرفه‌ای",
-    };
-  }
-
-  if (language === "Pashto") {
-    return {
-      eyebrow: "د خدمت وړاندې کوونکي پینل",
-      greeting: "سلام",
-
-      heroTitle: "د نن ورځې کارونه مدیریت کړئ",
-
-      heroSubtitle:
-        "نوې غوښتنې، کاري مهال‌وېش او خپل مسلکي فعالیت په یوه ځای کې وګورئ.",
-
-      notifications: "خبرتیاوې",
-
-      openProfile: "پروفایل پرانیستل",
-
-      currentStatus: "اوسنی حالت",
-
-      availableTitle: "د کار ترلاسه کولو ته چمتو",
-
-      unavailableTitle: "اوس مهال شتون نه لرئ",
-
-      availableSubtitle: "پیرودونکي کولی شي تاسو په فعالو پایلو کې وګوري.",
-
-      unavailableSubtitle: "تر بیا فعالولو پورې به نوې غوښتنې ترلاسه نه کړئ.",
-
-      availabilityControl: "د چمتووالي حالت",
-
-      todayRevenue: "د نن ورځې عاید",
-
-      todayJobs: "د نن ورځې کارونه",
-
-      newRequests: "نوې غوښتنې",
-
-      completedJobs: "بشپړ شوي کارونه",
-
-      newRequestsTitle: "نوې غوښتنې",
-
-      newRequestsCount: (count: string) =>
-        `${count} غوښتنې ستاسو ځواب ته په تمه دي.`,
-
-      noNewRequestsTitle: "نوې غوښتنه نشته",
-
-      noNewRequestsSubtitle: "د پیرودونکو نوې غوښتنې به دلته ښکاره شي.",
-
-      viewAll: "ټول وګورئ",
-
-      freshRequest: "نوې غوښتنه",
-
-      estimated: "اټکلي",
-
-      quickAccess: "چټک لاسرسی",
-
-      quickAccessSubtitle: "د کار د مدیریت اصلي وسایل",
-
-      quickRequests: "غوښتنې",
-
-      quickRequestsSubtitle: "نوې دندې وګورئ",
-
-      quickCalendar: "کاري کلیز",
-
-      quickCalendarSubtitle: "مهال‌وېش مدیریت کړئ",
-
-      quickMessages: "پیغامونه",
-
-      quickMessagesSubtitle: "له پیرودونکو سره خبرې",
-
-      quickProfile: "مسلکي پروفایل",
-
-      quickProfileSubtitle: "خدمتونه او معلومات",
-
-      upcomingTitle: "راتلونکی مهال‌وېش",
-
-      upcomingSubtitle: "نږدې غوښتنې او کارونه",
-
-      calendar: "کلیز",
-
-      confirmed: "تایید شوی",
-
-      pending: "په تمه",
-
-      customer: "پیرودونکی",
-
-      noUpcomingTitle: "راتلونکی کار نشته",
-
-      noUpcomingSubtitle: "منل شوې او راتلونکې غوښتنې به دلته ښکاره شي.",
-
-      performance: "ستاسو فعالیت",
-
-      performanceSubtitle: "د مسلکي حساب لنډیز",
-
-      customerRating: "د پیرودونکو امتیاز",
-
-      averageResponse: "د ځواب منځنی وخت",
-
-      responseRate: "د ځواب کچه",
-
-      totalRevenue: "ثبت شوی ټول عاید",
-
-      ratingValue: (value: string) => `${value} له ۵ څخه`,
-
-      minutesValue: (value: string) => `${value} دقیقې`,
-
-      tipTitle: "بشپړ پروفایل، ډېرې غوښتنې",
-
-      tipSubtitle:
-        "نمونې، روښانه توضیحات او څرګندې بیې د پیرودونکو باور زیاتوي.",
-
-      improveProfile: "مسلکي پروفایل بشپړول",
-    };
-  }
-
-  return {
-    eyebrow: "Provider workspace",
-    greeting: "Hello",
-
-    heroTitle: "Manage today’s work",
-
-    heroSubtitle:
-      "Review new requests, your schedule and professional performance in one place.",
-
-    notifications: "Notifications",
-
-    openProfile: "Open profile",
-
-    currentStatus: "Current status",
-
-    availableTitle: "Available for work",
-
-    unavailableTitle: "Temporarily unavailable",
-
-    availableSubtitle: "Customers can find you in active provider results.",
-
-    unavailableSubtitle:
-      "You will not receive new requests until you become available again.",
-
-    availabilityControl: "Availability status",
-
-    todayRevenue: "Today’s revenue",
-
-    todayJobs: "Today’s jobs",
-
-    newRequests: "New requests",
-
-    completedJobs: "Completed jobs",
-
-    newRequestsTitle: "New requests",
-
-    newRequestsCount: (count: string) =>
-      `${count} requests are waiting for your response.`,
-
-    noNewRequestsTitle: "No new requests",
-
-    noNewRequestsSubtitle: "New customer requests will appear in this section.",
-
-    viewAll: "View all",
-
-    freshRequest: "New request",
-
-    estimated: "Estimated",
-
-    quickAccess: "Quick access",
-
-    quickAccessSubtitle: "Your main work-management tools",
-
-    quickRequests: "Requests",
-
-    quickRequestsSubtitle: "Review new jobs",
-
-    quickCalendar: "Work calendar",
-
-    quickCalendarSubtitle: "Manage your schedule",
-
-    quickMessages: "Messages",
-
-    quickMessagesSubtitle: "Chat with customers",
-
-    quickProfile: "Professional profile",
-
-    quickProfileSubtitle: "Services and information",
-
-    upcomingTitle: "Upcoming schedule",
-
-    upcomingSubtitle: "Your nearest requests and jobs",
-
-    calendar: "Calendar",
-
-    confirmed: "Confirmed",
-
-    pending: "Pending",
-
-    customer: "Customer",
-
-    noUpcomingTitle: "No upcoming work",
-
-    noUpcomingSubtitle: "Accepted and upcoming requests will appear here.",
-
-    performance: "Your performance",
-
-    performanceSubtitle: "Professional-account activity summary",
-
-    customerRating: "Customer rating",
-
-    averageResponse: "Average response time",
-
-    responseRate: "Response rate",
-
-    totalRevenue: "Recorded revenue",
-
-    ratingValue: (value: string) => `${value} out of 5`,
-
-    minutesValue: (value: string) => `${value} min`,
-
-    tipTitle: "Complete profiles receive more requests",
-
-    tipSubtitle:
-      "Work samples, clear descriptions and transparent pricing can improve customer trust.",
-
-    improveProfile: "Improve professional profile",
-  };
-}
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
 
-    backgroundColor: KhedmatPalette.blue050,
+    backgroundColor: KhedmatPalette.white,
   },
 
   stateContainer: {

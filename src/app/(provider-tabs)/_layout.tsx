@@ -19,11 +19,6 @@ import { useLanguage } from "../../context/languagecontext";
 import { useNotifications } from "../../context/notification-context";
 import { useActiveProvider } from "../../hooks/use-active-provider";
 
-type LanguageName =
-  | "English"
-  | "Dari"
-  | "Pashto";
-
 type TabName =
   | "dashboard"
   | "requests"
@@ -44,35 +39,21 @@ type TabIconProps = {
 };
 
 export default function ProviderTabsLayout() {
-  const { language } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const { bookings } = useBooking();
 
   const {
     notifications,
-    getUnreadCount,
   } = useNotifications();
 
   const {
-  provider,
-} = useActiveProvider();
+    provider,
+  } = useActiveProvider();
 
-  const activeLanguage =
-    normalizeLanguage(language);
+  const isRtl = isRTL;
 
-  const isRtl =
-    activeLanguage === "Dari" ||
-    activeLanguage === "Pashto";
-
-  const copy =
-    getTabCopy(activeLanguage);
-
-  /*
-   * Preserve the existing prototype fallback until
-   * local provider registration creates real IDs.
-   */
-  
-
-const providerId = provider?.id;
+  const providerId =
+    provider?.id;
 
   const providerBookings =
     useMemo(
@@ -110,20 +91,23 @@ const providerId = provider?.id;
     }, [providerBookings]);
 
   const unreadNotificationsCount =
-  useMemo(() => {
-    if (!providerId) {
-      return 0;
-    }
+    useMemo(() => {
+      if (!providerId) {
+        return 0;
+      }
 
-    return getUnreadCount(
-      "provider",
+      return notifications.filter(
+        (notification) =>
+          notification.recipient ===
+            "provider" &&
+          notification.recipientId ===
+            providerId &&
+          !notification.read,
+      ).length;
+    }, [
+      notifications,
       providerId,
-    );
-  }, [
-    getUnreadCount,
-    notifications,
-    providerId,
-  ]);
+    ]);
 
   const renderLabel = (
     tab: TabName,
@@ -145,7 +129,7 @@ const providerId = provider?.id;
           styles.labelFocused,
       ]}
     >
-      {copy[tab]}
+      {t(getTabTranslationKey(tab))}
     </Text>
   );
 
@@ -179,7 +163,7 @@ const providerId = provider?.id;
       <Tabs.Screen
         name="index"
         options={{
-          title: copy.dashboard,
+          title: t("providerTabDashboard"),
 
           tabBarLabel: ({
             color,
@@ -208,7 +192,7 @@ const providerId = provider?.id;
       <Tabs.Screen
         name="requests"
         options={{
-          title: copy.requests,
+          title: t("providerTabRequests"),
 
           tabBarLabel: ({
             color,
@@ -240,7 +224,7 @@ const providerId = provider?.id;
       <Tabs.Screen
         name="calendar"
         options={{
-          title: copy.calendar,
+          title: t("providerTabCalendar"),
 
           tabBarLabel: ({
             color,
@@ -272,8 +256,7 @@ const providerId = provider?.id;
       <Tabs.Screen
         name="notifications"
         options={{
-          title:
-            copy.notifications,
+          title: t("providerTabNotifications"),
 
           tabBarLabel: ({
             color,
@@ -305,7 +288,7 @@ const providerId = provider?.id;
       <Tabs.Screen
         name="messages"
         options={{
-          title: copy.messages,
+          title: t("providerTabMessages"),
 
           tabBarLabel: ({
             color,
@@ -334,7 +317,7 @@ const providerId = provider?.id;
       <Tabs.Screen
         name="profile"
         options={{
-          title: copy.profile,
+          title: t("providerTabProfile"),
 
           tabBarLabel: ({
             color,
@@ -437,53 +420,36 @@ function formatDateId(
   return `${year}-${month}-${day}`;
 }
 
-function normalizeLanguage(
-  language: string,
-): LanguageName {
-  if (language === "Dari") {
-    return "Dari";
+function getTabTranslationKey(
+  tab: TabName,
+):
+  | "providerTabDashboard"
+  | "providerTabRequests"
+  | "providerTabCalendar"
+  | "providerTabNotifications"
+  | "providerTabMessages"
+  | "providerTabProfile" {
+  if (tab === "requests") {
+    return "providerTabRequests";
   }
 
-  if (language === "Pashto") {
-    return "Pashto";
+  if (tab === "calendar") {
+    return "providerTabCalendar";
   }
 
-  return "English";
-}
-
-function getTabCopy(
-  language: LanguageName,
-): Record<TabName, string> {
-  if (language === "Dari") {
-    return {
-      dashboard: "داشبورد",
-      requests: "درخواست‌ها",
-      calendar: "تقویم",
-      notifications: "اعلان‌ها",
-      messages: "پیام‌ها",
-      profile: "پروفایل",
-    };
+  if (tab === "notifications") {
+    return "providerTabNotifications";
   }
 
-  if (language === "Pashto") {
-    return {
-      dashboard: "ډشبورډ",
-      requests: "غوښتنې",
-      calendar: "کلیز",
-      notifications: "خبرتیاوې",
-      messages: "پیغامونه",
-      profile: "پروفایل",
-    };
+  if (tab === "messages") {
+    return "providerTabMessages";
   }
 
-  return {
-    dashboard: "Dashboard",
-    requests: "Requests",
-    calendar: "Calendar",
-    notifications: "Alerts",
-    messages: "Messages",
-    profile: "Profile",
-  };
+  if (tab === "profile") {
+    return "providerTabProfile";
+  }
+
+  return "providerTabDashboard";
 }
 
 const styles = StyleSheet.create({

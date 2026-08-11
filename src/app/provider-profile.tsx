@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ComponentProps, useMemo, useState } from "react";
+import { ComponentProps, useMemo } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -21,15 +21,13 @@ import {
   Typography,
 } from "../constants/theme";
 import { useLanguage } from "../context/languagecontext";
-import type { ProviderProfile, ProviderReview } from "../types/provider";
 import { useProviderById } from "../hooks/use-provider-by-id";
 import { useProviders } from "../hooks/use-providers";
+import type { ProviderProfile, ProviderReview } from "../types/provider";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
 type LanguageName = "English" | "Dari" | "Pashto";
-
-type ProfileCopy = ReturnType<typeof getProfileCopy>;
 
 const SUCCESS = "#268A57";
 const SUCCESS_SOFT = "#E8F6EE";
@@ -46,13 +44,11 @@ export default function ProviderProfileScreen() {
     providerId?: string | string[];
   }>();
 
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   const activeLanguage = normalizeLanguage(language);
 
   const isRtl = activeLanguage === "Dari" || activeLanguage === "Pashto";
-
-  const copy = getProfileCopy(activeLanguage);
 
   const providerId = getSingleParam(params.providerId);
 
@@ -79,11 +75,7 @@ export default function ProviderProfileScreen() {
           />
 
           <Text style={[styles.providerStateTitle, directionStyle(isRtl)]}>
-            {activeLanguage === "Dari"
-              ? "پروفایل ارائه‌دهنده در حال بارگذاری است..."
-              : activeLanguage === "Pashto"
-                ? "د خدمت چمتو کوونکي پروفایل بارېږي..."
-                : "Loading provider profile..."}
+            {t("publicProviderProfileLoading")}
           </Text>
         </View>
       </SafeAreaView>
@@ -101,19 +93,11 @@ export default function ProviderProfileScreen() {
           />
 
           <Text style={[styles.providerStateTitle, directionStyle(isRtl)]}>
-            {activeLanguage === "Dari"
-              ? "ارائه‌دهنده پیدا نشد"
-              : activeLanguage === "Pashto"
-                ? "د خدمت چمتو کوونکی ونه موندل شو"
-                : "Provider not found"}
+            {t("publicProviderProfileNotFoundTitle")}
           </Text>
 
           <Text style={[styles.providerStateBody, directionStyle(isRtl)]}>
-            {activeLanguage === "Dari"
-              ? "ممکن است این حساب حذف شده باشد یا هنوز در دسترس نباشد."
-              : activeLanguage === "Pashto"
-                ? "کېدای شي دا حساب لرې شوی وي یا لا تر اوسه موجود نه وي."
-                : "This provider account may have been removed or is not available yet."}
+            {t("publicProviderProfileNotFoundMessage")}
           </Text>
 
           {error ? (
@@ -128,11 +112,7 @@ export default function ProviderProfileScreen() {
               ]}
             >
               <Text style={styles.retryButtonText}>
-                {activeLanguage === "Dari"
-                  ? "تلاش دوباره"
-                  : activeLanguage === "Pashto"
-                    ? "بیا هڅه"
-                    : "Try again"}
+                {t("publicProviderProfileTryAgain")}
               </Text>
             </Pressable>
           ) : null}
@@ -145,7 +125,7 @@ export default function ProviderProfileScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <Text style={styles.backStateButtonText}>{copy.back}</Text>
+            <Text style={styles.backStateButtonText}>{t("publicProviderProfileBack")}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -164,15 +144,13 @@ function ProviderProfileContent({
 }) {
   const router = useRouter();
 
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   const activeLanguage = normalizeLanguage(language);
 
   const isRtl = activeLanguage === "Dari" || activeLanguage === "Pashto";
 
   const localizedDigits = activeLanguage !== "English";
-
-  const copy = getProfileCopy(activeLanguage);
 
   const relatedProviders = useMemo(
     () =>
@@ -185,8 +163,6 @@ function ProviderProfileContent({
         .slice(0, 3),
     [provider.categoryId, provider.id, providers],
   );
-
-  const [saved, setSaved] = useState(false);
 
   const handleBook = () => {
     router.push({
@@ -209,7 +185,11 @@ function ProviderProfileContent({
   const handleShare = async () => {
     try {
       await Share.share({
-        message: copy.shareMessage(provider.name, provider.profession),
+        message: formatPublicProviderShare(
+          t("publicProviderProfileShareTemplate"),
+          provider.name,
+          provider.profession,
+        ),
       });
     } catch (error) {
       console.error("Provider profile sharing failed:", error);
@@ -242,7 +222,7 @@ function ProviderProfileContent({
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={copy.back}
+              accessibilityLabel={t("publicProviderProfileBack")}
               onPress={() => router.back()}
               style={({ pressed }) => [
                 styles.iconButton,
@@ -257,7 +237,7 @@ function ProviderProfileContent({
             </Pressable>
 
             <Text style={[styles.topBarTitle, directionStyle(isRtl)]}>
-              {copy.pageTitle}
+              {t("publicProviderProfilePageTitle")}
             </Text>
 
             <View
@@ -270,7 +250,7 @@ function ProviderProfileContent({
             >
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={copy.share}
+                accessibilityLabel={t("publicProviderProfileShare")}
                 onPress={handleShare}
                 style={({ pressed }) => [
                   styles.iconButton,
@@ -284,25 +264,6 @@ function ProviderProfileContent({
                 />
               </Pressable>
 
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={saved ? copy.removeSaved : copy.save}
-                accessibilityState={{
-                  selected: saved,
-                }}
-                onPress={() => setSaved((current) => !current)}
-                style={({ pressed }) => [
-                  styles.iconButton,
-                  saved && styles.savedButton,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons
-                  name={saved ? "heart" : "heart-outline"}
-                  size={21}
-                  color={saved ? ERROR : KhedmatPalette.navy700}
-                />
-              </Pressable>
             </View>
           </View>
 
@@ -370,12 +331,10 @@ function ProviderProfileContent({
                 <Text style={styles.locationDivider}>•</Text>
 
                 <Text style={[styles.distanceText, directionStyle(isRtl)]}>
-                  {copy.distance(
-                    formatDigits(
+                  {formatPublicProviderSuffix(formatDigits(
                       provider.distanceKm.toFixed(1),
                       localizedDigits,
-                    ),
-                  )}
+                    ), t("publicProviderProfileDistanceSuffix"))}
                 </Text>
               </View>
 
@@ -395,8 +354,8 @@ function ProviderProfileContent({
                   }
                   text={
                     provider.availableToday
-                      ? copy.availableToday
-                      : copy.unavailableToday
+                      ? t("publicProviderProfileAvailableToday")
+                      : t("publicProviderProfileUnavailableToday")
                   }
                   tone={provider.availableToday ? "success" : "muted"}
                   isRtl={isRtl}
@@ -405,7 +364,7 @@ function ProviderProfileContent({
                 {provider.acceptsUrgentRequests ? (
                   <StatusBadge
                     icon="flash"
-                    text={copy.urgentRequests}
+                    text={t("publicProviderProfileUrgentRequests")}
                     tone="warning"
                     isRtl={isRtl}
                   />
@@ -414,7 +373,7 @@ function ProviderProfileContent({
                 {provider.instantBooking ? (
                   <StatusBadge
                     icon="calendar-outline"
-                    text={copy.instantBooking}
+                    text={t("publicProviderProfileInstantBooking")}
                     tone="info"
                     isRtl={isRtl}
                   />
@@ -427,9 +386,7 @@ function ProviderProfileContent({
             <StatCard
               icon="star"
               value={formatDigits(provider.rating.toFixed(1), localizedDigits)}
-              label={copy.reviews(
-                formatDigits(provider.reviewCount.toString(), localizedDigits),
-              )}
+              label={formatPublicProviderSuffix(formatDigits(provider.reviewCount.toString(), localizedDigits), t("publicProviderProfileReviewsSuffix"))}
               iconColor={WARNING}
               isRtl={isRtl}
             />
@@ -440,7 +397,7 @@ function ProviderProfileContent({
                 provider.completedJobs.toString(),
                 localizedDigits,
               )}
-              label={copy.completedJobs}
+              label={t("publicProviderProfileCompletedJobs")}
               isRtl={isRtl}
             />
 
@@ -451,7 +408,7 @@ function ProviderProfileContent({
                   ? provider.yearsExperience
                   : formatDigits(provider.yearsExperience, true)
               }
-              label={copy.workExperience}
+              label={t("publicProviderProfileWorkExperience")}
               isRtl={isRtl}
             />
           </View>
@@ -462,35 +419,32 @@ function ProviderProfileContent({
                 provider.responseRate.toString(),
                 localizedDigits,
               )}%`}
-              label={copy.responseRate}
+              label={t("publicProviderProfileResponseRate")}
               isRtl={isRtl}
             />
 
             <View style={styles.metricDivider} />
 
             <ResponseMetric
-              value={copy.minutes(
-                formatDigits(
+              value={formatPublicProviderSuffix(formatDigits(
                   provider.averageResponseMinutes.toString(),
                   localizedDigits,
-                ),
-              )}
-              label={copy.responseTime}
+                ), t("publicProviderProfileMinutesSuffix"))}
+              label={t("publicProviderProfileResponseTime")}
               isRtl={isRtl}
             />
 
             <View style={styles.metricDivider} />
 
             <ResponseMetric
-              value={copy.fromPrice(
-                formatCurrency(provider.minimumPrice, activeLanguage),
+              value={formatPublicProviderPrefix(t("publicProviderProfileFromPrefix"), formatCurrency(provider.minimumPrice, activeLanguage),
               )}
-              label={copy.startingPrice}
+              label={t("publicProviderProfileStartingPrice")}
               isRtl={isRtl}
             />
           </View>
 
-          <ProfileSection title={copy.servicesTitle} isRtl={isRtl}>
+          <ProfileSection title={t("publicProviderProfileServicesTitle")} isRtl={isRtl}>
             <View style={styles.servicesGrid}>
               {provider.services.map((service) => (
                 <View key={service.id} style={styles.serviceCard}>
@@ -507,8 +461,7 @@ function ProviderProfileContent({
                   </Text>
 
                   <Text style={[styles.servicePrice, directionStyle(isRtl)]}>
-                    {copy.fromPrice(
-                      formatCurrency(service.estimatedPrice, activeLanguage),
+                    {formatPublicProviderPrefix(t("publicProviderProfileFromPrefix"), formatCurrency(service.estimatedPrice, activeLanguage),
                     )}
                   </Text>
                 </View>
@@ -516,7 +469,7 @@ function ProviderProfileContent({
             </View>
           </ProfileSection>
 
-          <ProfileSection title={copy.aboutTitle} isRtl={isRtl}>
+          <ProfileSection title={t("publicProviderProfileAboutTitle")} isRtl={isRtl}>
             <View style={styles.descriptionCard}>
               <Text style={[styles.descriptionText, directionStyle(isRtl)]}>
                 {provider.description}
@@ -524,16 +477,18 @@ function ProviderProfileContent({
             </View>
           </ProfileSection>
 
-          <ProfileSection title={copy.scheduleTitle} isRtl={isRtl}>
+          <ProfileSection title={t("publicProviderProfileScheduleTitle")} isRtl={isRtl}>
             <View style={styles.detailsCard}>
               <ProfileDetail
                 icon="navigate-outline"
-                label={copy.serviceRadius}
-                value={copy.radiusValue(
+                label={t("publicProviderProfileServiceRadius")}
+                value={formatPublicProviderRadius(
+                  t("publicProviderProfileRadiusPrefix"),
                   formatDigits(
                     provider.serviceRadiusKm.toString(),
                     localizedDigits,
                   ),
+                  t("publicProviderProfileRadiusSuffix"),
                 )}
                 isRtl={isRtl}
               />
@@ -542,7 +497,7 @@ function ProviderProfileContent({
 
               <ProfileDetail
                 icon="calendar-outline"
-                label={copy.workingDays}
+                label={t("publicProviderProfileWorkingDays")}
                 value={formatWorkingDays(provider.workingDays, activeLanguage)}
                 isRtl={isRtl}
               />
@@ -551,10 +506,17 @@ function ProviderProfileContent({
 
               <ProfileDetail
                 icon="time-outline"
-                label={copy.workingHours}
-                value={copy.timeRange(
-                  formatTime(provider.startTime, activeLanguage),
-                  formatTime(provider.endTime, activeLanguage),
+                label={t("publicProviderProfileWorkingHours")}
+                value={formatPublicProviderTimeRange(
+                  formatTime(
+                    provider.startTime,
+                    activeLanguage,
+                  ),
+                  formatTime(
+                    provider.endTime,
+                    activeLanguage,
+                  ),
+                  t("publicProviderProfileTimeConnector"),
                 )}
                 isRtl={isRtl}
               />
@@ -562,15 +524,7 @@ function ProviderProfileContent({
           </ProfileSection>
 
           <ProfileSection
-            title={copy.portfolioTitle}
-            actionLabel={
-              provider.portfolio.length > 0 ? copy.viewAll : undefined
-            }
-            onAction={
-              provider.portfolio.length > 0
-                ? () => console.log("Open portfolio:", provider.id)
-                : undefined
-            }
+            title={t("publicProviderProfilePortfolioTitle")}
             isRtl={isRtl}
           >
             {provider.portfolio.length > 0 ? (
@@ -604,30 +558,15 @@ function ProviderProfileContent({
             ) : (
               <EmptySection
                 icon="images-outline"
-                title={copy.noPortfolioTitle}
-                text={copy.noPortfolioText}
+                title={t("publicProviderProfileNoPortfolioTitle")}
+                text={t("publicProviderProfileNoPortfolioText")}
                 isRtl={isRtl}
               />
             )}
           </ProfileSection>
 
           <ProfileSection
-            title={copy.reviewsTitle}
-            actionLabel={
-              provider.reviewCount > 0
-                ? copy.allReviews(
-                    formatDigits(
-                      provider.reviewCount.toString(),
-                      localizedDigits,
-                    ),
-                  )
-                : undefined
-            }
-            onAction={
-              provider.reviewCount > 0
-                ? () => console.log("Open reviews:", provider.id)
-                : undefined
-            }
+            title={t("publicProviderProfileReviewsTitle")}
             isRtl={isRtl}
           >
             {provider.reviews.length > 0 ? (
@@ -644,15 +583,15 @@ function ProviderProfileContent({
             ) : (
               <EmptySection
                 icon="chatbubble-ellipses-outline"
-                title={copy.noReviewsTitle}
-                text={copy.noReviewsText}
+                title={t("publicProviderProfileNoReviewsTitle")}
+                text={t("publicProviderProfileNoReviewsText")}
                 isRtl={isRtl}
               />
             )}
           </ProfileSection>
 
           {relatedProviders.length > 0 ? (
-            <ProfileSection title={copy.relatedTitle} isRtl={isRtl}>
+            <ProfileSection title={t("publicProviderProfileRelatedTitle")} isRtl={isRtl}>
               <View style={styles.relatedList}>
                 {relatedProviders.map((relatedProvider) => (
                   <Pressable
@@ -769,11 +708,11 @@ function ProviderProfileContent({
               ]}
             >
               <Text style={[styles.safetyTitle, directionStyle(isRtl)]}>
-                {provider.verified ? copy.verifiedTitle : copy.unverifiedTitle}
+                {provider.verified ? t("publicProviderProfileVerifiedTitle") : t("publicProviderProfileUnverifiedTitle")}
               </Text>
 
               <Text style={[styles.safetyText, directionStyle(isRtl)]}>
-                {provider.verified ? copy.verifiedText : copy.unverifiedText}
+                {provider.verified ? t("publicProviderProfileVerifiedText") : t("publicProviderProfileUnverifiedText")}
               </Text>
             </View>
           </View>
@@ -783,7 +722,7 @@ function ProviderProfileContent({
           <View style={styles.footerContent}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={copy.book}
+              accessibilityLabel={t("publicProviderProfileBook")}
               onPress={handleBook}
               style={({ pressed }) => [
                 styles.primaryButton,
@@ -805,14 +744,14 @@ function ProviderProfileContent({
                 />
 
                 <Text style={[styles.primaryButtonText, directionStyle(isRtl)]}>
-                  {copy.book}
+                  {t("publicProviderProfileBook")}
                 </Text>
               </View>
             </Pressable>
 
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={copy.message}
+              accessibilityLabel={t("publicProviderProfileMessage")}
               onPress={handleMessage}
               style={({ pressed }) => [
                 styles.messageButton,
@@ -826,7 +765,7 @@ function ProviderProfileContent({
               />
 
               <Text style={[styles.messageButtonText, directionStyle(isRtl)]}>
-                {copy.message}
+                {t("publicProviderProfileMessage")}
               </Text>
             </Pressable>
           </View>
@@ -1362,160 +1301,44 @@ function formatDigits(value: string, localized: boolean): string {
   return value.replace(/\d/g, (digit) => digits[digit] ?? digit);
 }
 
-function getProfileCopy(language: LanguageName) {
-  if (language === "Dari") {
-    return {
-      back: "بازگشت",
-      pageTitle: "پروفایل ارائه‌دهنده",
-      share: "اشتراک‌گذاری پروفایل",
-      save: "ذخیره ارائه‌دهنده",
-      removeSaved: "حذف از ذخیره‌شده‌ها",
-      shareMessage: (name: string, profession: string) =>
-        `${name} — ${profession} در خدمت`,
-      distance: (value: string) => `${value} کیلومتر`,
-      availableToday: "امروز آمادهٔ کار",
-      unavailableToday: "امروز در دسترس نیست",
-      urgentRequests: "درخواست فوری",
-      instantBooking: "رزرو فوری",
-      reviews: (value: string) => `${value} نظر`,
-      completedJobs: "کار تکمیل‌شده",
-      workExperience: "تجربهٔ کاری",
-      responseRate: "نرخ پاسخ",
-      responseTime: "زمان پاسخ",
-      startingPrice: "قیمت ابتدایی",
-      minutes: (value: string) => `${value} دقیقه`,
-      fromPrice: (value: string) => `از ${value}`,
-      servicesTitle: "خدمات ارائه‌شده",
-      aboutTitle: "دربارهٔ ارائه‌دهنده",
-      scheduleTitle: "محدوده و برنامهٔ کاری",
-      serviceRadius: "محدودهٔ خدمات",
-      radiusValue: (value: string) => `تا ${value} کیلومتر`,
-      workingDays: "روزهای کاری",
-      workingHours: "ساعت کاری",
-      timeRange: (start: string, end: string) => `${start} تا ${end}`,
-      portfolioTitle: "نمونه‌کارها",
-      viewAll: "مشاهده همه",
-      noPortfolioTitle: "هنوز نمونه‌کاری ثبت نشده است",
-      noPortfolioText:
-        "نمونه‌کارهای این ارائه‌دهنده پس از افزودن در این بخش نمایش داده می‌شوند.",
-      reviewsTitle: "نظرهای مشتریان",
-      allReviews: (value: string) => `همهٔ ${value} نظر`,
-      noReviewsTitle: "هنوز نظری ثبت نشده است",
-      noReviewsText:
-        "نظرهای مشتریان پس از تکمیل خدمات در این بخش نمایش داده می‌شوند.",
-      relatedTitle: "ارائه‌دهندگان مشابه",
-      verifiedTitle: "ارائه‌دهندهٔ تأییدشده",
-      verifiedText:
-        "هویت و معلومات حرفه‌ای این ارائه‌دهنده توسط خدمت بررسی شده است.",
-      unverifiedTitle: "حساب هنوز تأیید نشده است",
-      unverifiedText:
-        "پیش از رزرو، جزئیات حساب، نظرها و شرایط خدمت را با دقت بررسی کنید.",
-      book: "رزرو خدمت",
-      message: "پیام",
-    };
-  }
+function formatPublicProviderShare(
+  template: string,
+  name: string,
+  profession: string,
+): string {
+  return template
+    .replace("{name}", name)
+    .replace("{profession}", profession);
+}
 
-  if (language === "Pashto") {
-    return {
-      back: "بېرته",
-      pageTitle: "د خدمت وړاندې کوونکي پروفایل",
-      share: "پروفایل شریک کړئ",
-      save: "خدمت وړاندې کوونکی خوندي کړئ",
-      removeSaved: "له خوندي شوو لرې کړئ",
-      shareMessage: (name: string, profession: string) =>
-        `${name} — ${profession} په خدمت کې`,
-      distance: (value: string) => `${value} کیلومتره`,
-      availableToday: "نن کار ته چمتو دی",
-      unavailableToday: "نن شتون نه لري",
-      urgentRequests: "بیړنۍ غوښتنې",
-      instantBooking: "فوري رزرف",
-      reviews: (value: string) => `${value} نظرونه`,
-      completedJobs: "بشپړ شوي کارونه",
-      workExperience: "کاري تجربه",
-      responseRate: "د ځواب کچه",
-      responseTime: "د ځواب وخت",
-      startingPrice: "پیل بیه",
-      minutes: (value: string) => `${value} دقیقې`,
-      fromPrice: (value: string) => `له ${value}`,
-      servicesTitle: "وړاندې کېدونکي خدمتونه",
-      aboutTitle: "د خدمت وړاندې کوونکي په اړه",
-      scheduleTitle: "د خدمت ساحه او مهال‌وېش",
-      serviceRadius: "د خدمت ساحه",
-      radiusValue: (value: string) => `تر ${value} کیلومتره`,
-      workingDays: "کاري ورځې",
-      workingHours: "کاري ساعتونه",
-      timeRange: (start: string, end: string) => `له ${start} تر ${end}`,
-      portfolioTitle: "د کار نمونې",
-      viewAll: "ټول وګورئ",
-      noPortfolioTitle: "لا د کار نمونه نشته",
-      noPortfolioText:
-        "د دې خدمت وړاندې کوونکي د کار نمونې به له زیاتېدو وروسته دلته ښکاره شي.",
-      reviewsTitle: "د پیرودونکو نظرونه",
-      allReviews: (value: string) => `ټول ${value} نظرونه`,
-      noReviewsTitle: "لا کوم نظر نشته",
-      noReviewsText:
-        "د خدمت تر بشپړېدو وروسته د پیرودونکو نظرونه دلته ښکاره کېږي.",
-      relatedTitle: "ورته خدمت وړاندې کوونکي",
-      verifiedTitle: "تایید شوی خدمت وړاندې کوونکی",
-      verifiedText:
-        "د دې خدمت وړاندې کوونکي هویت او مسلکي معلومات د خدمت له خوا کتل شوي.",
-      unverifiedTitle: "حساب لا تایید شوی نه دی",
-      unverifiedText:
-        "تر رزرف مخکې د حساب جزئیات، نظرونه او د خدمت شرایط په دقت وګورئ.",
-      book: "خدمت رزرف کړئ",
-      message: "پیغام",
-    };
-  }
+function formatPublicProviderSuffix(
+  value: string,
+  suffix: string,
+): string {
+  return `${value} ${suffix}`;
+}
 
-  return {
-    back: "Back",
-    pageTitle: "Provider profile",
-    share: "Share provider profile",
-    save: "Save provider",
-    removeSaved: "Remove from saved providers",
-    shareMessage: (name: string, profession: string) =>
-      `${name} — ${profession} on Khedmat`,
-    distance: (value: string) => `${value} km away`,
-    availableToday: "Available today",
-    unavailableToday: "Unavailable today",
-    urgentRequests: "Urgent requests",
-    instantBooking: "Instant booking",
-    reviews: (value: string) => `${value} reviews`,
-    completedJobs: "Completed jobs",
-    workExperience: "Work experience",
-    responseRate: "Response rate",
-    responseTime: "Response time",
-    startingPrice: "Starting price",
-    minutes: (value: string) => `${value} min`,
-    fromPrice: (value: string) => `From ${value}`,
-    servicesTitle: "Services offered",
-    aboutTitle: "About the provider",
-    scheduleTitle: "Service area and schedule",
-    serviceRadius: "Service radius",
-    radiusValue: (value: string) => `Up to ${value} km`,
-    workingDays: "Working days",
-    workingHours: "Working hours",
-    timeRange: (start: string, end: string) => `${start} to ${end}`,
-    portfolioTitle: "Portfolio",
-    viewAll: "View all",
-    noPortfolioTitle: "No portfolio items yet",
-    noPortfolioText:
-      "This provider’s work samples will appear here after they are added.",
-    reviewsTitle: "Customer reviews",
-    allReviews: (value: string) => `All ${value} reviews`,
-    noReviewsTitle: "No reviews yet",
-    noReviewsText:
-      "Customer reviews will appear here after completed services.",
-    relatedTitle: "Similar providers",
-    verifiedTitle: "Verified provider",
-    verifiedText:
-      "This provider’s identity and professional information have been reviewed by Khedmat.",
-    unverifiedTitle: "Account not yet verified",
-    unverifiedText:
-      "Review the account details, customer reviews and service terms carefully before booking.",
-    book: "Book service",
-    message: "Message",
-  };
+function formatPublicProviderPrefix(
+  prefix: string,
+  value: string,
+): string {
+  return `${prefix} ${value}`;
+}
+
+function formatPublicProviderRadius(
+  prefix: string,
+  value: string,
+  suffix: string,
+): string {
+  return `${prefix} ${value} ${suffix}`;
+}
+
+function formatPublicProviderTimeRange(
+  start: string,
+  end: string,
+  connector: string,
+): string {
+  return `${start} ${connector} ${end}`;
 }
 
 const styles = StyleSheet.create({
@@ -1575,7 +1398,7 @@ const styles = StyleSheet.create({
 
   safeArea: {
     flex: 1,
-    backgroundColor: KhedmatPalette.blue050,
+    backgroundColor: KhedmatPalette.white,
   },
 
   root: {
@@ -1624,10 +1447,6 @@ const styles = StyleSheet.create({
     backgroundColor: KhedmatPalette.surface,
   },
 
-  savedButton: {
-    borderColor: "#E7B1AD",
-    backgroundColor: ERROR_SOFT,
-  },
 
   hero: {
     width: "100%",

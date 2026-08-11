@@ -1,35 +1,35 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 import {
-    Fonts,
-    KhedmatPalette,
-    Radius,
-    Shadows,
-    Spacing,
-    Typography,
+  Fonts,
+  KhedmatPalette,
+  Layout,
+  Radius,
+  Spacing,
+  Typography,
 } from "../constants/theme";
 import { useLanguage } from "../context/languagecontext";
 import { useActiveProvider } from "../hooks/use-active-provider";
 import {
-    listProviderServices,
-    listServices,
-    type ProviderServiceRow,
-    type ServiceRow,
+  listProviderServices,
+  listServices,
+  type ProviderServiceRow,
+  type ServiceRow,
 } from "../repositories/provider-account-repository";
 import { saveProviderServiceOffering } from "../services/provider-repository";
 
@@ -41,16 +41,21 @@ const MAX_SERVICES = 8;
 
 export default function ProviderServicesManagementScreen() {
   const router = useRouter();
-  const { language } = useLanguage();
+  const {
+    language,
+    t,
+    isRTL,
+  } = useLanguage();
   const {
     provider,
     isLoading: providerIsLoading,
     error: providerError,
   } = useActiveProvider();
 
-  const activeLanguage = normalizeLanguage(language);
-  const isRtl = activeLanguage === "Dari" || activeLanguage === "Pashto";
-  const copy = getCopy(activeLanguage);
+  const activeLanguage =
+    normalizeLanguage(language);
+
+  const isRtl = isRTL;
 
   const [catalog, setCatalog] = useState<ServiceRow[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -59,62 +64,64 @@ export default function ProviderServicesManagementScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
 
-    async function load(): Promise<void> {
-      if (!provider) {
-        if (!providerIsLoading) {
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      setIsLoading(true);
-      setLoadError(null);
-
-      try {
-        const [services, providerServices] = await Promise.all([
-          listServices(provider.categoryId),
-          listProviderServices(provider.id),
-        ]);
-
-        if (!mounted) {
+      async function load(): Promise<void> {
+        if (!provider) {
+          if (!providerIsLoading) {
+            setIsLoading(false);
+          }
           return;
         }
 
-        const catalogServiceIds = new Set(services.map((item) => item.id));
+        setIsLoading(true);
+        setLoadError(null);
 
-        const activeRows = providerServices.filter(
-          (item) => item.is_active && catalogServiceIds.has(item.service_id),
-        );
+        try {
+          const [services, providerServices] = await Promise.all([
+            listServices(provider.categoryId),
+            listProviderServices(provider.id),
+          ]);
 
-        setCatalog(services);
-        setSelectedIds(activeRows.map((item) => item.service_id));
-        setPrices(buildInitialPrices(services, providerServices));
-      } catch (error) {
-        if (!mounted) {
-          return;
-        }
+          if (!mounted) {
+            return;
+          }
 
-        setLoadError(
-          error instanceof Error
-            ? error
-            : new Error("Failed to load provider services."),
-        );
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
+          const catalogServiceIds = new Set(services.map((item) => item.id));
+
+          const activeRows = providerServices.filter(
+            (item) => item.is_active && catalogServiceIds.has(item.service_id),
+          );
+
+          setCatalog(services);
+          setSelectedIds(activeRows.map((item) => item.service_id));
+          setPrices(buildInitialPrices(services, providerServices));
+        } catch (error) {
+          if (!mounted) {
+            return;
+          }
+
+          setLoadError(
+            error instanceof Error
+              ? error
+              : new Error("Failed to load provider services."),
+          );
+        } finally {
+          if (mounted) {
+            setIsLoading(false);
+          }
         }
       }
-    }
 
-    void load();
+      void load();
 
-    return () => {
-      mounted = false;
-    };
-  }, [provider, providerIsLoading]);
+      return () => {
+        mounted = false;
+      };
+    }, [provider, providerIsLoading]),
+  );
 
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
@@ -131,7 +138,10 @@ export default function ProviderServicesManagementScreen() {
       }
 
       if (current.length >= MAX_SERVICES) {
-        Alert.alert(copy.limitTitle, copy.limitBody);
+        Alert.alert(
+          t("providerServicesLimitTitle"),
+          t("providerServicesLimitMessage"),
+        );
         return current;
       }
 
@@ -154,7 +164,10 @@ export default function ProviderServicesManagementScreen() {
     }
 
     if (selectedIds.length === 0) {
-      Alert.alert(copy.serviceRequiredTitle, copy.serviceRequiredBody);
+      Alert.alert(
+        t("providerServicesRequiredTitle"),
+        t("providerServicesRequiredMessage"),
+      );
       return;
     }
 
@@ -174,9 +187,25 @@ export default function ProviderServicesManagementScreen() {
       ) {
         const service = catalog.find((item) => item.id === serviceId);
 
+        const serviceName =
+          getServiceName(
+            service,
+            activeLanguage,
+            t(
+              "providerServiceFallbackName",
+            ),
+          );
+
         Alert.alert(
-          copy.invalidPriceTitle,
-          copy.invalidPriceBody(getServiceName(service, activeLanguage)),
+          t(
+            "providerServicesInvalidPriceTitle",
+          ),
+          t(
+            "providerServicesInvalidPriceMessage",
+          ).replace(
+            "{service}",
+            serviceName,
+          ),
         );
         return;
       }
@@ -192,18 +221,33 @@ export default function ProviderServicesManagementScreen() {
     try {
       await saveProviderServiceOffering(provider.id, payload);
 
-      Alert.alert(copy.savedTitle, copy.savedBody, [
-        {
-          text: copy.done,
-          onPress: () => router.back(),
-        },
-      ]);
+      Alert.alert(
+        t(
+          "providerServicesSavedTitle",
+        ),
+        t(
+          "providerServicesSavedMessage",
+        ),
+        [
+          {
+            text: t(
+              "providerServicesDone",
+            ),
+            onPress: () =>
+              router.back(),
+          },
+        ],
+      );
     } catch (error) {
       console.error("Failed to save provider services:", error);
 
       Alert.alert(
-        copy.saveFailedTitle,
-        error instanceof Error ? error.message : copy.saveFailedBody,
+        t(
+          "providerServicesSaveFailedTitle",
+        ),
+        t(
+          "providerServicesSaveFailedMessage",
+        ),
       );
     } finally {
       setIsSaving(false);
@@ -217,7 +261,17 @@ export default function ProviderServicesManagementScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerState}>
           <ActivityIndicator size="large" color={KhedmatPalette.blue500} />
-          <Text style={styles.stateTitle}>{copy.loading}</Text>
+          <Text
+            style={[
+              styles.stateTitle,
+              isRtl &&
+                styles.rtlText,
+            ]}
+          >
+            {t(
+              "providerServicesLoading",
+            )}
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -234,9 +288,27 @@ export default function ProviderServicesManagementScreen() {
               color={KhedmatPalette.error}
             />
           </View>
-          <Text style={styles.stateTitle}>{copy.loadFailed}</Text>
-          <Text style={styles.stateBody}>
-            {error?.message ?? copy.loadFailedBody}
+          <Text
+            style={[
+              styles.stateTitle,
+              isRtl &&
+                styles.rtlText,
+            ]}
+          >
+            {t(
+              "providerServicesLoadFailedTitle",
+            )}
+          </Text>
+          <Text
+            style={[
+              styles.stateBody,
+              isRtl &&
+                styles.rtlText,
+            ]}
+          >
+            {t(
+              "providerServicesLoadFailedMessage",
+            )}
           </Text>
           <Pressable
             onPress={() => router.back()}
@@ -245,7 +317,7 @@ export default function ProviderServicesManagementScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <Text style={styles.secondaryButtonText}>{copy.back}</Text>
+            <Text style={styles.secondaryButtonText}>{t("back")}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -261,7 +333,7 @@ export default function ProviderServicesManagementScreen() {
         <View style={styles.header}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={copy.back}
+            accessibilityLabel={t("back")}
             hitSlop={8}
             onPress={() => router.back()}
             style={({ pressed }) => [
@@ -278,10 +350,10 @@ export default function ProviderServicesManagementScreen() {
 
           <View style={styles.headerCopy}>
             <Text style={[styles.headerTitle, isRtl && styles.rtlText]}>
-              {copy.title}
+              {t("providerServicesTitle")}
             </Text>
             <Text style={[styles.headerSubtitle, isRtl && styles.rtlText]}>
-              {copy.subtitle}
+              {t("providerServicesSubtitle")}
             </Text>
           </View>
 
@@ -293,24 +365,65 @@ export default function ProviderServicesManagementScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          <View style={styles.summaryCard}>
-            <View>
-              <Text style={[styles.summaryLabel, isRtl && styles.rtlText]}>
-                {copy.selectedServices}
+          <View
+            style={[
+              styles.summaryRow,
+              isRtl &&
+                styles.rowReverse,
+            ]}
+          >
+            <View
+              style={
+                styles.summaryCopy
+              }
+            >
+              <Text
+                style={[
+                  styles.summaryLabel,
+                  isRtl &&
+                    styles.rtlText,
+                ]}
+              >
+                {t(
+                  "providerServicesSelected",
+                )}
               </Text>
-              <Text style={[styles.summaryValue, isRtl && styles.rtlText]}>
-                {selectedCount} / {MAX_SERVICES}
+
+              <Text
+                style={[
+                  styles.sectionHint,
+                  isRtl &&
+                    styles.rtlText,
+                ]}
+              >
+                {t(
+                  "providerServicesHint",
+                )}
               </Text>
             </View>
 
-            <View style={styles.currencyPill}>
-              <Text style={styles.currencyText}>AFN</Text>
+            <View
+              style={
+                styles.countBadge
+              }
+            >
+              <Text
+                style={
+                  styles.countBadgeText
+                }
+              >
+                {formatDigits(
+                  selectedCount.toString(),
+                  activeLanguage,
+                )}
+                /
+                {formatDigits(
+                  MAX_SERVICES.toString(),
+                  activeLanguage,
+                )}
+              </Text>
             </View>
           </View>
-
-          <Text style={[styles.sectionHint, isRtl && styles.rtlText]}>
-            {copy.hint}
-          </Text>
 
           <View style={styles.serviceList}>
             {catalog.map((service) => {
@@ -354,7 +467,13 @@ export default function ProviderServicesManagementScreen() {
                       <Text
                         style={[styles.serviceName, isRtl && styles.rtlText]}
                       >
-                        {getServiceName(service, activeLanguage)}
+                        {getServiceName(
+                          service,
+                          activeLanguage,
+                          t(
+                            "providerServiceFallbackName",
+                          ),
+                        )}
                       </Text>
 
                       {getServiceDescription(service, activeLanguage) ? (
@@ -375,7 +494,7 @@ export default function ProviderServicesManagementScreen() {
                       <Text
                         style={[styles.priceLabel, isRtl && styles.rtlText]}
                       >
-                        {copy.estimatedPrice}
+                        {t("providerServicesEstimatedPrice")}
                       </Text>
 
                       <View
@@ -395,7 +514,14 @@ export default function ProviderServicesManagementScreen() {
                           placeholderTextColor={KhedmatPalette.textMuted}
                           style={[styles.priceInput, isRtl && styles.rtlText]}
                         />
-                        <Text style={styles.afnLabel}>AFN</Text>
+                        <Text
+                          style={[
+                            styles.afnLabel,
+                            isRtl && styles.rtlText,
+                          ]}
+                        >
+                          {t("providerPerformanceCurrency")}
+                        </Text>
                       </View>
                     </View>
                   ) : null}
@@ -425,7 +551,13 @@ export default function ProviderServicesManagementScreen() {
               />
             )}
             <Text style={styles.saveButtonText}>
-              {isSaving ? copy.saving : copy.save}
+              {isSaving
+                ? t(
+                    "providerServicesSaving",
+                  )
+                : t(
+                    "providerServicesSave",
+                  )}
             </Text>
           </Pressable>
         </View>
@@ -468,12 +600,42 @@ function normalizeLanguage(value: unknown): LanguageName {
   return "English";
 }
 
+function formatDigits(
+  value: string,
+  language: LanguageName,
+): string {
+  if (language === "English") {
+    return value;
+  }
+
+  const digits: Record<string, string> = {
+    "0": "۰",
+    "1": "۱",
+    "2": "۲",
+    "3": "۳",
+    "4": "۴",
+    "5": "۵",
+    "6": "۶",
+    "7": "۷",
+    "8": "۸",
+    "9": "۹",
+  };
+
+  return value.replace(
+    /\d/g,
+    (digit) =>
+      digits[digit] ??
+      digit,
+  );
+}
+
 function getServiceName(
   service: ServiceRow | undefined,
   language: LanguageName,
+  fallbackName: string,
 ): string {
   if (!service) {
-    return "Service";
+    return fallbackName;
   }
 
   if (language === "Dari") {
@@ -502,116 +664,29 @@ function getServiceDescription(
   return "";
 }
 
-function getCopy(language: LanguageName) {
-  if (language === "Dari") {
-    return {
-      title: "خدمات و قیمت‌ها",
-      subtitle:
-        "خدماتی را که ارائه می‌کنید و قیمت تخمینی هر خدمت را مدیریت کنید.",
-      selectedServices: "خدمات انتخاب‌شده",
-      hint: "حداقل یک و حداکثر هشت خدمت را انتخاب کنید. قیمت‌ها به افغانی ثبت می‌شوند.",
-      estimatedPrice: "قیمت تخمینی",
-      save: "ذخیره تغییرات",
-      saving: "در حال ذخیره...",
-      done: "تمام",
-      back: "برگشت",
-      loading: "در حال بارگذاری خدمات...",
-      loadFailed: "خدمات بارگذاری نشد",
-      loadFailedBody: "لطفاً دوباره تلاش کنید.",
-      limitTitle: "حد خدمات تکمیل شد",
-      limitBody: "می‌توانید حداکثر ۸ خدمت فعال داشته باشید.",
-      serviceRequiredTitle: "حداقل یک خدمت لازم است",
-      serviceRequiredBody: "برای ادامه حداقل یک خدمت را انتخاب کنید.",
-      invalidPriceTitle: "قیمت نامعتبر",
-      invalidPriceBody: (serviceName: string) =>
-        `برای «${serviceName}» یک قیمت معتبر به افغانی وارد کنید.`,
-      savedTitle: "خدمات ذخیره شد",
-      savedBody: "خدمات و قیمت‌های شما با موفقیت به‌روزرسانی شد.",
-      saveFailedTitle: "ذخیره انجام نشد",
-      saveFailedBody: "خدمات شما ذخیره نشد. لطفاً دوباره تلاش کنید.",
-    };
-  }
-
-  if (language === "Pashto") {
-    return {
-      title: "خدمتونه او بیې",
-      subtitle: "خپل فعال خدمتونه او د هر خدمت اټکلي بیه تنظیم کړئ.",
-      selectedServices: "ټاکل شوي خدمتونه",
-      hint: "لږ تر لږه یو او تر اتو پورې خدمتونه وټاکئ. بیې په افغانۍ ثبتېږي.",
-      estimatedPrice: "اټکلي بیه",
-      save: "بدلونونه خوندي کړئ",
-      saving: "خوندي کېږي...",
-      done: "بشپړ",
-      back: "شاته",
-      loading: "خدمتونه بارېږي...",
-      loadFailed: "خدمتونه بار نه شول",
-      loadFailedBody: "مهرباني وکړئ بیا هڅه وکړئ.",
-      limitTitle: "د خدمتونو حد پوره شو",
-      limitBody: "تاسو تر اتو پورې فعال خدمتونه لرلی شئ.",
-      serviceRequiredTitle: "لږ تر لږه یو خدمت اړین دی",
-      serviceRequiredBody: "د دوام لپاره لږ تر لږه یو خدمت وټاکئ.",
-      invalidPriceTitle: "ناسمه بیه",
-      invalidPriceBody: (serviceName: string) =>
-        `د «${serviceName}» لپاره په افغانۍ سمه بیه ولیکئ.`,
-      savedTitle: "خدمتونه خوندي شول",
-      savedBody: "ستاسو خدمتونه او بیې په بریالیتوب سره تازه شول.",
-      saveFailedTitle: "خوندي کول ناکام شول",
-      saveFailedBody: "ستاسو خدمتونه خوندي نه شول. مهرباني وکړئ بیا هڅه وکړئ.",
-    };
-  }
-
-  return {
-    title: "Services & Prices",
-    subtitle:
-      "Manage the services you offer and the estimated price for each one.",
-    selectedServices: "Selected services",
-    hint: "Choose between 1 and 8 active services. Prices are stored in AFN.",
-    estimatedPrice: "Estimated price",
-    save: "Save changes",
-    saving: "Saving...",
-    done: "Done",
-    back: "Back",
-    loading: "Loading services...",
-    loadFailed: "Could not load services",
-    loadFailedBody: "Please try again.",
-    limitTitle: "Service limit reached",
-    limitBody: "You can have a maximum of 8 active services.",
-    serviceRequiredTitle: "At least one service is required",
-    serviceRequiredBody: "Select at least one service before saving.",
-    invalidPriceTitle: "Invalid price",
-    invalidPriceBody: (serviceName: string) =>
-      `Enter a valid AFN price for ${serviceName}.`,
-    savedTitle: "Services saved",
-    savedBody: "Your services and prices were updated successfully.",
-    saveFailedTitle: "Could not save services",
-    saveFailedBody: "Your services were not saved. Please try again.",
-  };
-}
-
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
   safeArea: {
     flex: 1,
-    backgroundColor: KhedmatPalette.blue050,
+    backgroundColor: KhedmatPalette.white,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: KhedmatPalette.border,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
     backgroundColor: KhedmatPalette.white,
   },
   iconButton: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: KhedmatPalette.surfaceSoft,
+    backgroundColor: KhedmatPalette.white,
   },
   headerCopy: {
     flex: 1,
@@ -621,78 +696,80 @@ const styles = StyleSheet.create({
     width: 44,
   },
   headerTitle: {
-    fontFamily: Fonts.bold,
-    fontSize: 20,
-    lineHeight: 26,
+    ...Typography.screenTitle,
+    fontSize: 22,
+    lineHeight: 28,
     color: KhedmatPalette.textPrimary,
     textAlign: "center",
   },
   headerSubtitle: {
     marginTop: 2,
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: KhedmatPalette.textMuted,
+    ...Typography.captionStyle,
+    lineHeight: 18,
+    color: KhedmatPalette.textSecondary,
     textAlign: "center",
   },
   scrollContent: {
-    padding: Spacing.lg,
+    width: "100%",
+    maxWidth: Layout.contentMaxWidth,
+    alignSelf: "center",
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
     paddingBottom: Spacing.section,
   },
-  summaryCard: {
+  summaryRow: {
+    width: "100%",
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    padding: Spacing.lg,
-    borderRadius: Radius.lg,
-    backgroundColor: KhedmatPalette.white,
-    borderWidth: 1,
-    borderColor: KhedmatPalette.border,
-    ...Shadows.small,
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.xs,
+  },
+  summaryCopy: {
+    flex: 1,
+    minWidth: 0,
   },
   summaryLabel: {
-    fontFamily: Fonts.medium,
-    fontSize: 13,
-    color: KhedmatPalette.textSecondary,
-  },
-  summaryValue: {
-    marginTop: 4,
-    fontFamily: Fonts.bold,
-    fontSize: 23,
-    color: KhedmatPalette.navy900,
-  },
-  currencyPill: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.pill,
-    backgroundColor: KhedmatPalette.successSoft,
-  },
-  currencyText: {
-    fontFamily: Fonts.bold,
-    fontSize: 12,
-    color: KhedmatPalette.success,
+    ...Typography.label,
+    color: KhedmatPalette.textPrimary,
+    fontSize: 14,
   },
   sectionHint: {
-    marginTop: Spacing.md,
-    marginBottom: Spacing.md,
-    paddingHorizontal: Spacing.xs,
-    fontFamily: Fonts.regular,
-    fontSize: 13,
-    lineHeight: 19,
+    marginTop: 4,
+    ...Typography.captionStyle,
+    lineHeight: 18,
     color: KhedmatPalette.textSecondary,
   },
+  countBadge: {
+    minWidth: 44,
+    height: 30,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: KhedmatPalette.blue050,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: KhedmatPalette.blue200,
+  },
+  countBadgeText: {
+    ...Typography.captionStyle,
+    fontFamily: Fonts.bold,
+    color: KhedmatPalette.blue500,
+  },
   serviceList: {
-    gap: Spacing.md,
+    gap: Spacing.sm,
   },
   serviceCard: {
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: KhedmatPalette.border,
+    borderColor: KhedmatPalette.blue200,
     backgroundColor: KhedmatPalette.white,
     overflow: "hidden",
   },
   serviceCardSelected: {
     borderColor: KhedmatPalette.blue500,
+    backgroundColor: KhedmatPalette.blue050,
   },
   serviceCardDisabled: {
     opacity: 0.55,
@@ -701,7 +778,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: Spacing.md,
-    padding: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
   },
   checkbox: {
     width: 24,
@@ -735,10 +813,10 @@ const styles = StyleSheet.create({
     color: KhedmatPalette.textMuted,
   },
   priceArea: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: KhedmatPalette.border,
+    borderTopColor: KhedmatPalette.blue200,
   },
   priceLabel: {
     marginTop: Spacing.md,
@@ -753,8 +831,8 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: KhedmatPalette.border,
-    backgroundColor: KhedmatPalette.surfaceSoft,
+    borderColor: KhedmatPalette.blue200,
+    backgroundColor: KhedmatPalette.white,
     paddingHorizontal: Spacing.md,
   },
   priceInput: {
@@ -774,17 +852,20 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingTop: Spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: KhedmatPalette.border,
+    borderTopColor: KhedmatPalette.blue200,
     backgroundColor: KhedmatPalette.white,
   },
   saveButton: {
+    width: "100%",
+    maxWidth: Layout.contentMaxWidth,
+    alignSelf: "center",
     minHeight: 52,
     borderRadius: Radius.lg,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: Spacing.sm,
-    backgroundColor: KhedmatPalette.navy700,
+    backgroundColor: KhedmatPalette.navy900,
   },
   saveButtonDisabled: {
     backgroundColor: KhedmatPalette.disabled,

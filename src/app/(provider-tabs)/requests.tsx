@@ -1,14 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
   ComponentProps,
-  ReactNode,
   useCallback,
   useMemo,
   useState,
 } from "react";
 import {
-  Alert,
   Pressable,
   RefreshControl,
   SafeAreaView,
@@ -34,7 +32,6 @@ import {
   useBooking,
 } from "../../context/booking-context";
 import { useLanguage } from "../../context/languagecontext";
-import { useNotifications } from "../../context/notification-context";
 import { useActiveProvider } from "../../hooks/use-active-provider";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
@@ -47,8 +44,6 @@ type FilterDefinition = {
   id: RequestFilter;
   icon: IconName;
 };
-
-type RequestCopy = ReturnType<typeof getRequestCopy>;
 
 const SUCCESS = "#268A57";
 const SUCCESS_SOFT = "#E8F6EE";
@@ -81,15 +76,12 @@ const FILTERS: FilterDefinition[] = [
 ];
 
 export default function ProviderRequestsScreen() {
+  const router = useRouter();
   const { width } = useWindowDimensions();
 
-  const { bookings, isRefreshing, refreshBookings, updateBookingStatus } =
+  const { bookings, isRefreshing, refreshBookings } =
     useBooking();
 
-  const {
-    createCustomerBookingConfirmedNotification,
-    createCustomerBookingCompletedNotification,
-  } = useNotifications();
 
   const {
     provider,
@@ -97,7 +89,7 @@ export default function ProviderRequestsScreen() {
     error: providerError,
   } = useActiveProvider();
 
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   const activeLanguage = normalizeLanguage(language);
 
@@ -105,16 +97,11 @@ export default function ProviderRequestsScreen() {
 
   const localizedDigits = activeLanguage !== "English";
 
-  const copy = getRequestCopy(activeLanguage);
-
   const providerId = provider?.id ?? null;
 
   const [selectedFilter, setSelectedFilter] =
     useState<RequestFilter>("pending");
 
-  const [expandedBookingId, setExpandedBookingId] = useState<string | null>(
-    null,
-  );
 
   const compactLayout = width < 370;
 
@@ -198,11 +185,7 @@ export default function ProviderRequestsScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.providerState}>
           <Text style={[styles.providerStateTitle, directionStyle(isRtl)]}>
-            {activeLanguage === "Dari"
-              ? "در حال بارگذاری حساب ارائه‌دهنده..."
-              : activeLanguage === "Pashto"
-                ? "د خدمت چمتو کوونکي حساب بارېږي..."
-                : "Loading provider account..."}
+            {t("providerAccountLoading")}
           </Text>
         </View>
       </SafeAreaView>
@@ -220,161 +203,20 @@ export default function ProviderRequestsScreen() {
           />
 
           <Text style={[styles.providerStateTitle, directionStyle(isRtl)]}>
-            {activeLanguage === "Dari"
-              ? "حساب فعال ارائه‌دهنده پیدا نشد"
-              : activeLanguage === "Pashto"
-                ? "فعال د خدمت چمتو کوونکي حساب ونه موندل شو"
-                : "No active provider account"}
+            {t("providerAccountLoadError")}
           </Text>
 
           <Text style={[styles.providerStateBody, directionStyle(isRtl)]}>
-            {activeLanguage === "Dari"
-              ? "ثبت‌نام ارائه‌دهنده را تکمیل کنید و دوباره تلاش کنید."
-              : activeLanguage === "Pashto"
-                ? "د خدمت چمتو کوونکي نوم‌لیکنه بشپړه کړئ او بیا هڅه وکړئ."
-                : "Complete provider registration and try again."}
+            {t("providerAccountLoadErrorBody")}
           </Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const handleAccept = (booking: BookingRecord) => {
-    Alert.alert(
-      copy.acceptDialogTitle,
-      copy.acceptDialogMessage(booking.serviceName),
-      [
-        {
-          text: copy.cancel,
-          style: "cancel",
-        },
-        {
-          text: copy.accept,
-          onPress: async () => {
-            try {
-              await updateBookingStatus(booking.id, "confirmed");
 
-              try {
-                await createCustomerBookingConfirmedNotification({
-                  customerId: booking.customerId,
-                  bookingId: booking.id,
-                  providerName: booking.providerName,
-                });
-              } catch (notificationError) {
-                console.error(
-                  "Booking was confirmed, but the customer notification failed:",
-                  notificationError,
-                );
-              }
 
-              setExpandedBookingId(null);
-            } catch (error) {
-              console.error("Failed to confirm booking:", error);
 
-              Alert.alert(
-                "Unable to update booking",
-                error instanceof Error ? error.message : "Please try again.",
-              );
-            }
-          },
-        },
-      ],
-    );
-  };
-
-  const handleReject = (booking: BookingRecord) => {
-    Alert.alert(copy.rejectDialogTitle, copy.rejectDialogMessage, [
-      {
-        text: copy.goBack,
-        style: "cancel",
-      },
-      {
-        text: copy.reject,
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await updateBookingStatus(booking.id, "cancelled");
-
-            setExpandedBookingId(null);
-          } catch (error) {
-            console.error("Failed to cancel booking:", error);
-
-            Alert.alert(
-              "Unable to update booking",
-              error instanceof Error ? error.message : "Please try again.",
-            );
-          }
-        },
-      },
-    ]);
-  };
-
-  const handleStartWork = (booking: BookingRecord) => {
-    Alert.alert(copy.startDialogTitle, copy.startDialogMessage, [
-      {
-        text: copy.cancel,
-        style: "cancel",
-      },
-      {
-        text: copy.startWork,
-        onPress: async () => {
-          try {
-            await updateBookingStatus(booking.id, "in-progress");
-          } catch (error) {
-            console.error("Failed to start booking:", error);
-
-            Alert.alert(
-              "Unable to update booking",
-              error instanceof Error ? error.message : "Please try again.",
-            );
-          }
-        },
-      },
-    ]);
-  };
-
-  const handleCompleteWork = (booking: BookingRecord) => {
-    Alert.alert(copy.completeDialogTitle, copy.completeDialogMessage, [
-      {
-        text: copy.cancel,
-        style: "cancel",
-      },
-      {
-        text: copy.completeWork,
-        onPress: async () => {
-          try {
-            await updateBookingStatus(booking.id, "completed");
-
-            try {
-              await createCustomerBookingCompletedNotification({
-                customerId: booking.customerId,
-                bookingId: booking.id,
-                providerName: booking.providerName,
-              });
-            } catch (notificationError) {
-              console.error(
-                "Booking was completed, but the customer notification failed:",
-                notificationError,
-              );
-            }
-          } catch (error) {
-            console.error("Failed to complete booking:", error);
-
-            Alert.alert(
-              "Unable to update booking",
-              error instanceof Error ? error.message : "Please try again.",
-            );
-          }
-        },
-      },
-    ]);
-  };
-
-  const toggleExpanded = (bookingId: string) => {
-    setExpandedBookingId((current) =>
-      current === bookingId ? null : bookingId,
-    );
-  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -395,22 +237,22 @@ export default function ProviderRequestsScreen() {
       >
         <View style={styles.header}>
           <Text style={[styles.eyebrow, directionStyle(isRtl)]}>
-            {copy.eyebrow}
+            {t("providerRequestsEyebrow")}
           </Text>
 
           <Text style={[styles.title, directionStyle(isRtl)]}>
-            {copy.title}
+            {t("providerRequestsTitle")}
           </Text>
 
           <Text style={[styles.subtitle, directionStyle(isRtl)]}>
-            {copy.subtitle}
+            {t("providerRequestsSubtitle")}
           </Text>
         </View>
 
         <View style={styles.overviewGrid}>
           <OverviewCard
             icon="time-outline"
-            label={copy.pendingOverview}
+            label={t("providerRequestsPending")}
             value={counts.pending}
             color={WARNING}
             backgroundColor={WARNING_SOFT}
@@ -421,7 +263,7 @@ export default function ProviderRequestsScreen() {
 
           <OverviewCard
             icon="briefcase-outline"
-            label={copy.activeOverview}
+            label={t("providerRequestsActive")}
             value={counts.active}
             color={KhedmatPalette.blue500}
             backgroundColor={INFO_SOFT}
@@ -432,7 +274,7 @@ export default function ProviderRequestsScreen() {
 
           <OverviewCard
             icon="checkmark-circle-outline"
-            label={copy.completedOverview}
+            label={t("providerRequestsCompleted")}
             value={counts.completed}
             color={SUCCESS}
             backgroundColor={SUCCESS_SOFT}
@@ -462,11 +304,9 @@ export default function ProviderRequestsScreen() {
                 accessibilityState={{
                   selected,
                 }}
-                accessibilityLabel={getFilterLabel(filter.id, activeLanguage)}
+                accessibilityLabel={t(getFilterLabelKey(filter.id))}
                 onPress={() => {
                   setSelectedFilter(filter.id);
-
-                  setExpandedBookingId(null);
                 }}
                 style={({ pressed }) => [
                   styles.filterChip,
@@ -489,7 +329,7 @@ export default function ProviderRequestsScreen() {
                     directionStyle(isRtl),
                   ]}
                 >
-                  {getFilterLabel(filter.id, activeLanguage)}
+                  {t(getFilterLabelKey(filter.id))}
                 </Text>
 
                 <View
@@ -529,11 +369,11 @@ export default function ProviderRequestsScreen() {
             ]}
           >
             <Text style={[styles.resultsTitle, directionStyle(isRtl)]}>
-              {getFilterTitle(selectedFilter, activeLanguage)}
+              {t(getFilterTitleKey(selectedFilter))}
             </Text>
 
             <Text style={[styles.resultsSubtitle, directionStyle(isRtl)]}>
-              {getFilterSubtitle(selectedFilter, activeLanguage)}
+              {t(getFilterSubtitleKey(selectedFilter))}
             </Text>
           </View>
 
@@ -552,22 +392,32 @@ export default function ProviderRequestsScreen() {
             <ProviderRequestCard
               key={booking.id}
               booking={booking}
-              expanded={expandedBookingId === booking.id}
               language={activeLanguage}
               isRtl={isRtl}
-              copy={copy}
-              onToggle={() => toggleExpanded(booking.id)}
-              onAccept={() => handleAccept(booking)}
-              onReject={() => handleReject(booking)}
-              onStart={() => handleStartWork(booking)}
-              onComplete={() => handleCompleteWork(booking)}
+              customerLabel={t("providerRequestsCustomer")}
+              customerFallback={t("providerRequestsCustomer")}
+              dateLabel={t("providerRequestsDate")}
+              timeLabel={t("providerRequestsTime")}
+              locationLabel={t("providerRequestsLocation")}
+              estimatedCostLabel={t("providerRequestsEstimatedCost")}
+              viewDetailsLabel={t("providerRequestsViewDetails")}
+              statusLabel={t(getStatusLabelKey(booking.status))}
+              onPress={() =>
+                router.push({
+                  pathname: "/provider-request-details",
+                  params: {
+                    bookingId: booking.id,
+                  },
+                })
+              }
             />
           ))}
 
           {filteredBookings.length === 0 ? (
             <EmptyRequests
               filter={selectedFilter}
-              language={activeLanguage}
+              title={t(getEmptyTitleKey(selectedFilter))}
+              subtitle={t(getEmptySubtitleKey(selectedFilter))}
               isRtl={isRtl}
             />
           ) : null}
@@ -590,7 +440,7 @@ export default function ProviderRequestsScreen() {
           </View>
 
           <Text style={[styles.noticeText, directionStyle(isRtl)]}>
-            {copy.notice}
+            {t("providerRequestsReviewNotice")}
           </Text>
         </View>
       </ScrollView>
@@ -648,233 +498,170 @@ function OverviewCard({
 
 type ProviderRequestCardProps = {
   booking: BookingRecord;
-  expanded: boolean;
   language: LanguageName;
   isRtl: boolean;
-  copy: RequestCopy;
-  onToggle: () => void;
-  onAccept: () => void;
-  onReject: () => void;
-  onStart: () => void;
-  onComplete: () => void;
+  customerLabel: string;
+  customerFallback: string;
+  dateLabel: string;
+  timeLabel: string;
+  locationLabel: string;
+  estimatedCostLabel: string;
+  viewDetailsLabel: string;
+  statusLabel: string;
+  onPress: () => void;
 };
 
 function ProviderRequestCard({
   booking,
-  expanded,
   language,
   isRtl,
-  copy,
-  onToggle,
-  onAccept,
-  onReject,
-  onStart,
-  onComplete,
+  customerLabel,
+  customerFallback,
+  dateLabel,
+  timeLabel,
+  locationLabel,
+  estimatedCostLabel,
+  viewDetailsLabel,
+  statusLabel,
+  onPress,
 }: ProviderRequestCardProps) {
-  const status = getStatusConfig(booking.status, language);
+  const status = getStatusVisual(booking.status);
 
   const isPending = booking.status === "pending";
 
   return (
-    <View style={[styles.requestCard, isPending && styles.pendingRequestCard]}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={booking.serviceName}
-        accessibilityState={{
-          expanded,
-        }}
-        onPress={onToggle}
-        style={({ pressed }) => [
-          styles.requestCardPressable,
-          pressed && styles.cardPressed,
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={booking.serviceName}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.requestCard,
+        isPending && styles.pendingRequestCard,
+        pressed && styles.cardPressed,
+      ]}
+    >
+      <View
+        style={[
+          styles.requestHeader,
+          {
+            flexDirection: isRtl ? "row-reverse" : "row",
+          },
         ]}
       >
         <View
           style={[
-            styles.requestHeader,
+            styles.serviceIcon,
             {
-              flexDirection: isRtl ? "row-reverse" : "row",
+              backgroundColor: isPending
+                ? WARNING_SOFT
+                : KhedmatPalette.surfaceSoft,
             },
           ]}
         >
-          <View
-            style={[
-              styles.serviceIcon,
-              {
-                backgroundColor: isPending
-                  ? WARNING_SOFT
-                  : KhedmatPalette.surfaceSoft,
-              },
-            ]}
-          >
-            <Ionicons
-              name={getServiceIcon(booking.serviceId)}
-              size={24}
-              color={isPending ? WARNING : KhedmatPalette.blue500}
-            />
-          </View>
-
-          <View
-            style={[
-              styles.requestMainCopy,
-              {
-                alignItems: isRtl ? "flex-end" : "flex-start",
-              },
-            ]}
-          >
-            <Text
-              numberOfLines={2}
-              style={[styles.requestTitle, directionStyle(isRtl)]}
-            >
-              {booking.serviceName}
-            </Text>
-
-            <Text style={[styles.requestReference, directionStyle(isRtl)]}>
-              {copy.requestNumber}: {getShortBookingId(booking.id, language)}
-            </Text>
-          </View>
-
-          <View
-            style={[
-              styles.statusBadge,
-              {
-                backgroundColor: status.backgroundColor,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.statusText,
-                {
-                  color: status.color,
-                },
-                directionStyle(isRtl),
-              ]}
-            >
-              {status.label}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.summaryGrid}>
-          <RequestSummary
-            icon="calendar-outline"
-            label={copy.date}
-            value={formatBookingDate(booking.date, language)}
-            isRtl={isRtl}
-          />
-
-          <RequestSummary
-            icon="time-outline"
-            label={copy.time}
-            value={formatTime(booking.time, language)}
-            isRtl={isRtl}
-          />
-
-          <RequestSummary
-            icon="location-outline"
-            label={copy.location}
-            value={booking.address.label}
-            isRtl={isRtl}
-          />
-
-          <RequestSummary
-            icon="cash-outline"
-            label={copy.estimatedCost}
-            value={formatCurrency(booking.servicePrice, language)}
-            isRtl={isRtl}
+          <Ionicons
+            name={getServiceIcon(booking.serviceId)}
+            size={22}
+            color={isPending ? WARNING : KhedmatPalette.blue500}
           />
         </View>
 
         <View
           style={[
-            styles.expandRow,
+            styles.requestMainCopy,
             {
-              flexDirection: isRtl ? "row-reverse" : "row",
+              alignItems: isRtl ? "flex-end" : "flex-start",
             },
           ]}
         >
-          <Text style={[styles.expandText, directionStyle(isRtl)]}>
-            {expanded ? copy.closeDetails : copy.viewDetails}
+          <Text
+            numberOfLines={1}
+            style={[styles.requestTitle, directionStyle(isRtl)]}
+          >
+            {booking.serviceName}
           </Text>
 
-          <Ionicons
-            name={expanded ? "chevron-up" : "chevron-down"}
-            size={17}
-            color={KhedmatPalette.blue500}
-          />
+          <Text
+            numberOfLines={1}
+            style={[styles.requestReference, directionStyle(isRtl)]}
+          >
+            {customerLabel}:{" "}
+            {booking.customerName?.trim() || customerFallback}
+          </Text>
         </View>
-      </Pressable>
 
-      {expanded ? (
-        <View style={styles.expandedContent}>
-          <View style={styles.divider} />
-
-          <DetailSection
-            icon="location-outline"
-            title={copy.serviceAddress}
-            isRtl={isRtl}
+        <View
+          style={[
+            styles.statusBadge,
+            {
+              backgroundColor: status.backgroundColor,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.statusText,
+              {
+                color: status.color,
+              },
+              directionStyle(isRtl),
+            ]}
           >
-            <Text style={[styles.detailText, directionStyle(isRtl)]}>
-              {booking.address.fullAddress}
-            </Text>
-          </DetailSection>
-
-          <View style={styles.smallDivider} />
-
-          <DetailSection
-            icon="document-text-outline"
-            title={copy.customerNotes}
-            isRtl={isRtl}
-          >
-            <Text style={[styles.detailText, directionStyle(isRtl)]}>
-              {booking.notes?.trim() ? booking.notes : copy.noNotes}
-            </Text>
-          </DetailSection>
-
-          <View style={styles.smallDivider} />
-
-          <DetailSection
-            icon="receipt-outline"
-            title={copy.priceSummary}
-            isRtl={isRtl}
-          >
-            <View style={styles.priceRows}>
-              <PriceRow
-                label={copy.serviceCost}
-                value={formatCurrency(booking.servicePrice, language)}
-                isRtl={isRtl}
-              />
-
-              <PriceRow
-                label={copy.platformFee}
-                value={formatCurrency(booking.platformFee, language)}
-                isRtl={isRtl}
-              />
-
-              <View style={styles.priceDivider} />
-
-              <PriceRow
-                label={copy.customerTotal}
-                value={formatCurrency(booking.total, language)}
-                emphasized
-                isRtl={isRtl}
-              />
-            </View>
-          </DetailSection>
-
-          <RequestActions
-            booking={booking}
-            copy={copy}
-            isRtl={isRtl}
-            onAccept={onAccept}
-            onReject={onReject}
-            onStart={onStart}
-            onComplete={onComplete}
-          />
+            {statusLabel}
+          </Text>
         </View>
-      ) : null}
-    </View>
+      </View>
+
+      <View style={styles.summaryGrid}>
+        <RequestSummary
+          icon="calendar-outline"
+          label={`${dateLabel} · ${timeLabel}`}
+          value={`${formatBookingDate(
+            booking.date,
+            language,
+          )} · ${formatTime(
+            booking.time,
+            language,
+          )}`}
+          isRtl={isRtl}
+        />
+
+        <RequestSummary
+          icon="location-outline"
+          label={locationLabel}
+          value={booking.address.label}
+          isRtl={isRtl}
+        />
+
+        <RequestSummary
+          icon="cash-outline"
+          label={estimatedCostLabel}
+          value={formatCurrency(
+            booking.servicePrice,
+            language,
+          )}
+          isRtl={isRtl}
+        />
+      </View>
+
+      <View
+        style={[
+          styles.openDetailsRow,
+          {
+            flexDirection: isRtl ? "row-reverse" : "row",
+          },
+        ]}
+      >
+        <Text style={[styles.openDetailsText, directionStyle(isRtl)]}>
+          {viewDetailsLabel}
+        </Text>
+
+        <Ionicons
+          name={isRtl ? "chevron-back" : "chevron-forward"}
+          size={18}
+          color={KhedmatPalette.blue500}
+        />
+      </View>
+    </Pressable>
   );
 }
 
@@ -922,284 +709,19 @@ function RequestSummary({ icon, label, value, isRtl }: RequestSummaryProps) {
   );
 }
 
-type DetailSectionProps = {
-  icon: IconName;
-  title: string;
-  children: ReactNode;
-  isRtl: boolean;
-};
-
-function DetailSection({ icon, title, children, isRtl }: DetailSectionProps) {
-  return (
-    <View style={styles.detailSection}>
-      <View
-        style={[
-          styles.detailHeader,
-          {
-            flexDirection: isRtl ? "row-reverse" : "row",
-          },
-        ]}
-      >
-        <View style={styles.detailHeaderIcon}>
-          <Ionicons name={icon} size={17} color={KhedmatPalette.blue500} />
-        </View>
-
-        <Text style={[styles.detailTitle, directionStyle(isRtl)]}>{title}</Text>
-      </View>
-
-      {children}
-    </View>
-  );
-}
-
-type PriceRowProps = {
-  label: string;
-  value: string;
-  emphasized?: boolean;
-  isRtl: boolean;
-};
-
-function PriceRow({ label, value, emphasized = false, isRtl }: PriceRowProps) {
-  return (
-    <View
-      style={[
-        styles.priceRow,
-        {
-          flexDirection: isRtl ? "row-reverse" : "row",
-        },
-      ]}
-    >
-      <Text
-        style={[
-          styles.priceLabel,
-          emphasized && styles.priceLabelEmphasized,
-          directionStyle(isRtl),
-        ]}
-      >
-        {label}
-      </Text>
-
-      <Text
-        style={[
-          styles.priceValue,
-          emphasized && styles.priceValueEmphasized,
-          directionStyle(isRtl),
-        ]}
-      >
-        {value}
-      </Text>
-    </View>
-  );
-}
-
-type RequestActionsProps = {
-  booking: BookingRecord;
-  copy: RequestCopy;
-  isRtl: boolean;
-  onAccept: () => void;
-  onReject: () => void;
-  onStart: () => void;
-  onComplete: () => void;
-};
-
-function RequestActions({
-  booking,
-  copy,
-  isRtl,
-  onAccept,
-  onReject,
-  onStart,
-  onComplete,
-}: RequestActionsProps) {
-  if (booking.status === "pending") {
-    return (
-      <View
-        style={[
-          styles.actions,
-          {
-            flexDirection: isRtl ? "row-reverse" : "row",
-          },
-        ]}
-      >
-        <RequestActionButton
-          label={copy.accept}
-          icon="checkmark-circle-outline"
-          variant="primary"
-          isRtl={isRtl}
-          onPress={onAccept}
-        />
-
-        <RequestActionButton
-          label={copy.reject}
-          icon="close-circle-outline"
-          variant="destructive"
-          isRtl={isRtl}
-          onPress={onReject}
-        />
-      </View>
-    );
-  }
-
-  if (booking.status === "confirmed") {
-    return (
-      <View style={styles.actions}>
-        <RequestActionButton
-          label={copy.startWork}
-          icon="play-circle-outline"
-          variant="primary"
-          isRtl={isRtl}
-          onPress={onStart}
-        />
-      </View>
-    );
-  }
-
-  if (booking.status === "in-progress") {
-    return (
-      <View style={styles.actions}>
-        <RequestActionButton
-          label={copy.completeWork}
-          icon="checkmark-done-outline"
-          variant="success"
-          isRtl={isRtl}
-          onPress={onComplete}
-        />
-      </View>
-    );
-  }
-
-  if (booking.status === "completed") {
-    return (
-      <StatusMessage
-        icon="checkmark-circle"
-        text={copy.completedMessage}
-        color={SUCCESS}
-        backgroundColor={SUCCESS_SOFT}
-        isRtl={isRtl}
-      />
-    );
-  }
-
-  return (
-    <StatusMessage
-      icon="close-circle-outline"
-      text={copy.cancelledMessage}
-      color={ERROR}
-      backgroundColor={ERROR_SOFT}
-      isRtl={isRtl}
-    />
-  );
-}
-
-type RequestActionButtonProps = {
-  label: string;
-  icon: IconName;
-  variant: "primary" | "destructive" | "success";
-  isRtl: boolean;
-  onPress: () => void;
-};
-
-function RequestActionButton({
-  label,
-  icon,
-  variant,
-  isRtl,
-  onPress,
-}: RequestActionButtonProps) {
-  const style = getActionStyle(variant);
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.actionButton,
-        {
-          backgroundColor: style.backgroundColor,
-          borderColor: style.borderColor,
-        },
-        pressed && styles.actionButtonPressed,
-      ]}
-    >
-      <View
-        style={[
-          styles.actionButtonContent,
-          {
-            flexDirection: isRtl ? "row-reverse" : "row",
-          },
-        ]}
-      >
-        <Ionicons name={icon} size={18} color={style.color} />
-
-        <Text
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.82}
-          style={[
-            styles.actionButtonText,
-            {
-              color: style.color,
-            },
-            directionStyle(isRtl),
-          ]}
-        >
-          {label}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
-
-type StatusMessageProps = {
-  icon: IconName;
-  text: string;
-  color: string;
-  backgroundColor: string;
-  isRtl: boolean;
-};
-
-function StatusMessage({
-  icon,
-  text,
-  color,
-  backgroundColor,
-  isRtl,
-}: StatusMessageProps) {
-  return (
-    <View
-      style={[
-        styles.statusMessage,
-        {
-          backgroundColor,
-          flexDirection: isRtl ? "row-reverse" : "row",
-        },
-      ]}
-    >
-      <Ionicons name={icon} size={21} color={color} />
-
-      <Text
-        style={[
-          styles.statusMessageText,
-          {
-            color,
-          },
-          directionStyle(isRtl),
-        ]}
-      >
-        {text}
-      </Text>
-    </View>
-  );
-}
-
 type EmptyRequestsProps = {
   filter: RequestFilter;
-  language: LanguageName;
+  title: string;
+  subtitle: string;
   isRtl: boolean;
 };
 
-function EmptyRequests({ filter, language, isRtl }: EmptyRequestsProps) {
+function EmptyRequests({
+  filter,
+  title,
+  subtitle,
+  isRtl,
+}: EmptyRequestsProps) {
   return (
     <View style={styles.emptyState}>
       <View style={styles.emptyIconContainer}>
@@ -1211,185 +733,81 @@ function EmptyRequests({ filter, language, isRtl }: EmptyRequestsProps) {
       </View>
 
       <Text style={[styles.emptyTitle, directionStyle(isRtl)]}>
-        {getEmptyTitle(filter, language)}
+        {title}
       </Text>
 
       <Text style={[styles.emptySubtitle, directionStyle(isRtl)]}>
-        {getEmptySubtitle(filter, language)}
+        {subtitle}
       </Text>
     </View>
   );
 }
 
-function getActionStyle(variant: "primary" | "destructive" | "success") {
-  if (variant === "destructive") {
-    return {
-      color: ERROR,
-      backgroundColor: ERROR_SOFT,
-      borderColor: "#E7B1AD",
-    };
-  }
 
-  if (variant === "success") {
-    return {
-      color: KhedmatPalette.white,
-      backgroundColor: SUCCESS,
-      borderColor: SUCCESS,
-    };
-  }
-
-  return {
-    color: KhedmatPalette.white,
-    backgroundColor: KhedmatPalette.navy900,
-    borderColor: KhedmatPalette.navy900,
-  };
-}
-
-function getFilterLabel(filter: RequestFilter, language: LanguageName): string {
-  if (language === "English") {
-    if (filter === "pending") {
-      return "New";
-    }
-
-    if (filter === "active") {
-      return "Active";
-    }
-
-    if (filter === "completed") {
-      return "Completed";
-    }
-
-    return "Cancelled";
-  }
-
-  if (language === "Pashto") {
-    if (filter === "pending") {
-      return "نوې";
-    }
-
-    if (filter === "active") {
-      return "فعال";
-    }
-
-    if (filter === "completed") {
-      return "بشپړ";
-    }
-
-    return "لغوه";
-  }
-
-  if (filter === "pending") {
-    return "جدید";
-  }
-
-  if (filter === "active") {
-    return "فعال";
-  }
-
-  if (filter === "completed") {
-    return "تکمیل‌شده";
-  }
-
-  return "رد و لغو";
-}
-
-function getFilterTitle(filter: RequestFilter, language: LanguageName): string {
-  if (language === "English") {
-    if (filter === "pending") {
-      return "New requests";
-    }
-
-    if (filter === "active") {
-      return "Active jobs";
-    }
-
-    if (filter === "completed") {
-      return "Completed jobs";
-    }
-
-    return "Cancelled requests";
-  }
-
-  if (language === "Pashto") {
-    if (filter === "pending") {
-      return "نوې غوښتنې";
-    }
-
-    if (filter === "active") {
-      return "فعال کارونه";
-    }
-
-    if (filter === "completed") {
-      return "بشپړ شوي کارونه";
-    }
-
-    return "لغوه شوې غوښتنې";
-  }
-
-  if (filter === "pending") {
-    return "درخواست‌های تازه";
-  }
-
-  if (filter === "active") {
-    return "کارهای فعال";
-  }
-
-  if (filter === "completed") {
-    return "کارهای تکمیل‌شده";
-  }
-
-  return "درخواست‌های رد یا لغوشده";
-}
-
-function getFilterSubtitle(
+function getFilterLabelKey(
   filter: RequestFilter,
-  language: LanguageName,
-): string {
-  if (language === "English") {
-    if (filter === "pending") {
-      return "Review and respond to new customer requests.";
-    }
-
-    if (filter === "active") {
-      return "Manage confirmed and in-progress work.";
-    }
-
-    if (filter === "completed") {
-      return "Review your completed service history.";
-    }
-
-    return "Review rejected or cancelled requests.";
-  }
-
-  if (language === "Pashto") {
-    if (filter === "pending") {
-      return "د پیرودونکو نوې غوښتنې وګورئ او ځواب ورکړئ.";
-    }
-
-    if (filter === "active") {
-      return "تایید شوي او روان کارونه مدیریت کړئ.";
-    }
-
-    if (filter === "completed") {
-      return "د بشپړ شوو خدمتونو تاریخچه وګورئ.";
-    }
-
-    return "رد یا لغوه شوې غوښتنې وګورئ.";
-  }
-
+):
+  | "providerRequestsStatusNew"
+  | "providerRequestsActive"
+  | "providerRequestsCompleted"
+  | "providerRequestsCancelled" {
   if (filter === "pending") {
-    return "درخواست‌های تازهٔ مشتریان را بررسی و پاسخ دهید.";
+    return "providerRequestsStatusNew";
   }
 
   if (filter === "active") {
-    return "کارهای پذیرفته‌شده و در حال انجام را مدیریت کنید.";
+    return "providerRequestsActive";
   }
 
   if (filter === "completed") {
-    return "سابقهٔ خدمات تکمیل‌شده را مشاهده کنید.";
+    return "providerRequestsCompleted";
   }
 
-  return "درخواست‌های رد یا لغوشده را بررسی کنید.";
+  return "providerRequestsCancelled";
+}
+
+function getFilterTitleKey(
+  filter: RequestFilter,
+):
+  | "providerRequestsPending"
+  | "providerRequestsActive"
+  | "providerRequestsCompleted"
+  | "providerRequestsCancelled" {
+  if (filter === "pending") {
+    return "providerRequestsPending";
+  }
+
+  if (filter === "active") {
+    return "providerRequestsActive";
+  }
+
+  if (filter === "completed") {
+    return "providerRequestsCompleted";
+  }
+
+  return "providerRequestsCancelled";
+}
+
+function getFilterSubtitleKey(
+  filter: RequestFilter,
+):
+  | "providerRequestsPendingFilterSubtitle"
+  | "providerRequestsActiveFilterSubtitle"
+  | "providerRequestsCompletedFilterSubtitle"
+  | "providerRequestsCancelledFilterSubtitle" {
+  if (filter === "pending") {
+    return "providerRequestsPendingFilterSubtitle";
+  }
+
+  if (filter === "active") {
+    return "providerRequestsActiveFilterSubtitle";
+  }
+
+  if (filter === "completed") {
+    return "providerRequestsCompletedFilterSubtitle";
+  }
+
+  return "providerRequestsCancelledFilterSubtitle";
 }
 
 function getEmptyIcon(filter: RequestFilter): IconName {
@@ -1408,111 +826,80 @@ function getEmptyIcon(filter: RequestFilter): IconName {
   return "close-circle-outline";
 }
 
-function getEmptyTitle(filter: RequestFilter, language: LanguageName): string {
-  if (language === "English") {
-    if (filter === "pending") {
-      return "No new requests";
-    }
-
-    if (filter === "active") {
-      return "No active jobs";
-    }
-
-    if (filter === "completed") {
-      return "No completed jobs yet";
-    }
-
-    return "No cancelled requests";
-  }
-
-  if (language === "Pashto") {
-    if (filter === "pending") {
-      return "نوې غوښتنه نشته";
-    }
-
-    if (filter === "active") {
-      return "فعال کار نشته";
-    }
-
-    if (filter === "completed") {
-      return "تر اوسه کار نه دی بشپړ شوی";
-    }
-
-    return "لغوه شوې غوښتنه نشته";
-  }
-
-  if (filter === "pending") {
-    return "درخواست تازه‌ای ندارید";
-  }
-
-  if (filter === "active") {
-    return "کار فعالی ندارید";
-  }
-
-  if (filter === "completed") {
-    return "هنوز کاری تکمیل نشده است";
-  }
-
-  return "درخواست رد یا لغوشده‌ای نیست";
-}
-
-function getEmptySubtitle(
+function getEmptyTitleKey(
   filter: RequestFilter,
-  language: LanguageName,
-): string {
-  if (language === "English") {
-    if (filter === "pending") {
-      return "New customer requests will appear here.";
-    }
-
-    if (filter === "active") {
-      return "Accepted and in-progress jobs will appear here.";
-    }
-
-    if (filter === "completed") {
-      return "Completed services will be added to this history.";
-    }
-
-    return "Rejected or cancelled requests will appear here.";
-  }
-
-  if (language === "Pashto") {
-    if (filter === "pending") {
-      return "د پیرودونکو نوې غوښتنې به دلته ښکاره شي.";
-    }
-
-    if (filter === "active") {
-      return "منل شوي او روان کارونه به دلته ښکاره شي.";
-    }
-
-    if (filter === "completed") {
-      return "بشپړ شوي خدمتونه به دې تاریخچې ته اضافه شي.";
-    }
-
-    return "رد یا لغوه شوې غوښتنې به دلته ښکاره شي.";
-  }
-
+):
+  | "providerRequestsEmptyPendingTitle"
+  | "providerRequestsEmptyActiveTitle"
+  | "providerRequestsEmptyCompletedTitle"
+  | "providerRequestsEmptyCancelledTitle" {
   if (filter === "pending") {
-    return "درخواست‌های تازهٔ مشتریان در این بخش نمایش داده می‌شوند.";
+    return "providerRequestsEmptyPendingTitle";
   }
 
   if (filter === "active") {
-    return "درخواست‌های پذیرفته‌شده و در حال انجام در این بخش قرار می‌گیرند.";
+    return "providerRequestsEmptyActiveTitle";
   }
 
   if (filter === "completed") {
-    return "پس از تکمیل خدمت، سابقهٔ آن در این بخش نمایش داده می‌شود.";
+    return "providerRequestsEmptyCompletedTitle";
   }
 
-  return "درخواست‌هایی که رد یا لغو شوند در این قسمت قرار خواهند گرفت.";
+  return "providerRequestsEmptyCancelledTitle";
 }
 
-function getStatusConfig(status: BookingStatus, language: LanguageName) {
-  const labels = getStatusLabels(language);
+function getEmptySubtitleKey(
+  filter: RequestFilter,
+):
+  | "providerRequestsEmptyPendingMessage"
+  | "providerRequestsEmptyActiveMessage"
+  | "providerRequestsEmptyCompletedMessage"
+  | "providerRequestsEmptyCancelledMessage" {
+  if (filter === "pending") {
+    return "providerRequestsEmptyPendingMessage";
+  }
 
+  if (filter === "active") {
+    return "providerRequestsEmptyActiveMessage";
+  }
+
+  if (filter === "completed") {
+    return "providerRequestsEmptyCompletedMessage";
+  }
+
+  return "providerRequestsEmptyCancelledMessage";
+}
+
+function getStatusLabelKey(
+  status: BookingStatus,
+):
+  | "providerRequestsStatusNew"
+  | "providerRequestsStatusAccepted"
+  | "providerRequestsStatusInProgress"
+  | "providerRequestsStatusCompleted"
+  | "providerRequestsStatusCancelled" {
+  if (status === "confirmed") {
+    return "providerRequestsStatusAccepted";
+  }
+
+  if (status === "in-progress") {
+    return "providerRequestsStatusInProgress";
+  }
+
+  if (status === "completed") {
+    return "providerRequestsStatusCompleted";
+  }
+
+  if (status === "cancelled") {
+    return "providerRequestsStatusCancelled";
+  }
+
+  return "providerRequestsStatusNew";
+}
+
+function getStatusVisual(status: BookingStatus) {
   if (status === "confirmed") {
     return {
-      label: labels.confirmed,
       color: KhedmatPalette.blue500,
       backgroundColor: INFO_SOFT,
     };
@@ -1520,7 +907,6 @@ function getStatusConfig(status: BookingStatus, language: LanguageName) {
 
   if (status === "in-progress") {
     return {
-      label: labels.inProgress,
       color: KhedmatPalette.navy700,
       backgroundColor: KhedmatPalette.blue050,
     };
@@ -1528,7 +914,6 @@ function getStatusConfig(status: BookingStatus, language: LanguageName) {
 
   if (status === "completed") {
     return {
-      label: labels.completed,
       color: SUCCESS,
       backgroundColor: SUCCESS_SOFT,
     };
@@ -1536,46 +921,14 @@ function getStatusConfig(status: BookingStatus, language: LanguageName) {
 
   if (status === "cancelled") {
     return {
-      label: labels.cancelled,
       color: ERROR,
       backgroundColor: ERROR_SOFT,
     };
   }
 
   return {
-    label: labels.pending,
     color: WARNING,
     backgroundColor: WARNING_SOFT,
-  };
-}
-
-function getStatusLabels(language: LanguageName) {
-  if (language === "English") {
-    return {
-      confirmed: "Accepted",
-      inProgress: "In progress",
-      completed: "Completed",
-      cancelled: "Cancelled",
-      pending: "New",
-    };
-  }
-
-  if (language === "Pashto") {
-    return {
-      confirmed: "منل شوی",
-      inProgress: "روان",
-      completed: "بشپړ شوی",
-      cancelled: "لغوه شوی",
-      pending: "نوې",
-    };
-  }
-
-  return {
-    confirmed: "پذیرفته‌شده",
-    inProgress: "در حال انجام",
-    completed: "تکمیل‌شده",
-    cancelled: "رد یا لغو",
-    pending: "جدید",
   };
 }
 
@@ -1628,13 +981,6 @@ function getServiceIcon(serviceId: string): IconName {
   return "construct-outline";
 }
 
-function getShortBookingId(bookingId: string, language: LanguageName): string {
-  const finalPart = bookingId.split("-").pop() ?? bookingId;
-
-  const shortened = finalPart.slice(-8);
-
-  return language === "English" ? shortened : formatDigits(shortened, true);
-}
 
 function getBookingTimestamp(booking: BookingRecord): number {
   const date = booking.date || "1970-01-01";
@@ -1774,245 +1120,6 @@ function directionStyle(isRtl: boolean) {
   };
 }
 
-function getRequestCopy(language: LanguageName) {
-  if (language === "Dari") {
-    return {
-      eyebrow: "مدیریت کارها",
-      title: "درخواست‌ها",
-
-      subtitle:
-        "درخواست‌های تازه را بررسی کنید و وضعیت کارهای پذیرفته‌شده را مدیریت نمایید.",
-
-      pendingOverview: "درخواست جدید",
-
-      activeOverview: "کار فعال",
-
-      completedOverview: "تکمیل‌شده",
-
-      requestNumber: "شماره درخواست",
-
-      date: "تاریخ",
-      time: "زمان",
-      location: "محل",
-
-      estimatedCost: "هزینه تخمینی",
-
-      serviceAddress: "آدرس انجام خدمت",
-
-      customerNotes: "توضیحات مشتری",
-
-      noNotes: "مشتری توضیح اضافی وارد نکرده است.",
-
-      priceSummary: "خلاصه هزینه",
-
-      serviceCost: "هزینه خدمت",
-
-      platformFee: "هزینه پلتفرم",
-
-      customerTotal: "مجموع مشتری",
-
-      viewDetails: "مشاهده جزئیات",
-
-      closeDetails: "بستن جزئیات",
-
-      accept: "پذیرش درخواست",
-
-      reject: "رد درخواست",
-
-      startWork: "شروع کار",
-
-      completeWork: "تکمیل خدمت",
-
-      completedMessage: "این خدمت تکمیل شده است.",
-
-      cancelledMessage: "این درخواست رد یا لغو شده است.",
-
-      notice:
-        "پیش از پذیرش، تاریخ، زمان، آدرس، توضیحات و هزینهٔ تخمینی درخواست را دقیق بررسی کنید.",
-
-      acceptDialogTitle: "پذیرش درخواست",
-
-      acceptDialogMessage: (service: string) =>
-        `آیا می‌خواهید درخواست «${service}» را بپذیرید؟`,
-
-      rejectDialogTitle: "رد درخواست",
-
-      rejectDialogMessage:
-        "با رد درخواست، مشتری باید ارائه‌دهندهٔ دیگری انتخاب کند.",
-
-      startDialogTitle: "شروع کار",
-
-      startDialogMessage:
-        "آیا در محل حاضر شده‌اید و می‌خواهید وضعیت کار را به «در حال انجام» تغییر دهید؟",
-
-      completeDialogTitle: "تکمیل خدمت",
-
-      completeDialogMessage:
-        "پس از تکمیل، این رزرو وارد سابقهٔ کارهای تکمیل‌شده می‌شود.",
-
-      cancel: "لغو",
-      goBack: "بازگشت",
-    };
-  }
-
-  if (language === "Pashto") {
-    return {
-      eyebrow: "د کارونو مدیریت",
-
-      title: "غوښتنې",
-
-      subtitle: "نوې غوښتنې وګورئ او د منل شوو کارونو حالت مدیریت کړئ.",
-
-      pendingOverview: "نوې غوښتنې",
-
-      activeOverview: "فعال کارونه",
-
-      completedOverview: "بشپړ شوي",
-
-      requestNumber: "د غوښتنې شمېره",
-
-      date: "نېټه",
-      time: "وخت",
-      location: "ځای",
-
-      estimatedCost: "اټکلي لګښت",
-
-      serviceAddress: "د خدمت پته",
-
-      customerNotes: "د پیرودونکي یادښت",
-
-      noNotes: "پیرودونکي اضافي معلومات نه دي لیکلي.",
-
-      priceSummary: "د لګښت لنډیز",
-
-      serviceCost: "د خدمت لګښت",
-
-      platformFee: "د پلېټفارم فیس",
-
-      customerTotal: "د پیرودونکي ټول مبلغ",
-
-      viewDetails: "تفصیل وګورئ",
-
-      closeDetails: "تفصیل وتړئ",
-
-      accept: "غوښتنه ومنئ",
-
-      reject: "غوښتنه رد کړئ",
-
-      startWork: "کار پیل کړئ",
-
-      completeWork: "خدمت بشپړ کړئ",
-
-      completedMessage: "دا خدمت بشپړ شوی دی.",
-
-      cancelledMessage: "دا غوښتنه رد یا لغوه شوې ده.",
-
-      notice:
-        "له منلو مخکې نېټه، وخت، پته، یادښتونه او اټکلي لګښت په دقت وګورئ.",
-
-      acceptDialogTitle: "غوښتنه منل",
-
-      acceptDialogMessage: (service: string) =>
-        `ایا غواړئ د «${service}» غوښتنه ومنئ؟`,
-
-      rejectDialogTitle: "غوښتنه ردول",
-
-      rejectDialogMessage:
-        "که غوښتنه رد کړئ، پیرودونکی باید بل خدمت وړاندې کوونکی وټاکي.",
-
-      startDialogTitle: "کار پیلول",
-
-      startDialogMessage:
-        "ایا د خدمت ځای ته رسېدلي یاست او غواړئ حالت «روان» ته واړوئ؟",
-
-      completeDialogTitle: "خدمت بشپړول",
-
-      completeDialogMessage:
-        "له بشپړېدو وروسته به دا رزرف د بشپړ شوو کارونو تاریخچې ته لاړ شي.",
-
-      cancel: "لغوه",
-      goBack: "بېرته",
-    };
-  }
-
-  return {
-    eyebrow: "Work management",
-    title: "Requests",
-
-    subtitle: "Review new requests and manage the status of accepted jobs.",
-
-    pendingOverview: "New requests",
-
-    activeOverview: "Active jobs",
-
-    completedOverview: "Completed",
-
-    requestNumber: "Request number",
-
-    date: "Date",
-    time: "Time",
-    location: "Location",
-
-    estimatedCost: "Estimated cost",
-
-    serviceAddress: "Service address",
-
-    customerNotes: "Customer notes",
-
-    noNotes: "The customer did not provide additional notes.",
-
-    priceSummary: "Price summary",
-
-    serviceCost: "Service cost",
-
-    platformFee: "Platform fee",
-
-    customerTotal: "Customer total",
-
-    viewDetails: "View details",
-
-    closeDetails: "Close details",
-
-    accept: "Accept request",
-
-    reject: "Reject request",
-
-    startWork: "Start work",
-
-    completeWork: "Complete service",
-
-    completedMessage: "This service has been completed.",
-
-    cancelledMessage: "This request was rejected or cancelled.",
-
-    notice:
-      "Before accepting, carefully review the requested date, time, address, notes and estimated cost.",
-
-    acceptDialogTitle: "Accept request",
-
-    acceptDialogMessage: (service: string) =>
-      `Do you want to accept the “${service}” request?`,
-
-    rejectDialogTitle: "Reject request",
-
-    rejectDialogMessage:
-      "If you reject this request, the customer will need to select another provider.",
-
-    startDialogTitle: "Start work",
-
-    startDialogMessage:
-      "Have you arrived at the service location and want to mark this job as in progress?",
-
-    completeDialogTitle: "Complete service",
-
-    completeDialogMessage:
-      "After completion, this booking will be added to your completed-work history.",
-
-    cancel: "Cancel",
-    goBack: "Go back",
-  };
-}
-
 const styles = StyleSheet.create({
   providerState: {
     flex: 1,
@@ -2040,7 +1147,7 @@ const styles = StyleSheet.create({
 
   safeArea: {
     flex: 1,
-    backgroundColor: KhedmatPalette.blue050,
+    backgroundColor: KhedmatPalette.white,
   },
 
   scrollContent: {
@@ -2256,11 +1363,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFDF8",
   },
 
-  requestCardPressable: {
-    width: "100%",
-    padding: Spacing.lg,
-  },
-
   requestHeader: {
     width: "100%",
     alignItems: "flex-start",
@@ -2357,171 +1459,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  expandRow: {
-    width: "100%",
-    marginTop: Spacing.md,
-    paddingTop: Spacing.md,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: KhedmatPalette.border,
-  },
-
-  expandText: {
-    ...Typography.captionStyle,
-    color: KhedmatPalette.blue500,
-    fontFamily: Fonts.medium,
-  },
-
-  expandedContent: {
-    width: "100%",
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
-  },
-
-  divider: {
-    width: "100%",
-    height: StyleSheet.hairlineWidth,
-    marginBottom: Spacing.lg,
-    backgroundColor: KhedmatPalette.border,
-  },
-
-  smallDivider: {
-    width: "100%",
-    height: StyleSheet.hairlineWidth,
-    marginVertical: Spacing.lg,
-    backgroundColor: KhedmatPalette.border,
-  },
-
-  detailSection: {
-    width: "100%",
-    gap: Spacing.md,
-  },
-
-  detailHeader: {
-    width: "100%",
-    alignItems: "center",
-    gap: Spacing.sm,
-  },
-
-  detailHeaderIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: Radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: KhedmatPalette.surfaceSoft,
-  },
-
-  detailTitle: {
-    ...Typography.label,
-    flex: 1,
-    color: KhedmatPalette.textPrimary,
-  },
-
-  detailText: {
-    ...Typography.bodyStyle,
-    width: "100%",
-    color: KhedmatPalette.textSecondary,
-    lineHeight: 23,
-  },
-
-  priceRows: {
-    width: "100%",
-    padding: Spacing.md,
-    gap: Spacing.md,
-    borderRadius: Radius.lg,
-    backgroundColor: KhedmatPalette.surfaceSoft,
-  },
-
-  priceRow: {
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing.md,
-  },
-
-  priceDivider: {
-    width: "100%",
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: KhedmatPalette.border,
-  },
-
-  priceLabel: {
-    ...Typography.captionStyle,
-    flex: 1,
-    color: KhedmatPalette.textMuted,
-  },
-
-  priceValue: {
-    ...Typography.label,
-    color: KhedmatPalette.textPrimary,
-  },
-
-  priceLabelEmphasized: {
-    color: KhedmatPalette.textPrimary,
-    fontFamily: Fonts.medium,
-  },
-
-  priceValueEmphasized: {
-    color: SUCCESS,
-    fontFamily: Fonts.bold,
-    fontSize: 16,
-  },
-
-  actions: {
-    width: "100%",
-    marginTop: Spacing.xl,
-    gap: Spacing.sm,
-  },
-
-  actionButton: {
-    flex: 1,
-    minHeight: 50,
-    paddingHorizontal: Spacing.md,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderRadius: Radius.lg,
-  },
-
-  actionButtonContent: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.sm,
-  },
-
-  actionButtonText: {
-    ...Typography.label,
-    fontFamily: Fonts.medium,
-    fontSize: 14,
-  },
-
-  actionButtonPressed: {
-    opacity: 0.8,
-    transform: [
-      {
-        scale: 0.985,
-      },
-    ],
-  },
-
-  statusMessage: {
-    width: "100%",
-    minHeight: 56,
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.md,
-    alignItems: "center",
-    gap: Spacing.sm,
-    borderRadius: Radius.lg,
-  },
-
-  statusMessageText: {
-    ...Typography.label,
-    flex: 1,
-  },
-
   emptyState: {
     minHeight: 340,
     paddingHorizontal: Spacing.xl,
@@ -2587,6 +1524,22 @@ const styles = StyleSheet.create({
 
   pressed: {
     opacity: 0.78,
+  },
+
+  openDetailsRow: {
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.md,
+  },
+
+  openDetailsText: {
+    ...Typography.label,
+    color: KhedmatPalette.blue500,
+    fontSize: 13,
   },
 
   cardPressed: {
