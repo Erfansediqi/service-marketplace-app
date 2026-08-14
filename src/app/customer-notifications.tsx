@@ -1,5 +1,11 @@
-import { router } from "expo-router";
-import { useMemo } from "react";
+import {
+  router,
+  useFocusEffect,
+} from "expo-router";
+import {
+  useCallback,
+  useMemo,
+} from "react";
 import {
   FlatList,
   Pressable,
@@ -10,7 +16,6 @@ import {
 } from "react-native";
 
 import NotificationCard from "../components/khedmat/notification-card";
-import { LOCAL_CUSTOMER_ID } from "../constants/identity";
 import {
   KhedmatPalette,
   Layout,
@@ -20,60 +25,97 @@ import {
 } from "../constants/theme";
 import { useLanguage } from "../context/languagecontext";
 import { useNotifications } from "../context/notification-context";
-import { StorageService } from "../services/storage";
-
+import { useSupabaseAuth } from "../context/supabase-auth-context";
 
 export default function CustomerNotificationsScreen() {
   const {
-    notifications: notificationState,
+    user,
+    isHydrated: authIsHydrated,
+  } = useSupabaseAuth();
+
+  const {
+    refreshNotifications,
     getNotifications,
     getUnreadCount,
     markAllAsRead,
     markAsRead,
   } = useNotifications();
-  const clearOldNotifications =
-  async (): Promise<void> => {
-    await StorageService.remove(
-      "@khedmat_notifications",
+
+  const {
+    isRTL,
+    t,
+  } = useLanguage();
+
+  const customerId =
+    user?.id ?? null;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (
+        !authIsHydrated ||
+        !customerId
+      ) {
+        return;
+      }
+
+      void refreshNotifications().catch(
+        (error) => {
+          console.error(
+            "Failed to refresh customer notifications:",
+            error,
+          );
+        },
+      );
+    }, [
+      authIsHydrated,
+      customerId,
+      refreshNotifications,
+    ]),
+  );
+
+  const notifications =
+    useMemo(
+      () =>
+        customerId
+          ? getNotifications(
+              "customer",
+              customerId,
+            )
+          : [],
+      [
+        customerId,
+        getNotifications,
+      ],
     );
-  };
 
-  const { isRTL, t } = useLanguage();
-
-  const notifications = useMemo(
-    () =>
-      getNotifications(
-        "customer",
-        LOCAL_CUSTOMER_ID,
-      ),
-    [
-      getNotifications,
-      notificationState,
-    ],
-  );
-
-  const unreadCount = useMemo(
-    () =>
-      getUnreadCount(
-        "customer",
-        LOCAL_CUSTOMER_ID,
-      ),
-    [
-      getUnreadCount,
-      notificationState,
-    ],
-  );
+  const unreadCount =
+    useMemo(
+      () =>
+        customerId
+          ? getUnreadCount(
+              "customer",
+              customerId,
+            )
+          : 0,
+      [
+        customerId,
+        getUnreadCount,
+      ],
+    );
 
   const handleMarkAllAsRead =
     async (): Promise<void> => {
-      if (unreadCount === 0) {
+      if (
+        !customerId ||
+        unreadCount === 0
+      ) {
         return;
       }
 
       try {
         await markAllAsRead(
           "customer",
-          LOCAL_CUSTOMER_ID,
+          customerId,
         );
       } catch (error) {
         console.error(
@@ -84,7 +126,9 @@ export default function CustomerNotificationsScreen() {
     };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id}
@@ -97,7 +141,8 @@ export default function CustomerNotificationsScreen() {
           <View
             style={[
               styles.header,
-              isRTL && styles.rowReverse,
+              isRTL &&
+                styles.rowReverse,
             ]}
           >
             <Text
@@ -108,7 +153,9 @@ export default function CustomerNotificationsScreen() {
                   : styles.textLeft,
               ]}
             >
-              {t("notificationsTitle")}
+              {t(
+                "notificationsTitle",
+              )}
             </Text>
 
             <Pressable
@@ -117,18 +164,25 @@ export default function CustomerNotificationsScreen() {
                 "markAllAsRead",
               )}
               accessibilityState={{
-                disabled: unreadCount === 0,
+                disabled:
+                  !customerId ||
+                  unreadCount === 0,
               }}
-              disabled={unreadCount === 0}
+              disabled={
+                !customerId ||
+                unreadCount === 0
+              }
               hitSlop={8}
               onPress={() => {
                 void handleMarkAllAsRead();
               }}
               style={({ pressed }) => [
                 styles.markAllButton,
-                unreadCount === 0 &&
+                (!customerId ||
+                  unreadCount === 0) &&
                   styles.markAllButtonDisabled,
                 pressed &&
+                  Boolean(customerId) &&
                   unreadCount > 0 &&
                   styles.markAllButtonPressed,
               ]}
@@ -136,20 +190,25 @@ export default function CustomerNotificationsScreen() {
               <Text
                 style={[
                   styles.markAllText,
-                  unreadCount === 0 &&
+                  (!customerId ||
+                    unreadCount === 0) &&
                     styles.markAllTextDisabled,
                   isRTL
                     ? styles.textRight
                     : styles.textLeft,
                 ]}
               >
-                {t("markAllAsRead")}
+                {t(
+                  "markAllAsRead",
+                )}
               </Text>
             </Pressable>
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
+          <View
+            style={styles.empty}
+          >
             <Text
               style={[
                 styles.emptyTitle,
@@ -162,13 +221,7 @@ export default function CustomerNotificationsScreen() {
                 "notificationsEmptyTitle",
               )}
             </Text>
-<Pressable
-  onPress={() => {
-    void clearOldNotifications();
-  }}
->
-  <Text>Clear old notifications</Text>
-</Pressable>
+
             <Text
               style={[
                 styles.emptyBody,
@@ -224,12 +277,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor:
-      KhedmatPalette.blue050,
+      KhedmatPalette.white,
   },
 
   content: {
     width: "100%",
-    maxWidth: Layout.contentMaxWidth,
+    maxWidth:
+      Layout.contentMaxWidth,
     alignSelf: "center",
     padding:
       Layout.screenPadding,
@@ -246,11 +300,13 @@ const styles = StyleSheet.create({
     justifyContent:
       "space-between",
     gap: Spacing.md,
-    marginBottom: Spacing.xl,
+    marginBottom:
+      Spacing.lg,
   },
 
   rowReverse: {
-    flexDirection: "row-reverse",
+    flexDirection:
+      "row-reverse",
   },
 
   title: {
@@ -261,63 +317,70 @@ const styles = StyleSheet.create({
   },
 
   markAllButton: {
-    minHeight:
-      Layout.minimumTouchTarget,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: Spacing.sm,
-    borderRadius: Radius.md,
+    minHeight: 40,
+    justifyContent:
+      "center",
+    paddingHorizontal:
+      Spacing.md,
+    borderRadius:
+      Radius.pill,
+    backgroundColor:
+      KhedmatPalette.blue050,
   },
 
   markAllButtonPressed: {
-    opacity: 0.72,
+    opacity: 0.75,
   },
 
   markAllButtonDisabled: {
-    opacity: 0.6,
+    backgroundColor:
+      KhedmatPalette.surfaceSoft,
   },
 
   markAllText: {
-    ...Typography.label,
+    ...Typography.captionStyle,
     color:
       KhedmatPalette.blue500,
+    fontWeight: "600",
   },
 
   markAllTextDisabled: {
     color:
-      KhedmatPalette.disabled,
+      KhedmatPalette.textMuted,
   },
 
   empty: {
     flex: 1,
     minHeight: 320,
-    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: Spacing.xl,
+    justifyContent:
+      "center",
+    padding:
+      Spacing.xl,
   },
 
   emptyTitle: {
     ...Typography.sectionTitle,
     color:
       KhedmatPalette.textPrimary,
-    marginBottom: Spacing.sm,
-    textAlign: "center",
   },
 
   emptyBody: {
     ...Typography.bodyStyle,
+    maxWidth: 340,
+    marginTop:
+      Spacing.xs,
     color:
-      KhedmatPalette.textMuted,
-    textAlign: "center",
-    maxWidth:
-      Layout.readableTextMaxWidth,
+      KhedmatPalette.textSecondary,
   },
 
   textLeft: {
     textAlign: "left",
+    writingDirection: "ltr",
   },
 
   textRight: {
     textAlign: "right",
+    writingDirection: "rtl",
   },
 });

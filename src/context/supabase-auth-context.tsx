@@ -14,6 +14,7 @@ import * as QueryParams from "expo-auth-session/build/QueryParams";
 import * as WebBrowser from "expo-web-browser";
 
 import { supabase } from "../lib/supabase";
+import { getOrCreateInstallationId } from "../services/installation-id";
 
 export type SupportedLanguage = "English" | "Dari" | "Pashto";
 
@@ -402,14 +403,43 @@ export function SupabaseAuthProvider({ children }: PropsWithChildren) {
   );
 
   const signOut = useCallback(async (): Promise<void> => {
-    const { error } = await supabase.auth.signOut();
+    if (session?.user) {
+      try {
+        const installationId =
+          await getOrCreateInstallationId();
+
+        const { error } =
+          await supabase.rpc(
+            "disable_push_device",
+            {
+              p_installation_id:
+                installationId,
+            },
+          );
+
+        if (error) {
+          console.error(
+            "Failed to disable this installation's push registration before logout:",
+            error,
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Failed to prepare this installation for push disable during logout:",
+          error,
+        );
+      }
+    }
+
+    const { error } =
+      await supabase.auth.signOut();
 
     if (error) {
       throw error;
     }
 
     setSession(null);
-  }, []);
+  }, [session?.user]);
 
   const value = useMemo<SupabaseAuthContextValue>(
     () => ({
@@ -435,11 +465,11 @@ export function SupabaseAuthProvider({ children }: PropsWithChildren) {
       isUpdatingPassword,
       sendPhoneOtp,
       sendPhoneLoginOtp,
-      session,
-      signInWithSocialProvider,
-      signOut,
-      updatePassword,
       verifyPhoneOtp,
+      signInWithSocialProvider,
+      updatePassword,
+      signOut,
+      session,
     ],
   );
 

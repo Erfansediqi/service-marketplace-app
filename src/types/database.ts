@@ -161,6 +161,79 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body_key: string
+          body_params: Json
+          booking_id: string | null
+          created_at: string
+          data: Json
+          dedupe_key: string
+          id: string
+          priority: string
+          read_at: string | null
+          recipient_provider_id: string | null
+          recipient_role: string
+          recipient_user_id: string
+          title_key: string
+          type: string
+        }
+        Insert: {
+          body_key: string
+          body_params?: Json
+          booking_id?: string | null
+          created_at?: string
+          data?: Json
+          dedupe_key: string
+          id?: string
+          priority?: string
+          read_at?: string | null
+          recipient_provider_id?: string | null
+          recipient_role: string
+          recipient_user_id: string
+          title_key: string
+          type: string
+        }
+        Update: {
+          body_key?: string
+          body_params?: Json
+          booking_id?: string | null
+          created_at?: string
+          data?: Json
+          dedupe_key?: string
+          id?: string
+          priority?: string
+          read_at?: string | null
+          recipient_provider_id?: string | null
+          recipient_role?: string
+          recipient_user_id?: string
+          title_key?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_provider_id_fkey"
+            columns: ["recipient_provider_id"]
+            isOneToOne: false
+            referencedRelation: "provider_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_path: string | null
@@ -462,6 +535,77 @@ export type Database = {
           },
         ]
       }
+      push_devices: {
+        Row: {
+          app_version: string | null
+          created_at: string
+          delivery_failure_count: number
+          disabled_at: string | null
+          disabled_reason: string | null
+          enabled: boolean
+          id: string
+          installation_id: string
+          last_delivery_error: string | null
+          last_delivery_error_at: string | null
+          last_registered_at: string
+          last_seen_at: string
+          platform: string
+          project_id: string | null
+          push_provider: string
+          push_token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_version?: string | null
+          created_at?: string
+          delivery_failure_count?: number
+          disabled_at?: string | null
+          disabled_reason?: string | null
+          enabled?: boolean
+          id?: string
+          installation_id: string
+          last_delivery_error?: string | null
+          last_delivery_error_at?: string | null
+          last_registered_at?: string
+          last_seen_at?: string
+          platform: string
+          project_id?: string | null
+          push_provider?: string
+          push_token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_version?: string | null
+          created_at?: string
+          delivery_failure_count?: number
+          disabled_at?: string | null
+          disabled_reason?: string | null
+          enabled?: boolean
+          id?: string
+          installation_id?: string
+          last_delivery_error?: string | null
+          last_delivery_error_at?: string | null
+          last_registered_at?: string
+          last_seen_at?: string
+          platform?: string
+          project_id?: string | null
+          push_provider?: string
+          push_token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_devices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_categories: {
         Row: {
           created_at: string
@@ -622,6 +766,21 @@ export type Database = {
         }
       }
       current_user_is_admin: { Args: never; Returns: boolean }
+      disable_push_device: {
+        Args: { p_installation_id: string }
+        Returns: boolean
+      }
+      register_push_device: {
+        Args: {
+          p_app_version?: string
+          p_installation_id: string
+          p_platform: string
+          p_project_id?: string
+          p_push_provider: string
+          p_push_token: string
+        }
+        Returns: string
+      }
       save_provider_services: {
         Args: { p_provider_id: string; p_services: Json }
         Returns: {

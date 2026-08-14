@@ -1,5 +1,5 @@
-import { router } from "expo-router";
-import { useMemo } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useMemo } from "react";
 import {
   FlatList,
   Pressable,
@@ -26,7 +26,7 @@ export default function ProviderNotificationsScreen() {
     useSession();
 
   const {
-    notifications: notificationState,
+    refreshNotifications,
     getNotifications,
     getUnreadCount,
     markAllAsRead,
@@ -34,6 +34,26 @@ export default function ProviderNotificationsScreen() {
   } = useNotifications();
 
   const { isRTL, t } = useLanguage();
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!activeProviderId) {
+        return;
+      }
+
+      void refreshNotifications().catch(
+        (error) => {
+          console.error(
+            "Failed to refresh provider notifications:",
+            error,
+          );
+        },
+      );
+    }, [
+      activeProviderId,
+      refreshNotifications,
+    ]),
+  );
 
   const notifications = useMemo(
     () =>
@@ -46,7 +66,6 @@ export default function ProviderNotificationsScreen() {
     [
       activeProviderId,
       getNotifications,
-      notificationState,
     ],
   );
 
@@ -61,7 +80,6 @@ export default function ProviderNotificationsScreen() {
     [
       activeProviderId,
       getUnreadCount,
-      notificationState,
     ],
   );
 

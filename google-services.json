@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "765643007218",
+    "project_id": "khedmat-f6bf9",
+    "storage_bucket": "khedmat-f6bf9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:765643007218:android:4acb19de366a5587f41c6b",
+        "android_client_info": {
+          "package_name": "com.khedmat.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNI7ogh6Q-Yxb5ivn_B6uDlmX49dEulRQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

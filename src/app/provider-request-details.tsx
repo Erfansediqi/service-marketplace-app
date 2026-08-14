@@ -1,36 +1,35 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
-    useLocalSearchParams,
-    useRouter,
+  useLocalSearchParams,
+  useRouter,
 } from "expo-router";
 import {
-    useMemo,
-    useState,
+  useMemo,
+  useState,
 } from "react";
 import {
-    Alert,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Alert,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import { KhedmatButton } from "../components/khedmat/khedmat-button";
 import {
-    KhedmatPalette,
-    Layout,
-    Radius,
-    Spacing,
-    Typography,
+  KhedmatPalette,
+  Layout,
+  Radius,
+  Spacing,
+  Typography,
 } from "../constants/theme";
 import {
-    type BookingRecord,
-    useBooking,
+  type BookingRecord,
+  useBooking,
 } from "../context/booking-context";
 import { useLanguage } from "../context/languagecontext";
-import { useNotifications } from "../context/notification-context";
 
 export default function ProviderRequestDetailsScreen() {
   const router = useRouter();
@@ -52,11 +51,6 @@ export default function ProviderRequestDetailsScreen() {
     getBookingById,
     updateBookingStatus,
   } = useBooking();
-
-  const {
-    createCustomerBookingConfirmedNotification,
-    createCustomerBookingCompletedNotification,
-  } = useNotifications();
 
   const [
     isUpdating,
@@ -126,51 +120,6 @@ export default function ProviderRequestDetailsScreen() {
           nextStatus,
         );
 
-        if (
-          nextStatus ===
-          "confirmed"
-        ) {
-          try {
-            await createCustomerBookingConfirmedNotification(
-              {
-                customerId:
-                  booking.customerId,
-                bookingId:
-                  booking.id,
-                providerName:
-                  booking.providerName,
-              },
-            );
-          } catch (error) {
-            console.warn(
-              "Booking was confirmed, but the customer notification failed:",
-              error,
-            );
-          }
-        }
-
-        if (
-          nextStatus ===
-          "completed"
-        ) {
-          try {
-            await createCustomerBookingCompletedNotification(
-              {
-                customerId:
-                  booking.customerId,
-                bookingId:
-                  booking.id,
-                providerName:
-                  booking.providerName,
-              },
-            );
-          } catch (error) {
-            console.warn(
-              "Booking was completed, but the customer notification failed:",
-              error,
-            );
-          }
-        }
       } catch (error) {
         console.error(
           "Failed to update provider request:",
@@ -452,14 +401,27 @@ export default function ProviderRequestDetailsScreen() {
           />
 
           {booking.customerPhone ? (
-            <>
-              <Divider />
+  <>
+    <Divider />
 
-              label={t(
-  "providerRequestsCustomer",
-)}
-            </>
-          ) : null}
+    <InfoRow
+      icon="call-outline"
+      label={t(
+        "providerRequestsCustomerPhone",
+      )}
+      value={
+        booking.customerPhone
+      }
+      isRTL={isRTL}
+      rowDirection={
+        rowDirection
+      }
+      textDirection={
+        textDirection
+      }
+    />
+  </>
+) : null}
         </InfoCard>
 
         <SectionTitle

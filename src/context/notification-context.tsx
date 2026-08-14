@@ -1,135 +1,147 @@
 import React, {
-  PropsWithChildren,
+  type PropsWithChildren,
   createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 
 import {
-  createBookingCompletedNotification,
-  createBookingConfirmedNotification,
-  createBookingCreatedNotification,
-} from "../services/notification-service";
-
-import { StorageService } from "../services/storage";
-
-import {
+  listNotificationsForCurrentUser,
+  markNotificationRead,
+  markNotificationsRead,
+} from "../repositories/notification-repository";
+import type {
   NotificationRecipient,
   NotificationRecord,
 } from "../types/notifications";
 
-const STORAGE_KEY = "@khedmat_notifications";
+import { useSupabaseAuth } from "./supabase-auth-context";
 
 interface NotificationContextValue {
   notifications: NotificationRecord[];
   isHydrated: boolean;
+  isRefreshing: boolean;
 
-  addNotification: (
-    notification: NotificationRecord
-  ) => Promise<void>;
-
-  removeNotification: (
-    notificationId: string
-  ) => Promise<void>;
+  refreshNotifications: () => Promise<void>;
 
   markAsRead: (
-    notificationId: string
+    notificationId: string,
   ) => Promise<void>;
 
   markAllAsRead: (
     recipient: NotificationRecipient,
-    recipientId: string
-  ) => Promise<void>;
-
-  createProviderBookingNotification: (
-    options: {
-      providerId: string;
-      bookingId: string;
-      customerName: string;
-    }
-  ) => Promise<void>;
-
-  createCustomerBookingConfirmedNotification: (
-    options: {
-      customerId: string;
-      bookingId: string;
-      providerName: string;
-    }
-  ) => Promise<void>;
-
-  createCustomerBookingCompletedNotification: (
-    options: {
-      customerId: string;
-      bookingId: string;
-      providerName: string;
-    }
+    recipientId: string,
   ) => Promise<void>;
 
   getNotifications: (
     recipient: NotificationRecipient,
-    recipientId: string
+    recipientId: string,
   ) => NotificationRecord[];
 
   getUnreadCount: (
     recipient: NotificationRecipient,
-    recipientId: string
+    recipientId: string,
   ) => number;
+
 }
 
 const NotificationContext =
   createContext<NotificationContextValue | null>(
-    null
+    null,
   );
 
 export function NotificationProvider({
   children,
 }: PropsWithChildren) {
-  const [notifications, setNotifications] =
-    useState<NotificationRecord[]>([]);
+  const {
+    user,
+    isHydrated: authIsHydrated,
+  } = useSupabaseAuth();
 
-  const notificationsRef =
-    useRef<NotificationRecord[]>([]);
+  const [
+    remoteNotifications,
+    setRemoteNotifications,
+  ] = useState<NotificationRecord[]>([]);
 
-  const [isHydrated, setIsHydrated] =
-    useState(false);
+  const [
+    isHydrated,
+    setIsHydrated,
+  ] = useState(false);
+
+  const [
+    isRefreshing,
+    setIsRefreshing,
+  ] = useState(false);
+
+  const currentUserId =
+    user?.id ?? null;
+
+  const refreshNotifications =
+    useCallback(
+      async (): Promise<void> => {
+        if (!currentUserId) {
+          setRemoteNotifications([]);
+          return;
+        }
+
+        setIsRefreshing(true);
+
+        try {
+          const next =
+            await listNotificationsForCurrentUser();
+
+          setRemoteNotifications(next);
+        } catch (error) {
+          console.error(
+            "Failed to load notifications from Supabase:",
+            error,
+          );
+
+          throw error;
+        } finally {
+          setIsRefreshing(false);
+        }
+      },
+      [currentUserId],
+    );
 
   useEffect(() => {
+    if (!authIsHydrated) {
+      return;
+    }
+
     let mounted = true;
 
-    async function hydrate() {
+    async function hydrate(): Promise<void> {
+      setIsHydrated(false);
+
+      if (!currentUserId) {
+        setRemoteNotifications([]);
+        setIsHydrated(true);
+        return;
+      }
+
       try {
-        const stored =
-          await StorageService.get<
-            NotificationRecord[]
-          >(STORAGE_KEY);
+        const next =
+          await listNotificationsForCurrentUser();
 
         if (!mounted) {
           return;
         }
 
-        const hydrated =
-  stored ?? [];
+        setRemoteNotifications(next);
 
-        notificationsRef.current =
-          hydrated;
-
-        setNotifications(hydrated);
       } catch (error) {
         console.error(
-          "Failed to hydrate notifications:",
-          error
+          "Failed to hydrate notifications from Supabase:",
+          error,
         );
 
         if (mounted) {
-          notificationsRef.current = [];
-setNotifications([]);
-
-          notificationsRef.current = [];
-setNotifications([]);
+          setRemoteNotifications([]);
         }
       } finally {
         if (mounted) {
@@ -143,213 +155,135 @@ setNotifications([]);
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [
+    authIsHydrated,
+    currentUserId,
+  ]);
 
-  const persist = useCallback(
-    async (
-      next: NotificationRecord[]
-    ): Promise<void> => {
-      notificationsRef.current =
-        next;
-
-      setNotifications(next);
-
-      await StorageService.save(
-        STORAGE_KEY,
-        next
-      );
-    },
-    []
-  );
-
-  const addNotification =
-    useCallback(
-      async (
-        notification: NotificationRecord
-      ): Promise<void> => {
-        await persist([
-          notification,
-          ...notificationsRef.current,
-        ]);
-      },
-      [persist]
-    );
-
-    const createProviderBookingNotification =
-  useCallback(
-    async (options: {
-      providerId: string;
-      bookingId: string;
-      customerName: string;
-    }): Promise<void> => {
-      await addNotification(
-        createBookingCreatedNotification(options)
-      );
-    },
-    [addNotification]
-  );
-
-const createCustomerBookingConfirmedNotification =
-  useCallback(
-    async (options: {
-      customerId: string;
-      bookingId: string;
-      providerName: string;
-    }): Promise<void> => {
-      await addNotification(
-        createBookingConfirmedNotification(options)
-      );
-    },
-    [addNotification]
-  );
-
-const createCustomerBookingCompletedNotification =
-  useCallback(
-    async (options: {
-      customerId: string;
-      bookingId: string;
-      providerName: string;
-    }): Promise<void> => {
-      await addNotification(
-        createBookingCompletedNotification(options)
-      );
-    },
-    [addNotification]
-  );
-
-  const removeNotification =
-    useCallback(
-      async (
-        notificationId: string
-      ): Promise<void> => {
-        await persist(
-          notificationsRef.current.filter(
-            (notification) =>
-              notification.id !==
-              notificationId
-          )
-        );
-      },
-      [persist]
-    );
+  const notifications =
+    remoteNotifications;
 
   const markAsRead =
     useCallback(
       async (
-        notificationId: string
+        notificationId: string,
       ): Promise<void> => {
-        await persist(
-          notificationsRef.current.map(
-            (notification) =>
-              notification.id ===
-              notificationId
-                ? {
-                    ...notification,
-                    read: true,
-                    readAt:
-                      new Date().toISOString(),
-                  }
-                : notification
-          )
+        const readAt =
+          await markNotificationRead(
+            notificationId,
+          );
+
+        setRemoteNotifications(
+          (current) =>
+            current.map(
+              (notification) =>
+                notification.id ===
+                notificationId
+                  ? {
+                      ...notification,
+                      read: true,
+                      readAt,
+                    }
+                  : notification,
+            ),
         );
       },
-      [persist]
+      [],
     );
 
   const markAllAsRead =
     useCallback(
       async (
         recipient: NotificationRecipient,
-        recipientId: string
+        recipientId: string,
       ): Promise<void> => {
-        await persist(
-          notificationsRef.current.map(
-            (notification) => {
-              if (
-                notification.recipient !==
-                  recipient ||
-                notification.recipientId !==
-                  recipientId
-              ) {
-                return notification;
-              }
+        const readAt =
+          await markNotificationsRead(
+            recipient,
+            recipientId,
+          );
 
-              return {
-                ...notification,
-                read: true,
-                readAt:
-                  new Date().toISOString(),
-              };
-            }
-          )
+        setRemoteNotifications(
+          (current) =>
+            current.map(
+              (notification) => {
+                if (
+                  notification.recipient !==
+                    recipient ||
+                  notification.recipientId !==
+                    recipientId ||
+                  notification.read
+                ) {
+                  return notification;
+                }
+
+                return {
+                  ...notification,
+                  read: true,
+                  readAt,
+                };
+              },
+            ),
         );
       },
-      [persist]
+      [],
     );
 
   const getNotifications =
     useCallback(
       (
         recipient: NotificationRecipient,
-        recipientId: string
+        recipientId: string,
       ): NotificationRecord[] =>
-        notificationsRef.current.filter(
+        notifications.filter(
           (notification) =>
             notification.recipient ===
               recipient &&
             notification.recipientId ===
-              recipientId
+              recipientId,
         ),
-      []
+      [notifications],
     );
 
   const getUnreadCount =
     useCallback(
       (
         recipient: NotificationRecipient,
-        recipientId: string
+        recipientId: string,
       ): number =>
-        notificationsRef.current.filter(
+        notifications.filter(
           (notification) =>
             notification.recipient ===
               recipient &&
             notification.recipientId ===
               recipientId &&
-            !notification.read
+            !notification.read,
         ).length,
-      []
+      [notifications],
     );
 
   const value =
     useMemo<NotificationContextValue>(
       () => ({
-  notifications,
-  isHydrated,
-  addNotification,
-  removeNotification,
-  markAsRead,
-  markAllAsRead,
-
-  createProviderBookingNotification,
-  createCustomerBookingConfirmedNotification,
-  createCustomerBookingCompletedNotification,
-
-  getNotifications,
-  getUnreadCount,
-}),
+        notifications,
+        isHydrated,
+        isRefreshing,
+        refreshNotifications,
+        markAsRead,
+        markAllAsRead,
+        getNotifications,
+        getUnreadCount,
+      }),
       [
-  notifications,
-  isHydrated,
-  addNotification,
-  removeNotification,
-  markAsRead,
-  markAllAsRead,
-  createProviderBookingNotification,
-  createCustomerBookingConfirmedNotification,
-  createCustomerBookingCompletedNotification,
-  getNotifications,
-  getUnreadCount,
-]
+        notifications,
+        isHydrated,
+        isRefreshing,
+        refreshNotifications,
+        markAsRead,
+        markAllAsRead,
+        getNotifications,
+        getUnreadCount,
+      ],
     );
 
   return (
@@ -362,11 +296,12 @@ const createCustomerBookingCompletedNotification =
 }
 
 export function useNotifications(): NotificationContextValue {
-  const context = useContext(NotificationContext);
+  const context =
+    useContext(NotificationContext);
 
   if (!context) {
     throw new Error(
-      "useNotifications must be used within a NotificationProvider."
+      "useNotifications must be used within a NotificationProvider.",
     );
   }
 
