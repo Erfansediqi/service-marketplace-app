@@ -56,29 +56,7 @@ const BENEFITS: BenefitDefinition[] = [
         "نږدې پیرودونکو ته لاسرسی",
     },
 
-    subtitle: {
-      English:
-        "Receive service requests that match your skills and work area.",
-      Dari:
-        "درخواست‌های مرتبط با مهارت و محل فعالیت خود را دریافت کنید.",
-      Pashto:
-        "د خپلو مهارتونو او کاري سیمې سره سمې غوښتنې ترلاسه کړئ.",
-    },
-  },
-  {
-    id: "work-management",
-    icon: "calendar-outline",
-
-    title: {
-      English:
-        "Manage work easily",
-      Dari:
-        "مدیریت سادهٔ کارها",
-      Pashto:
-        "کارونه په اسانۍ مدیریت کړئ",
-    },
-
-    subtitle: {
+      subtitle: {
       English:
         "Manage requests, schedules and service progress from one place.",
       Dari:
@@ -275,16 +253,7 @@ export default function ProviderWelcomeScreen() {
                 },
               ]}
             >
-              <Text
-                style={[
-                  styles.eyebrow,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.eyebrow}
-              </Text>
+
 
               <Text
                 style={[
@@ -297,16 +266,7 @@ export default function ProviderWelcomeScreen() {
                 {copy.title}
               </Text>
 
-              <Text
-                style={[
-                  styles.subtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.subtitle}
-              </Text>
+
             </View>
           </View>
 
@@ -361,18 +321,6 @@ export default function ProviderWelcomeScreen() {
                   }
                 </Text>
 
-                <Text
-                  style={[
-                    styles.infoSubtitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {
-                    copy.registrationSubtitle
-                  }
-                </Text>
               </View>
             </View>
           </View>
@@ -401,18 +349,7 @@ export default function ProviderWelcomeScreen() {
                 {copy.benefitsTitle}
               </Text>
 
-              <Text
-                style={[
-                  styles.sectionSubtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {
-                  copy.benefitsSubtitle
-                }
-              </Text>
+
             </View>
 
             <View
@@ -985,18 +922,7 @@ const styles =
       gap: Spacing.sm,
     },
 
-    eyebrow: {
-      ...Typography.captionStyle,
-
-      width: "100%",
-
-      color:
-        KhedmatPalette.blue500,
-
-      fontFamily: Fonts.medium,
-    },
-
-    title: {
+      title: {
       ...Typography.screenTitle,
 
       width: "100%",
@@ -1027,9 +953,9 @@ const styles =
     infoCard: {
       width: "100%",
 
-      marginTop: Spacing.xxl,
+      marginTop: Spacing.lg,
 
-      padding: Spacing.lg,
+      padding: Spacing.md,
 
       borderWidth: 1,
 
@@ -1083,24 +1009,13 @@ const styles =
       fontSize: 16,
     },
 
-    infoSubtitle: {
-      ...Typography.captionStyle,
-
-      width: "100%",
-
-      color:
-        KhedmatPalette.textSecondary,
-
-      lineHeight: 19,
-    },
-
-    section: {
+      section: {
       width: "100%",
 
       marginTop:
-        Spacing.section,
+        Spacing.xl,
 
-      gap: Spacing.lg,
+      gap: Spacing.md,
     },
 
     sectionHeader: {
@@ -1122,20 +1037,7 @@ const styles =
       lineHeight: 28,
     },
 
-    sectionSubtitle: {
-      ...Typography.captionStyle,
-
-      width: "100%",
-
-      maxWidth: 450,
-
-      color:
-        KhedmatPalette.textMuted,
-
-      lineHeight: 19,
-    },
-
-    benefits: {
+      benefits: {
       width: "100%",
 
       gap: Spacing.md,
@@ -1144,9 +1046,9 @@ const styles =
     benefitCard: {
       width: "100%",
 
-      minHeight: 108,
+      minHeight: 90,
 
-      padding: Spacing.lg,
+      padding: Spacing.md,
 
       alignItems: "flex-start",
 

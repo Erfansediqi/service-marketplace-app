@@ -311,10 +311,6 @@ export default function ProviderDashboardScreen() {
                 },
               ]}
             >
-              <Text style={[styles.eyebrow, directionStyle(isRtl)]}>
-                {t("providerDashboardEyebrow")}
-              </Text>
-
               <Text
                 numberOfLines={1}
                 style={[styles.greeting, directionStyle(isRtl)]}
@@ -354,16 +350,6 @@ export default function ProviderDashboardScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.hero}>
-          <Text style={[styles.heroTitle, directionStyle(isRtl)]}>
-            {t("providerDashboardHeroTitle")}
-          </Text>
-
-          <Text style={[styles.heroSubtitle, directionStyle(isRtl)]}>
-            {t("providerDashboardHeroSubtitle")}
-          </Text>
-        </View>
-
         <View
           style={[
             styles.availabilityCard,
@@ -397,17 +383,10 @@ export default function ProviderDashboardScreen() {
               },
             ]}
           >
-            <Text style={[styles.availabilityLabel, directionStyle(isRtl)]}>
-              {t("providerDashboardCurrentStatus")}
-            </Text>
-
             <Text style={[styles.availabilityTitle, directionStyle(isRtl)]}>
               {availableNow ? t("providerDashboardAvailableTitle") : t("providerDashboardUnavailableTitle")}
             </Text>
 
-            <Text style={[styles.availabilitySubtitle, directionStyle(isRtl)]}>
-              {availableNow ? t("providerDashboardAvailableSubtitle") : t("providerDashboardUnavailableSubtitle")}
-            </Text>
           </View>
 
           <Pressable
@@ -680,9 +659,6 @@ function SectionHeader({
           {title}
         </Text>
 
-        <Text style={[styles.sectionSubtitle, directionStyle(isRtl)]}>
-          {subtitle}
-        </Text>
       </View>
 
       {actionLabel && onPress ? (
@@ -1338,18 +1314,6 @@ const styles = StyleSheet.create({
 
   identityCopy: {
     flex: 1,
-
-    gap: 1,
-  },
-
-  eyebrow: {
-    ...Typography.captionStyle,
-
-    width: "100%",
-
-    color: KhedmatPalette.blue500,
-
-    fontFamily: Fonts.medium,
   },
 
   greeting: {
@@ -1357,9 +1321,9 @@ const styles = StyleSheet.create({
 
     width: "100%",
 
-    color: KhedmatPalette.textPrimary,
+    color: KhedmatPalette.navy900,
 
-    fontSize: 16,
+    fontSize: 17,
 
     lineHeight: 22,
   },
@@ -1415,46 +1379,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
 
-  hero: {
-    width: "100%",
-
-    marginTop: Spacing.xl,
-
-    gap: Spacing.xs,
-  },
-
-  heroTitle: {
-    ...Typography.screenTitle,
-
-    width: "100%",
-
-    maxWidth: 460,
-
-    color: KhedmatPalette.textPrimary,
-
-    fontSize: 27,
-
-    lineHeight: 34,
-  },
-
-  heroSubtitle: {
-    ...Typography.bodyStyle,
-
-    width: "100%",
-
-    maxWidth: Layout.readableTextMaxWidth,
-
-    color: KhedmatPalette.textSecondary,
-  },
-
   availabilityCard: {
     width: "100%",
 
-    minHeight: 116,
+    minHeight: 84,
 
-    marginTop: Spacing.xxl,
+    marginTop: Spacing.lg,
 
-    padding: Spacing.lg,
+    padding: Spacing.md,
 
     alignItems: "center",
 
@@ -1472,8 +1404,8 @@ const styles = StyleSheet.create({
   },
 
   availabilityIcon: {
-    width: 50,
-    height: 50,
+    width: 42,
+    height: 42,
 
     flexShrink: 0,
 
@@ -1494,16 +1426,6 @@ const styles = StyleSheet.create({
 
   availabilityCopy: {
     flex: 1,
-
-    gap: 2,
-  },
-
-  availabilityLabel: {
-    ...Typography.captionStyle,
-
-    width: "100%",
-
-    color: KhedmatPalette.textMuted,
   },
 
   availabilityTitle: {
@@ -1516,16 +1438,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
 
     lineHeight: 23,
-  },
-
-  availabilitySubtitle: {
-    ...Typography.captionStyle,
-
-    width: "100%",
-
-    color: KhedmatPalette.textSecondary,
-
-    lineHeight: 18,
   },
 
   switchPressable: {
@@ -1577,7 +1489,7 @@ const styles = StyleSheet.create({
   metricCard: {
     width: "48.7%",
 
-    minHeight: 138,
+    minHeight: 112,
 
     padding: Spacing.md,
 
@@ -1599,14 +1511,14 @@ const styles = StyleSheet.create({
   },
 
   metricCardCompact: {
-    minHeight: 130,
+    minHeight: 106,
 
     paddingHorizontal: Spacing.sm,
   },
 
   metricIcon: {
-    width: 42,
-    height: 42,
+    width: 36,
+    height: 36,
 
     borderRadius: Radius.md,
 
@@ -1644,9 +1556,9 @@ const styles = StyleSheet.create({
   section: {
     width: "100%",
 
-    marginTop: Spacing.section,
+    marginTop: Spacing.xl,
 
-    gap: Spacing.lg,
+    gap: Spacing.md,
   },
 
   sectionHeader: {
@@ -1670,11 +1582,11 @@ const styles = StyleSheet.create({
 
     width: "100%",
 
-    color: KhedmatPalette.textPrimary,
+    color: KhedmatPalette.navy900,
 
-    fontSize: 21,
+    fontSize: 19,
 
-    lineHeight: 28,
+    lineHeight: 25,
   },
 
   sectionSubtitle: {
@@ -1708,15 +1620,15 @@ const styles = StyleSheet.create({
   requestCard: {
     width: "100%",
 
-    padding: Spacing.lg,
+    padding: Spacing.md,
 
     borderWidth: 1,
 
-    borderColor: "#E5C875",
+    borderColor: KhedmatPalette.border,
 
     borderRadius: Radius.xl,
 
-    backgroundColor: "#FFFDF6",
+    backgroundColor: KhedmatPalette.white,
 
     ...Shadows.small,
   },

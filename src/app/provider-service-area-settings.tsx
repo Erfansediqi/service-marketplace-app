@@ -480,9 +480,6 @@ export default function ProviderServiceAreaSettingsScreen() {
           title={t(
             "providerServiceAreaSettingsTitle",
           )}
-          subtitle={t(
-            "providerServiceAreaSettingsSubtitle",
-          )}
           backLabel={t("back")}
           onBack={() =>
             router.back()
@@ -521,9 +518,6 @@ export default function ProviderServiceAreaSettingsScreen() {
           }
           title={t(
             "providerServiceAreaSettingsTitle",
-          )}
-          subtitle={t(
-            "providerServiceAreaSettingsSubtitle",
           )}
           backLabel={t("back")}
           onBack={() =>
@@ -625,9 +619,6 @@ export default function ProviderServiceAreaSettingsScreen() {
           }
           title={t(
             "providerServiceAreaSettingsTitle",
-          )}
-          subtitle={t(
-            "providerServiceAreaSettingsSubtitle",
           )}
           backLabel={t("back")}
           onBack={() =>
@@ -741,22 +732,7 @@ export default function ProviderServiceAreaSettingsScreen() {
           )}
         </Text>
 
-        <Text
-          style={[
-            styles.sectionHint,
-            {
-              textAlign: isRTL
-                ? "right"
-                : "left",
-              writingDirection:
-                textDirection,
-            },
-          ]}
-        >
-          {t(
-            "providerServiceAreaServiceModesHint",
-          )}
-        </Text>
+
 
         <View
           style={
@@ -820,22 +796,7 @@ export default function ProviderServiceAreaSettingsScreen() {
               )}
             </Text>
 
-            <Text
-              style={[
-                styles.sectionHint,
-                {
-                  textAlign: isRTL
-                    ? "right"
-                    : "left",
-                  writingDirection:
-                    textDirection,
-                },
-              ]}
-            >
-              {t(
-                "providerServiceAreaTravelRadiusHint",
-              )}
-            </Text>
+
 
             <View
               style={
@@ -894,41 +855,6 @@ export default function ProviderServiceAreaSettingsScreen() {
             </View>
           </>
         ) : null}
-
-        <View
-          style={[
-            styles.coverageNotice,
-            {
-              flexDirection:
-                rowDirection,
-            },
-          ]}
-        >
-          <Ionicons
-            name="information-circle-outline"
-            size={20}
-            color={
-              KhedmatPalette.blue500
-            }
-          />
-
-          <Text
-            style={[
-              styles.coverageNoticeText,
-              {
-                textAlign: isRTL
-                  ? "right"
-                  : "left",
-                writingDirection:
-                  textDirection,
-              },
-            ]}
-          >
-            {t(
-              "providerServiceAreaCoverageNote",
-            )}
-          </Text>
-        </View>
       </KhedmatScreen>
 
       <Modal
@@ -1146,7 +1072,6 @@ type HeaderProps = {
     | "ltr"
     | "rtl";
   title: string;
-  subtitle: string;
   backLabel: string;
   onBack: () => void;
 };
@@ -1156,7 +1081,6 @@ function Header({
   rowDirection,
   textDirection,
   title,
-  subtitle,
   backLabel,
   onBack,
 }: HeaderProps) {
@@ -1215,20 +1139,6 @@ function Header({
           {title}
         </Text>
 
-        <Text
-          style={[
-            styles.subtitle,
-            {
-              textAlign: isRTL
-                ? "right"
-                : "left",
-              writingDirection:
-                textDirection,
-            },
-          ]}
-        >
-          {subtitle}
-        </Text>
       </View>
     </View>
   );
@@ -1628,9 +1538,9 @@ const styles =
       alignSelf: "center",
       alignItems:
         "flex-start",
-      gap: Spacing.md,
+      gap: Spacing.sm,
       marginBottom:
-        Spacing.xl,
+        Spacing.lg,
     },
 
     backButton: {
@@ -1654,17 +1564,9 @@ const styles =
     title: {
       ...Typography.screenTitle,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       fontSize: 22,
       lineHeight: 28,
-    },
-
-    subtitle: {
-      ...Typography.captionStyle,
-      marginTop: 3,
-      color:
-        KhedmatPalette.textSecondary,
-      lineHeight: 18,
     },
 
     loadingState: {
@@ -1717,25 +1619,14 @@ const styles =
     sectionTitle: {
       ...Typography.sectionTitle,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       fontSize: 18,
       lineHeight: 24,
     },
 
     sectionSpacing: {
       marginTop:
-        Spacing.xl,
-    },
-
-    sectionHint: {
-      ...Typography.captionStyle,
-      marginTop:
-        Spacing.xs,
-      marginBottom:
-        Spacing.md,
-      color:
-        KhedmatPalette.textSecondary,
-      lineHeight: 18,
+        Spacing.lg,
     },
 
     locationFields: {
@@ -1759,7 +1650,7 @@ const styles =
 
     selectionButton: {
       width: "100%",
-      minHeight: 54,
+      minHeight: 50,
       alignItems: "center",
       justifyContent:
         "space-between",
@@ -1770,7 +1661,7 @@ const styles =
         Radius.md,
       borderWidth: 1,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
         KhedmatPalette.white,
     },
@@ -1795,7 +1686,7 @@ const styles =
 
     modeRow: {
       width: "100%",
-      minHeight: 82,
+      minHeight: 72,
       alignItems: "center",
       gap: Spacing.md,
       paddingHorizontal:
@@ -1806,7 +1697,7 @@ const styles =
         Radius.lg,
       borderWidth: 1,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
         KhedmatPalette.white,
     },
@@ -1815,12 +1706,12 @@ const styles =
       borderColor:
         KhedmatPalette.blue500,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
 
     modeIcon: {
-      width: 42,
-      height: 42,
+      width: 38,
+      height: 38,
       flexShrink: 0,
       alignItems: "center",
       justifyContent:
@@ -1860,7 +1751,7 @@ const styles =
 
     radiusChip: {
       minWidth: 78,
-      minHeight: 42,
+      minHeight: 40,
       alignItems: "center",
       justifyContent:
         "center",
@@ -1870,7 +1761,7 @@ const styles =
         Radius.pill,
       borderWidth: 1,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
         KhedmatPalette.white,
     },
@@ -1892,33 +1783,6 @@ const styles =
     radiusChipTextSelected: {
       color:
         KhedmatPalette.white,
-    },
-
-    coverageNotice: {
-      width: "100%",
-      alignItems:
-        "flex-start",
-      gap: Spacing.sm,
-      marginTop:
-        Spacing.xl,
-      padding:
-        Spacing.md,
-      borderRadius:
-        Radius.md,
-      borderWidth:
-        StyleSheet.hairlineWidth,
-      borderColor:
-        KhedmatPalette.blue200,
-      backgroundColor:
-        KhedmatPalette.blue050,
-    },
-
-    coverageNoticeText: {
-      ...Typography.captionStyle,
-      flex: 1,
-      color:
-        KhedmatPalette.textSecondary,
-      lineHeight: 19,
     },
 
     modalBackdrop: {
@@ -1947,7 +1811,7 @@ const styles =
     modalTitle: {
       ...Typography.sectionTitle,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       marginBottom:
         Spacing.md,
     },
@@ -1978,7 +1842,7 @@ const styles =
 
     pickerRowSelected: {
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.surfaceSoft,
     },
 
     pickerLabel: {

@@ -313,19 +313,21 @@ const styles = StyleSheet.create({
     ...Typography.screenTitle,
     flex: 1,
     color:
-      KhedmatPalette.textPrimary,
+      KhedmatPalette.navy900,
+    fontSize: 28,
+    lineHeight: 35,
   },
 
   markAllButton: {
-    minHeight: 40,
+    minHeight: 36,
     justifyContent:
       "center",
     paddingHorizontal:
-      Spacing.md,
+      Spacing.sm,
     borderRadius:
       Radius.pill,
     backgroundColor:
-      KhedmatPalette.blue050,
+      KhedmatPalette.white,
   },
 
   markAllButtonPressed: {
@@ -334,13 +336,13 @@ const styles = StyleSheet.create({
 
   markAllButtonDisabled: {
     backgroundColor:
-      KhedmatPalette.surfaceSoft,
+      KhedmatPalette.white,
   },
 
   markAllText: {
     ...Typography.captionStyle,
     color:
-      KhedmatPalette.blue500,
+      KhedmatPalette.navy900,
     fontWeight: "600",
   },
 
@@ -351,7 +353,7 @@ const styles = StyleSheet.create({
 
   empty: {
     flex: 1,
-    minHeight: 320,
+    minHeight: 280,
     alignItems: "center",
     justifyContent:
       "center",
@@ -362,7 +364,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     ...Typography.sectionTitle,
     color:
-      KhedmatPalette.textPrimary,
+      KhedmatPalette.navy900,
   },
 
   emptyBody: {

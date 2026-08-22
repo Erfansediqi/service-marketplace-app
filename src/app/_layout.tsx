@@ -398,15 +398,19 @@ export default function RootLayout() {
 
           <CustomerProfileProvider>
             <CustomerAddressProvider>
-              <BookingProvider>
-                <LanguageProvider>
+              <LanguageProvider>
+                <BookingProvider>
                   <NotificationProvider>
                     <BiometricAppLock>
-                      <AppNavigator fontsReady={fontsReady} />
+                      <AppNavigator
+                        fontsReady={
+                          fontsReady
+                        }
+                      />
                     </BiometricAppLock>
                   </NotificationProvider>
-                </LanguageProvider>
-              </BookingProvider>
+                </BookingProvider>
+              </LanguageProvider>
             </CustomerAddressProvider>
           </CustomerProfileProvider>
         </SessionProvider>

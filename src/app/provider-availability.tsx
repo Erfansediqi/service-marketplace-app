@@ -428,70 +428,20 @@ export default function ProviderAvailabilityScreen() {
           </View>
 
           <View style={styles.header}>
-            <View
-              style={
-                styles.headerIcon
-              }
-            >
-              <Ionicons
-                name="calendar-outline"
-                size={31}
-                color={
-                  KhedmatPalette
-                    .white
-                }
-              />
-            </View>
-
-            <View
+            <Text
               style={[
-                styles.headerCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
+                styles.title,
+                directionStyle(
+                  isRtl,
+                ),
               ]}
             >
-              <Text
-                style={[
-                  styles.eyebrow,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.eyebrow}
-              </Text>
-
-              <Text
-                style={[
-                  styles.title,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.title}
-              </Text>
-
-              <Text
-                style={[
-                  styles.subtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.subtitle}
-              </Text>
-            </View>
+              {copy.title}
+            </Text>
           </View>
 
           <View
-            style={
-              styles.form
-            }
+            style={styles.form}
           >
             <View
               style={styles.section}
@@ -539,18 +489,7 @@ export default function ProviderAvailabilityScreen() {
                   </Text>
                 </View>
 
-                <Text
-                  style={[
-                    styles.sectionSubtitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {
-                    copy.workingDaysSubtitle
-                  }
-                </Text>
+
               </View>
 
               <View
@@ -697,18 +636,7 @@ export default function ProviderAvailabilityScreen() {
                   </Text>
                 </View>
 
-                <Text
-                  style={[
-                    styles.sectionSubtitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {
-                    copy.workingHoursSubtitle
-                  }
-                </Text>
+
               </View>
 
               <View
@@ -817,18 +745,7 @@ export default function ProviderAvailabilityScreen() {
                   }
                 </Text>
 
-                <Text
-                  style={[
-                    styles.sectionSubtitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {
-                    copy.availabilitySettingsSubtitle
-                  }
-                </Text>
+
               </View>
 
               <AvailabilityToggleCard
@@ -937,25 +854,7 @@ export default function ProviderAvailabilityScreen() {
                     : copy.noDaysSelected}
                 </Text>
 
-                <Text
-                  style={[
-                    styles.summarySubtitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {copy.timeRange(
-                    formatTime(
-                      startTime,
-                      activeLanguage,
-                    ),
-                    formatTime(
-                      endTime,
-                      activeLanguage,
-                    ),
-                  )}
-                </Text>
+
               </View>
             </View>
           </View>
@@ -1078,14 +977,7 @@ export default function ProviderAvailabilityScreen() {
               </View>
             </Pressable>
 
-            <Text
-              style={[
-                styles.helperText,
-                directionStyle(isRtl),
-              ]}
-            >
-              {copy.helperText}
-            </Text>
+
           </View>
         </View>
       </View>
@@ -2006,7 +1898,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor:
-      KhedmatPalette.blue050,
+      KhedmatPalette.white,
   },
   root: {
     flex: 1,
@@ -2030,8 +1922,8 @@ const styles = StyleSheet.create({
       "space-between",
   },
   backButton: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
@@ -2039,7 +1931,7 @@ const styles = StyleSheet.create({
     borderColor:
       KhedmatPalette.border,
     backgroundColor:
-      KhedmatPalette.surface,
+      KhedmatPalette.white,
   },
   stepBadge: {
     minHeight: 34,
@@ -2059,8 +1951,7 @@ const styles = StyleSheet.create({
   },
   header: {
     width: "100%",
-    marginTop: Spacing.xl,
-    gap: Spacing.lg,
+    marginTop: Spacing.lg,
   },
   headerIcon: {
     width: 64,
@@ -2088,8 +1979,8 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 470,
     color:
-      KhedmatPalette.textPrimary,
-    fontSize: 27,
+      KhedmatPalette.navy900,
+    fontSize: 28,
     lineHeight: 35,
   },
   subtitle: {
@@ -2333,8 +2224,8 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   toggleIcon: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     flexShrink: 0,
     borderRadius: Radius.lg,
     alignItems: "center",
@@ -2393,8 +2284,8 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     width: "100%",
-    minHeight: 112,
-    padding: Spacing.lg,
+    minHeight: 88,
+    padding: Spacing.md,
     alignItems: "center",
     gap: Spacing.md,
     borderWidth: 1,
@@ -2441,8 +2332,8 @@ const styles = StyleSheet.create({
   noticeCard: {
     width: "100%",
     minHeight: 108,
-    marginTop: Spacing.section,
-    padding: Spacing.lg,
+    marginTop: Spacing.xl,
+    padding: Spacing.md,
     alignItems: "flex-start",
     gap: Spacing.md,
     borderWidth: 1,
@@ -2489,7 +2380,7 @@ const styles = StyleSheet.create({
     borderTopColor:
       KhedmatPalette.border,
     backgroundColor:
-      KhedmatPalette.surface,
+      KhedmatPalette.white,
   },
   footerContent: {
     width: "100%",

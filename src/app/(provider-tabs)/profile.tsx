@@ -103,6 +103,12 @@ function ProviderAccountContent({ provider }: { provider: ProviderProfile }) {
 
   const profileCompletion = calculateProfileCompletion(provider);
 
+  const localizedProfession =
+    getLocalizedCategoryTitle(
+      provider.categoryId,
+      activeLanguage,
+    );
+
   const accountItems = useMemo<ProfileMenuItem[]>(
     () => [
       {
@@ -432,16 +438,8 @@ function ProviderAccountContent({ provider }: { provider: ProviderProfile }) {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.header}>
-          <Text style={[styles.eyebrow, directionStyle(isRtl)]}>
-            {t("providerAccountEyebrow")}
-          </Text>
-
           <Text style={[styles.title, directionStyle(isRtl)]}>
             {t("providerAccountTitle")}
-          </Text>
-
-          <Text style={[styles.subtitle, directionStyle(isRtl)]}>
-            {t("providerAccountSubtitle")}
           </Text>
         </View>
 
@@ -503,7 +501,7 @@ function ProviderAccountContent({ provider }: { provider: ProviderProfile }) {
               numberOfLines={1}
               style={[styles.providerProfession, directionStyle(isRtl)]}
             >
-              {provider.profession}
+              {localizedProfession}
             </Text>
 
             <View
@@ -527,17 +525,7 @@ function ProviderAccountContent({ provider }: { provider: ProviderProfile }) {
                 isRtl={isRtl}
               />
 
-              <ProfileMeta
-                icon="briefcase-outline"
-                value={formatProviderJobsValue(
-                  formatDigits(
-                    provider.completedJobs.toString(),
-                    localizedDigits,
-                  ),
-                  activeLanguage,
-                )}
-                isRtl={isRtl}
-              />
+
 
               <ProfileMeta
                 icon="location-outline"
@@ -829,7 +817,7 @@ type ProfileSectionProps = {
 
 function ProfileSection({
   title,
-  subtitle,
+  subtitle: _subtitle,
   items,
   isRtl,
 }: ProfileSectionProps) {
@@ -847,9 +835,6 @@ function ProfileSection({
           {title}
         </Text>
 
-        <Text style={[styles.sectionSubtitle, directionStyle(isRtl)]}>
-          {subtitle}
-        </Text>
       </View>
 
       <View style={styles.menuCard}>
@@ -1011,6 +996,94 @@ function getLanguageDisplayName(language: LanguageName): string {
   }
 
   return "English";
+}
+
+function getLocalizedCategoryTitle(
+  categoryId: ProviderProfile["categoryId"],
+  language: LanguageName,
+): string {
+  const titles: Record<
+    ProviderProfile["categoryId"],
+    Record<LanguageName, string>
+  > = {
+    electrician: {
+      English: "Electrician",
+      Dari: "برق‌کار",
+      Pashto: "برېښناکار",
+    },
+    plumber: {
+      English: "Plumber",
+      Dari: "لوله‌کش",
+      Pashto: "نلدوان",
+    },
+    carpenter: {
+      English: "Carpenter",
+      Dari: "نجار",
+      Pashto: "ترکاڼ",
+    },
+    construction: {
+      English: "Construction",
+      Dari: "ساختمان",
+      Pashto: "ساختماني کار",
+    },
+    painter: {
+      English: "Painter",
+      Dari: "رنگ‌مال",
+      Pashto: "رنګمال",
+    },
+    cleaner: {
+      English: "Cleaner",
+      Dari: "نظافت‌چی",
+      Pashto: "پاک‌کار",
+    },
+    "ac-technician": {
+      English: "AC technician",
+      Dari: "تخنیکر کولر",
+      Pashto: "د اې سي تخنیکر",
+    },
+    driver: {
+      English: "Driver",
+      Dari: "راننده",
+      Pashto: "موټر چلوونکی",
+    },
+    "phone-repair": {
+      English: "Phone repair",
+      Dari: "ترمیم موبایل",
+      Pashto: "د موبایل ترمیم",
+    },
+    "computer-repair": {
+      English: "Computer repair",
+      Dari: "ترمیم کمپیوتر",
+      Pashto: "د کمپیوټر ترمیم",
+    },
+    tailor: {
+      English: "Tailor",
+      Dari: "خیاط",
+      Pashto: "خیاط",
+    },
+    barber: {
+      English: "Barber",
+      Dari: "آرایشگر",
+      Pashto: "سلماني",
+    },
+    tutor: {
+      English: "Tutor",
+      Dari: "معلم خصوصی",
+      Pashto: "خصوصي ښوونکی",
+    },
+    photographer: {
+      English: "Photographer",
+      Dari: "عکاس",
+      Pashto: "عکاس",
+    },
+    other: {
+      English: "Service provider",
+      Dari: "ارائه‌دهندهٔ خدمات",
+      Pashto: "خدمت وړاندې کوونکی",
+    },
+  };
+
+  return titles[categoryId][language];
 }
 
 function normalizeLanguage(language: string): LanguageName {

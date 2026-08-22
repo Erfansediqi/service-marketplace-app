@@ -3,12 +3,12 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    Alert,
-    Image,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  Alert,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import { KhedmatButton } from "../components/khedmat/khedmat-button";
@@ -16,11 +16,11 @@ import { KhedmatCard } from "../components/khedmat/khedmat-card";
 import { KhedmatInput } from "../components/khedmat/khedmat-input";
 import { KhedmatScreen } from "../components/khedmat/khedmat-screen";
 import {
-    KhedmatPalette,
-    Layout,
-    Radius,
-    Spacing,
-    Typography,
+  KhedmatPalette,
+  Layout,
+  Radius,
+  Spacing,
+  Typography,
 } from "../constants/theme";
 import { useLanguage } from "../context/languagecontext";
 import { useSession } from "../context/session-context";
@@ -201,9 +201,6 @@ export default function ProviderPortfolioScreen() {
           title={t(
             "providerPortfolioTitle",
           )}
-          subtitle={t(
-            "providerPortfolioSubtitle",
-          )}
           backLabel={t("back")}
           onBack={() =>
             router.back()
@@ -299,9 +296,6 @@ export default function ProviderPortfolioScreen() {
         }
         title={t(
           "providerPortfolioTitle",
-        )}
-        subtitle={t(
-          "providerPortfolioSubtitle",
         )}
         backLabel={t("back")}
         onBack={() =>
@@ -644,7 +638,6 @@ type HeaderProps = {
     | "ltr"
     | "rtl";
   title: string;
-  subtitle: string;
   backLabel: string;
   onBack: () => void;
 };
@@ -654,7 +647,6 @@ function Header({
   rowDirection,
   textDirection,
   title,
-  subtitle,
   backLabel,
   onBack,
 }: HeaderProps) {
@@ -713,20 +705,7 @@ function Header({
           {title}
         </Text>
 
-        <Text
-          style={[
-            styles.subtitle,
-            {
-              textAlign: isRTL
-                ? "right"
-                : "left",
-              writingDirection:
-                textDirection,
-            },
-          ]}
-        >
-          {subtitle}
-        </Text>
+
       </View>
     </View>
   );
@@ -774,17 +753,9 @@ const styles =
     title: {
       ...Typography.screenTitle,
       color:
-        KhedmatPalette.textPrimary,
-      fontSize: 22,
+        KhedmatPalette.navy900,
+      fontSize: 24,
       lineHeight: 28,
-    },
-
-    subtitle: {
-      ...Typography.captionStyle,
-      marginTop: 3,
-      color:
-        KhedmatPalette.textSecondary,
-      lineHeight: 18,
     },
 
     actionRow: {
@@ -833,7 +804,7 @@ const styles =
       borderColor:
         KhedmatPalette.blue200,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
 
     countBadgeText: {
@@ -863,7 +834,7 @@ const styles =
       borderRadius:
         Radius.pill,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
       marginBottom:
         Spacing.md,
     },
@@ -966,7 +937,7 @@ const styles =
       borderRadius:
         Radius.pill,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
 
     photoPickerTitle: {
@@ -993,7 +964,7 @@ const styles =
       width: "100%",
       aspectRatio: 4 / 3,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
 
     changePhotoButton: {

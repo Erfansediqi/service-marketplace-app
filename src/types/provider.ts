@@ -17,8 +17,25 @@ export type ProviderCategoryId =
 
 export type ProviderService = {
   id: string;
+
+  /*
+   * Keep `title` / `description` as the English-safe defaults for existing
+   * screens while the UI is migrated to explicit language selection.
+   *
+   * Screens that support English, Dari and Pashto should use the matching
+   * localized field instead of rendering multiple languages together.
+   */
   title: string;
   description: string;
+
+  titleEnglish: string;
+  titleDari: string;
+  titlePashto: string;
+
+  descriptionEnglish: string;
+  descriptionDari: string;
+  descriptionPashto: string;
+
   estimatedPrice: number;
 };
 

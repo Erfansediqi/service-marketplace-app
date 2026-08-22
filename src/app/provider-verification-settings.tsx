@@ -183,9 +183,6 @@ export default function ProviderVerificationSettingsScreen() {
           title={t(
             "providerVerificationSettingsTitle",
           )}
-          subtitle={t(
-            "providerVerificationSettingsSubtitle",
-          )}
           backLabel={t("back")}
           onBack={() =>
             router.back()
@@ -224,9 +221,6 @@ export default function ProviderVerificationSettingsScreen() {
           }
           title={t(
             "providerVerificationSettingsTitle",
-          )}
-          subtitle={t(
-            "providerVerificationSettingsSubtitle",
           )}
           backLabel={t("back")}
           onBack={() =>
@@ -304,9 +298,6 @@ export default function ProviderVerificationSettingsScreen() {
         }
         title={t(
           "providerVerificationSettingsTitle",
-        )}
-        subtitle={t(
-          "providerVerificationSettingsSubtitle",
         )}
         backLabel={t("back")}
         onBack={() =>
@@ -571,7 +562,6 @@ type HeaderProps = {
     | "ltr"
     | "rtl";
   title: string;
-  subtitle: string;
   backLabel: string;
   onBack: () => void;
 };
@@ -581,7 +571,6 @@ function Header({
   rowDirection,
   textDirection,
   title,
-  subtitle,
   backLabel,
   onBack,
 }: HeaderProps) {
@@ -640,20 +629,6 @@ function Header({
           {title}
         </Text>
 
-        <Text
-          style={[
-            styles.subtitle,
-            {
-              textAlign: isRTL
-                ? "right"
-                : "left",
-              writingDirection:
-                textDirection,
-            },
-          ]}
-        >
-          {subtitle}
-        </Text>
       </View>
     </View>
   );
@@ -914,17 +889,9 @@ const styles =
     title: {
       ...Typography.screenTitle,
       color:
-        KhedmatPalette.textPrimary,
-      fontSize: 22,
+        KhedmatPalette.navy900,
+      fontSize: 24,
       lineHeight: 28,
-    },
-
-    subtitle: {
-      ...Typography.captionStyle,
-      marginTop: 3,
-      color:
-        KhedmatPalette.textSecondary,
-      lineHeight: 18,
     },
 
     loadingState: {
@@ -1006,7 +973,7 @@ const styles =
 
     statusIconPending: {
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
 
     statusIconWarning: {
@@ -1034,7 +1001,7 @@ const styles =
       ...Typography.sectionTitle,
       marginTop: 2,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       fontSize: 18,
       lineHeight: 24,
     },
@@ -1093,7 +1060,7 @@ const styles =
       borderRadius:
         Radius.md,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.surfaceSoft,
     },
 
     infoCopy: {
@@ -1131,9 +1098,9 @@ const styles =
       borderWidth:
         StyleSheet.hairlineWidth,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
 
     privateNoticeText: {

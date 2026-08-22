@@ -352,9 +352,7 @@ export default function ProviderServicesManagementScreen() {
             <Text style={[styles.headerTitle, isRtl && styles.rtlText]}>
               {t("providerServicesTitle")}
             </Text>
-            <Text style={[styles.headerSubtitle, isRtl && styles.rtlText]}>
-              {t("providerServicesSubtitle")}
-            </Text>
+
           </View>
 
           <View style={styles.headerSpacer} />

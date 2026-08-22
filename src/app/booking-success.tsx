@@ -26,36 +26,10 @@ type IconName = ComponentProps<typeof Ionicons>["name"];
 
 type LanguageName = "English" | "Dari" | "Pashto";
 
-type ProcessStepId = "review" | "response" | "conversation" | "service";
-
-type SuccessCopy = ReturnType<typeof getSuccessCopy>;
-
 const SUCCESS = "#268A57";
 const SUCCESS_SOFT = "#E8F6EE";
 const WARNING = "#8A5A00";
 const WARNING_SOFT = "#FFF4D6";
-
-const PROCESS_STEPS: {
-  id: ProcessStepId;
-  icon: IconName;
-}[] = [
-  {
-    id: "review",
-    icon: "document-text-outline",
-  },
-  {
-    id: "response",
-    icon: "checkmark-circle-outline",
-  },
-  {
-    id: "conversation",
-    icon: "chatbubble-outline",
-  },
-  {
-    id: "service",
-    icon: "construct-outline",
-  },
-];
 
 export default function BookingSuccessScreen() {
   const router = useRouter();
@@ -71,8 +45,6 @@ export default function BookingSuccessScreen() {
   const activeLanguage = normalizeLanguage(language);
 
   const isRtl = activeLanguage === "Dari" || activeLanguage === "Pashto";
-
-  const localizedDigits = activeLanguage !== "English";
 
   const copy = getSuccessCopy(activeLanguage);
 
@@ -140,47 +112,21 @@ export default function BookingSuccessScreen() {
           contentContainerStyle={styles.scrollContent}
         >
           <View style={styles.hero}>
-            <View style={styles.successIllustration}>
-              <View style={styles.successHalo} />
-
-              <View style={styles.successCircle}>
-                <Ionicons
-                  name="checkmark"
-                  size={44}
-                  color={KhedmatPalette.white}
-                />
-              </View>
-
-              <View style={styles.sparkleTop}>
-                <Ionicons
-                  name="sparkles"
-                  size={17}
-                  color={KhedmatPalette.blue500}
-                />
-              </View>
-
-              <View style={styles.sparkleBottom}>
-                <Ionicons
-                  name="paper-plane"
-                  size={15}
-                  color={KhedmatPalette.white}
-                />
-              </View>
+            <View style={styles.successCircle}>
+              <Ionicons
+                name="checkmark"
+                size={34}
+                color={KhedmatPalette.white}
+              />
             </View>
 
-            <View style={styles.heroCopy}>
-              <Text style={[styles.eyebrow, directionStyle(isRtl)]}>
-                {copy.eyebrow}
-              </Text>
+            <Text style={[styles.title, directionStyle(isRtl)]}>
+              {copy.title}
+            </Text>
 
-              <Text style={[styles.title, directionStyle(isRtl)]}>
-                {copy.title}
-              </Text>
-
-              <Text style={[styles.subtitle, directionStyle(isRtl)]}>
-                {copy.subtitle}
-              </Text>
-            </View>
+            <Text style={[styles.subtitle, directionStyle(isRtl)]}>
+              {copy.subtitle}
+            </Text>
           </View>
 
           <View
@@ -192,7 +138,11 @@ export default function BookingSuccessScreen() {
             ]}
           >
             <View style={styles.statusIcon}>
-              <Ionicons name="time-outline" size={24} color={WARNING} />
+              <Ionicons
+                name="time-outline"
+                size={20}
+                color={KhedmatPalette.blue500}
+              />
             </View>
 
             <View
@@ -203,22 +153,12 @@ export default function BookingSuccessScreen() {
                 },
               ]}
             >
-              <Text style={[styles.statusLabel, directionStyle(isRtl)]}>
-                {copy.statusLabel}
-              </Text>
-
               <Text style={[styles.statusTitle, directionStyle(isRtl)]}>
                 {copy.statusTitle}
               </Text>
 
               <Text style={[styles.statusSubtitle, directionStyle(isRtl)]}>
                 {copy.statusSubtitle}
-              </Text>
-            </View>
-
-            <View style={styles.pendingBadge}>
-              <Text style={[styles.pendingBadgeText, directionStyle(isRtl)]}>
-                {copy.pending}
               </Text>
             </View>
           </View>
@@ -233,7 +173,6 @@ export default function BookingSuccessScreen() {
                 icon="person-outline"
                 label={copy.provider}
                 value={providerName}
-                supportingText={providerProfession}
                 isRtl={isRtl}
               />
 
@@ -250,17 +189,11 @@ export default function BookingSuccessScreen() {
 
               <SummaryRow
                 icon="calendar-outline"
-                label={copy.date}
-                value={formatBookingDate(bookingDate, activeLanguage)}
-                isRtl={isRtl}
-              />
-
-              <Divider />
-
-              <SummaryRow
-                icon="time-outline"
-                label={copy.time}
-                value={formatTime(bookingTime, activeLanguage)}
+                label={copy.schedule}
+                value={`${formatBookingDate(bookingDate, activeLanguage)} · ${formatTime(
+                  bookingTime,
+                  activeLanguage,
+                )}`}
                 isRtl={isRtl}
               />
 
@@ -268,7 +201,7 @@ export default function BookingSuccessScreen() {
 
               <SummaryRow
                 icon="location-outline"
-                label={address?.label || copy.address}
+                label={copy.address}
                 value={address?.fullAddress || copy.addressFallback}
                 isRtl={isRtl}
                 multiline
@@ -280,7 +213,6 @@ export default function BookingSuccessScreen() {
                 icon="cash-outline"
                 label={copy.estimatedTotal}
                 value={formatCurrency(total, activeLanguage)}
-                supportingText={copy.estimatedTotalHint}
                 isRtl={isRtl}
               />
             </View>
@@ -295,13 +227,11 @@ export default function BookingSuccessScreen() {
                 },
               ]}
             >
-              <View style={styles.referenceIcon}>
-                <Ionicons
-                  name="receipt-outline"
-                  size={22}
-                  color={KhedmatPalette.blue500}
-                />
-              </View>
+              <Ionicons
+                name="receipt-outline"
+                size={19}
+                color={KhedmatPalette.blue500}
+              />
 
               <View
                 style={[
@@ -327,107 +257,8 @@ export default function BookingSuccessScreen() {
                   {copy.submittedAt(formatCreatedAt(createdAt, activeLanguage))}
                 </Text>
               </View>
-
-              <Ionicons name="checkmark-circle" size={25} color={SUCCESS} />
             </View>
           ) : null}
-
-          <View style={styles.section}>
-            <View
-              style={[
-                styles.sectionHeader,
-                {
-                  alignItems: isRtl ? "flex-end" : "flex-start",
-                },
-              ]}
-            >
-              <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
-                {copy.nextTitle}
-              </Text>
-
-              <Text style={[styles.sectionSubtitle, directionStyle(isRtl)]}>
-                {copy.nextSubtitle}
-              </Text>
-            </View>
-
-            <View style={styles.steps}>
-              {PROCESS_STEPS.map((step, index) => (
-                <ProcessStep
-                  key={step.id}
-                  stepId={step.id}
-                  icon={step.icon}
-                  number={formatDigits((index + 1).toString(), localizedDigits)}
-                  isLast={index === PROCESS_STEPS.length - 1}
-                  copy={copy}
-                  isRtl={isRtl}
-                />
-              ))}
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.notificationCard,
-              {
-                flexDirection: isRtl ? "row-reverse" : "row",
-              },
-            ]}
-          >
-            <View style={styles.notificationIcon}>
-              <Ionicons
-                name="notifications-outline"
-                size={22}
-                color={KhedmatPalette.blue500}
-              />
-            </View>
-
-            <View
-              style={[
-                styles.notificationCopy,
-                {
-                  alignItems: isRtl ? "flex-end" : "flex-start",
-                },
-              ]}
-            >
-              <Text style={[styles.notificationTitle, directionStyle(isRtl)]}>
-                {copy.notificationsTitle}
-              </Text>
-
-              <Text style={[styles.notificationText, directionStyle(isRtl)]}>
-                {copy.notificationsText}
-              </Text>
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.paymentCard,
-              {
-                flexDirection: isRtl ? "row-reverse" : "row",
-              },
-            ]}
-          >
-            <View style={styles.paymentIcon}>
-              <Ionicons name="wallet-outline" size={22} color={SUCCESS} />
-            </View>
-
-            <View
-              style={[
-                styles.paymentCopy,
-                {
-                  alignItems: isRtl ? "flex-end" : "flex-start",
-                },
-              ]}
-            >
-              <Text style={[styles.paymentTitle, directionStyle(isRtl)]}>
-                {copy.paymentTitle}
-              </Text>
-
-              <Text style={[styles.paymentText, directionStyle(isRtl)]}>
-                {copy.paymentText}
-              </Text>
-            </View>
-          </View>
         </ScrollView>
 
         <View style={styles.footer}>
@@ -498,9 +329,7 @@ export default function BookingSuccessScreen() {
               </View>
             </Pressable>
 
-            <Text style={[styles.footerHint, directionStyle(isRtl)]}>
-              {copy.footerHint}
-            </Text>
+
           </View>
         </View>
       </View>
@@ -571,77 +400,6 @@ function SummaryRow({
 
 function Divider() {
   return <View style={styles.divider} />;
-}
-
-function ProcessStep({
-  stepId,
-  icon,
-  number,
-  isLast,
-  copy,
-  isRtl,
-}: {
-  stepId: ProcessStepId;
-  icon: IconName;
-  number: string;
-  isLast: boolean;
-  copy: SuccessCopy;
-  isRtl: boolean;
-}) {
-  return (
-    <View style={styles.stepWrapper}>
-      <View
-        style={[
-          styles.stepCard,
-          {
-            flexDirection: isRtl ? "row-reverse" : "row",
-          },
-        ]}
-      >
-        <View style={styles.stepIcon}>
-          <Ionicons name={icon} size={22} color={KhedmatPalette.blue500} />
-        </View>
-
-        <View
-          style={[
-            styles.stepCopy,
-            {
-              alignItems: isRtl ? "flex-end" : "flex-start",
-            },
-          ]}
-        >
-          <Text style={[styles.stepTitle, directionStyle(isRtl)]}>
-            {copy.stepTitle(stepId)}
-          </Text>
-
-          <Text style={[styles.stepSubtitle, directionStyle(isRtl)]}>
-            {copy.stepSubtitle(stepId)}
-          </Text>
-        </View>
-
-        <View style={styles.stepNumber}>
-          <Text style={styles.stepNumberText}>{number}</Text>
-        </View>
-      </View>
-
-      {!isLast ? (
-        <View
-          style={[
-            styles.connectorRow,
-            {
-              flexDirection: isRtl ? "row-reverse" : "row",
-            },
-          ]}
-        >
-          <View style={styles.connectorSide} />
-
-          <View style={styles.connector} />
-
-          <View style={styles.connectorFill} />
-        </View>
-      ) : null}
-    </View>
-  );
 }
 
 function getSingleParam(value: string | string[] | undefined): string {
@@ -913,174 +671,82 @@ function formatDigits(value: string, localized: boolean): string {
 function getSuccessCopy(language: LanguageName) {
   if (language === "Dari") {
     return {
-      eyebrow: "درخواست ارسال شد",
-      title: "رزرو شما با موفقیت ثبت شد",
+      title: "رزرو ارسال شد",
       subtitle:
-        "درخواست برای ارائه‌دهنده ارسال شده است. پس از بررسی، نتیجه از طریق اعلان و پیام به شما اطلاع داده می‌شود.",
-      statusLabel: "وضعیت رزرو",
-      statusTitle: "در انتظار پاسخ ارائه‌دهنده",
+        "درخواست شما برای ارائه‌دهنده ارسال شد. پس از پاسخ، به شما اطلاع داده می‌شود.",
+      statusTitle: "در انتظار پاسخ",
       statusSubtitle:
-        "ارائه‌دهنده می‌تواند درخواست را بپذیرد، رد کند یا زمان دیگری پیشنهاد دهد.",
-      pending: "در انتظار",
-      summaryTitle: "خلاصهٔ درخواست",
+        "ارائه‌دهنده می‌تواند درخواست را بپذیرد یا رد کند.",
+      summaryTitle: "خلاصهٔ رزرو",
       provider: "ارائه‌دهنده",
       providerFallback: "ارائه‌دهنده",
       professionFallback: "متخصص خدمات",
       service: "خدمت",
       serviceFallback: "خدمت انتخاب‌شده",
-      date: "تاریخ",
-      time: "زمان",
+      schedule: "زمان‌بندی",
       address: "آدرس",
       addressFallback: "آدرس ثبت نشده",
-      estimatedTotal: "مجموع تخمینی",
-      estimatedTotalHint: "مبلغ نهایی پس از بررسی کار تأیید می‌شود.",
+      estimatedTotal: "مبلغ تخمینی",
       reference: "شمارهٔ پیگیری",
       submittedAt: (value: string) => `ثبت‌شده در ${value}`,
-      nextTitle: "مرحلهٔ بعد چه می‌شود؟",
-      nextSubtitle: "درخواست شما از مراحل زیر عبور خواهد کرد.",
-      stepTitle: (id: ProcessStepId) =>
-        ({
-          review: "بررسی درخواست",
-          response: "پاسخ ارائه‌دهنده",
-          conversation: "هماهنگی جزئیات",
-          service: "انجام خدمت",
-        })[id],
-      stepSubtitle: (id: ProcessStepId) =>
-        ({
-          review: "ارائه‌دهنده جزئیات، زمان و آدرس درخواست را بررسی می‌کند.",
-          response:
-            "درخواست پذیرفته یا رد می‌شود و ممکن است زمان دیگری پیشنهاد گردد.",
-          conversation:
-            "پس از پذیرش می‌توانید جزئیات بیشتر را از طریق پیام هماهنگ کنید.",
-          service:
-            "ارائه‌دهنده در زمان تأییدشده برای انجام خدمت مراجعه می‌کند.",
-        })[id],
-      notificationsTitle: "اعلان‌های برنامه را فعال نگه دارید",
-      notificationsText:
-        "پاسخ ارائه‌دهنده و هر تغییر در زمان یا وضعیت رزرو از طریق اعلان برنامه نمایش داده می‌شود.",
-      paymentTitle: "هنوز پرداختی انجام نشده است",
-      paymentText:
-        "این درخواست با وضعیت پرداخت‌نشده ثبت شده است. مبلغ و روش پرداخت پس از تأیید خدمت مشخص خواهد شد.",
       viewBooking: "مشاهدهٔ رزرو",
-      goHome: "بازگشت به خانه",
-      footerHint: "می‌توانید وضعیت این درخواست را در بخش رزروها دنبال کنید.",
+      goHome: "خانه",
     };
   }
 
   if (language === "Pashto") {
     return {
-      eyebrow: "غوښتنه ولېږل شوه",
-      title: "ستاسو رزرف په بریالیتوب ثبت شو",
+      title: "رزرف ولېږل شو",
       subtitle:
-        "غوښتنه خدمت وړاندې کوونکي ته لېږل شوې. له ارزونې وروسته به پایله د خبرتیا او پیغام له لارې درته وښودل شي.",
-      statusLabel: "د رزرف حالت",
-      statusTitle: "د خدمت وړاندې کوونکي د ځواب په تمه",
+        "ستاسو غوښتنه خدمت وړاندې کوونکي ته ولېږل شوه. د ځواب وروسته به خبر درکړل شي.",
+      statusTitle: "د ځواب په تمه",
       statusSubtitle:
-        "خدمت وړاندې کوونکی غوښتنه منلای، ردولای یا بل وخت وړاندیز کولای شي.",
-      pending: "په تمه",
-      summaryTitle: "د غوښتنې لنډیز",
+        "خدمت وړاندې کوونکی غوښتنه منلای یا ردولای شي.",
+      summaryTitle: "د رزرف لنډیز",
       provider: "خدمت وړاندې کوونکی",
       providerFallback: "خدمت وړاندې کوونکی",
       professionFallback: "د خدمت متخصص",
       service: "خدمت",
       serviceFallback: "ټاکل شوی خدمت",
-      date: "نېټه",
-      time: "وخت",
+      schedule: "وخت",
       address: "پته",
       addressFallback: "پته نه ده ثبت شوې",
-      estimatedTotal: "اټکلی ټول",
-      estimatedTotalHint: "وروستی مبلغ د کار له ارزونې وروسته تاییدېږي.",
+      estimatedTotal: "اټکلی مبلغ",
       reference: "د تعقیب شمېره",
       submittedAt: (value: string) => `په ${value} ثبت شوی`,
-      nextTitle: "وروسته څه کېږي؟",
-      nextSubtitle: "ستاسو غوښتنه به له لاندې مرحلو تېرېږي.",
-      stepTitle: (id: ProcessStepId) =>
-        ({
-          review: "د غوښتنې ارزونه",
-          response: "د خدمت وړاندې کوونکي ځواب",
-          conversation: "د جزئیاتو همغږي",
-          service: "د خدمت ترسره کول",
-        })[id],
-      stepSubtitle: (id: ProcessStepId) =>
-        ({
-          review: "خدمت وړاندې کوونکی د غوښتنې جزئیات، وخت او پته ګوري.",
-          response: "غوښتنه منل یا رد کېږي او ښايي بل وخت وړاندیز شي.",
-          conversation:
-            "له منلو وروسته نور جزئیات د پیغام له لارې همغږي کولی شئ.",
-          service: "خدمت وړاندې کوونکی په تایید شوي وخت کې د خدمت لپاره راځي.",
-        })[id],
-      notificationsTitle: "د اپلېکېشن خبرتیاوې فعالې وساتئ",
-      notificationsText:
-        "د خدمت وړاندې کوونکي ځواب او د رزرف د وخت یا حالت هر بدلون به د اپلېکېشن له لارې درته وښودل شي.",
-      paymentTitle: "تر اوسه تادیه نه ده شوې",
-      paymentText:
-        "دا غوښتنه د نه تادیه شوي حالت سره ثبت شوې. مبلغ او د تادیې طریقه به د خدمت له تایید وروسته مشخص شي.",
       viewBooking: "رزرف وګورئ",
-      goHome: "کورپاڼې ته لاړ شئ",
-      footerHint: "د دې غوښتنې حالت د رزرفونو په برخه کې تعقیبولی شئ.",
+      goHome: "کور",
     };
   }
 
   return {
-    eyebrow: "Request submitted",
-    title: "Your booking was created successfully",
+    title: "Booking sent",
     subtitle:
-      "The request has been sent to the provider. You will receive the result through notifications and messages after review.",
-    statusLabel: "Booking status",
-    statusTitle: "Waiting for provider response",
-    statusSubtitle: "The provider may accept, decline or propose another time.",
-    pending: "Pending",
-    summaryTitle: "Request summary",
+      "Your request was sent to the provider. We’ll notify you when they respond.",
+    statusTitle: "Waiting for response",
+    statusSubtitle:
+      "The provider can accept or decline your request.",
+    summaryTitle: "Booking summary",
     provider: "Provider",
     providerFallback: "Provider",
     professionFallback: "Service professional",
     service: "Service",
     serviceFallback: "Selected service",
-    date: "Date",
-    time: "Time",
+    schedule: "Schedule",
     address: "Address",
     addressFallback: "No address recorded",
-    estimatedTotal: "Estimated total",
-    estimatedTotalHint:
-      "The final amount is confirmed after the work is assessed.",
-    reference: "Tracking reference",
+    estimatedTotal: "Estimated amount",
+    reference: "Reference",
     submittedAt: (value: string) => `Submitted ${value}`,
-    nextTitle: "What happens next?",
-    nextSubtitle: "Your request will move through the following stages.",
-    stepTitle: (id: ProcessStepId) =>
-      ({
-        review: "Request review",
-        response: "Provider response",
-        conversation: "Coordinate details",
-        service: "Service delivery",
-      })[id],
-    stepSubtitle: (id: ProcessStepId) =>
-      ({
-        review:
-          "The provider reviews the request details, schedule and address.",
-        response:
-          "The request may be accepted, declined or returned with another proposed time.",
-        conversation:
-          "After acceptance, you can coordinate additional details through messages.",
-        service:
-          "The provider arrives at the confirmed time to complete the service.",
-      })[id],
-    notificationsTitle: "Keep app notifications enabled",
-    notificationsText:
-      "The provider response and any change to the booking time or status will appear through app notifications.",
-    paymentTitle: "No payment has been made yet",
-    paymentText:
-      "This request was created with an unpaid status. The amount and payment method will be confirmed after the service is accepted.",
     viewBooking: "View booking",
-    goHome: "Return home",
-    footerHint: "You can follow this request from the Bookings section.",
+    goHome: "Home",
   };
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: KhedmatPalette.blue050,
+    backgroundColor: KhedmatPalette.white,
   },
   root: {
     flex: 1,
@@ -1090,13 +756,13 @@ const styles = StyleSheet.create({
     maxWidth: Layout.contentMaxWidth,
     alignSelf: "center",
     paddingHorizontal: Layout.screenPadding,
-    paddingTop: Spacing.xxl,
-    paddingBottom: 230,
+    paddingTop: Spacing.xl,
+    paddingBottom: 190,
   },
   hero: {
     width: "100%",
     alignItems: "center",
-    gap: Spacing.xxl,
+    gap: Spacing.md,
   },
   successIllustration: {
     width: 132,
@@ -1112,13 +778,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#DFF3E8",
   },
   successCircle: {
-    width: 78,
-    height: 78,
-    borderRadius: Radius.xxl,
+    width: 64,
+    height: 64,
+    borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: SUCCESS,
-    ...Shadows.medium,
   },
   sparkleTop: {
     position: "absolute",
@@ -1162,39 +827,40 @@ const styles = StyleSheet.create({
     ...Typography.screenTitle,
     width: "100%",
     maxWidth: 470,
-    color: KhedmatPalette.textPrimary,
+    color: KhedmatPalette.navy900,
     fontSize: 28,
-    lineHeight: 36,
+    lineHeight: 35,
     textAlign: "center",
   },
   subtitle: {
     ...Typography.bodyLarge,
     width: "100%",
-    maxWidth: 460,
+    maxWidth: 420,
     color: KhedmatPalette.textSecondary,
-    lineHeight: 25,
+    fontSize: 14,
+    lineHeight: 21,
     textAlign: "center",
   },
   statusCard: {
     width: "100%",
-    minHeight: 126,
-    marginTop: Spacing.section,
-    padding: Spacing.lg,
+    minHeight: 82,
+    marginTop: Spacing.xl,
+    padding: Spacing.md,
     alignItems: "center",
     gap: Spacing.md,
     borderWidth: 1,
-    borderColor: "#E5C875",
+    borderColor: KhedmatPalette.border,
     borderRadius: Radius.xl,
-    backgroundColor: "#FFFDF6",
+    backgroundColor: KhedmatPalette.white,
   },
   statusIcon: {
-    width: 50,
-    height: 50,
+    width: 40,
+    height: 40,
     flexShrink: 0,
     borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: WARNING_SOFT,
+    backgroundColor: KhedmatPalette.surfaceSoft,
   },
   statusCopy: {
     flex: 1,
@@ -1236,7 +902,7 @@ const styles = StyleSheet.create({
   },
   section: {
     width: "100%",
-    marginTop: Spacing.section,
+    marginTop: Spacing.xl,
     gap: Spacing.md,
   },
   sectionHeader: {
@@ -1511,7 +1177,7 @@ const styles = StyleSheet.create({
     left: 0,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: KhedmatPalette.border,
-    backgroundColor: KhedmatPalette.surface,
+    backgroundColor: KhedmatPalette.white,
   },
   footerContent: {
     width: "100%",

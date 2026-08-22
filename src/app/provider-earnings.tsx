@@ -1113,7 +1113,7 @@ const styles =
     title: {
       ...Typography.screenTitle,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       fontSize: 22,
       lineHeight: 28,
     },
@@ -1159,7 +1159,7 @@ const styles =
     errorTitle: {
       ...Typography.sectionTitle,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       textAlign: "center",
     },
 
@@ -1197,7 +1197,7 @@ const styles =
       borderRadius:
         Radius.pill,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
 
     primaryCopy: {
@@ -1268,7 +1268,7 @@ const styles =
 
     summaryIconInfo: {
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
 
     summaryIconWarning: {
@@ -1316,7 +1316,7 @@ const styles =
       borderColor:
         KhedmatPalette.blue200,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
 
     recordedNoteText: {
@@ -1335,7 +1335,7 @@ const styles =
       marginBottom:
         Spacing.sm,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       fontSize: 18,
       lineHeight: 24,
     },
@@ -1372,7 +1372,7 @@ const styles =
       borderRadius:
         Radius.md,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
 
     historyCopy: {
@@ -1423,7 +1423,7 @@ const styles =
       borderRadius:
         Radius.pill,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
       marginBottom:
         Spacing.md,
     },

@@ -292,25 +292,7 @@ export default function CustomerMessagesScreen() {
           styles.scrollContent
         }
       >
-        <View
-          style={
-            styles.header
-          }
-        >
-          <Text
-            style={[
-              styles.eyebrow,
-              directionStyle(
-                isRTL,
-                textDirection,
-              ),
-            ]}
-          >
-            {t(
-              "customerMessagesEyebrow",
-            )}
-          </Text>
-
+        <View style={styles.header}>
           <Text
             style={[
               styles.title,
@@ -324,20 +306,6 @@ export default function CustomerMessagesScreen() {
               "customerMessagesTitle",
             )}
           </Text>
-
-          <Text
-            style={[
-              styles.subtitle,
-              directionStyle(
-                isRTL,
-                textDirection,
-              ),
-            ]}
-          >
-            {t(
-              "customerMessagesSubtitle",
-            )}
-          </Text>
         </View>
 
         <View
@@ -349,53 +317,27 @@ export default function CustomerMessagesScreen() {
             },
           ]}
         >
-          <View
-            style={
-              styles.backendNoticeIcon
+          <Ionicons
+            name="chatbubble-ellipses-outline"
+            size={18}
+            color={
+              KhedmatPalette.blue500
             }
-          >
-            <Ionicons
-              name="chatbubble-ellipses-outline"
-              size={22}
-              color={
-                KhedmatPalette.blue500
-              }
-            />
-          </View>
+          />
 
-          <View
-            style={
-              styles.backendNoticeCopy
-            }
+          <Text
+            style={[
+              styles.backendNoticeTitle,
+              directionStyle(
+                isRTL,
+                textDirection,
+              ),
+            ]}
           >
-            <Text
-              style={[
-                styles.backendNoticeTitle,
-                directionStyle(
-                  isRTL,
-                  textDirection,
-                ),
-              ]}
-            >
-              {t(
-                "customerMessagesBackendNoticeTitle",
-              )}
-            </Text>
-
-            <Text
-              style={[
-                styles.backendNoticeMessage,
-                directionStyle(
-                  isRTL,
-                  textDirection,
-                ),
-              ]}
-            >
-              {t(
-                "customerMessagesBackendNoticeMessage",
-              )}
-            </Text>
-          </View>
+            {t(
+              "customerMessagesBackendNoticeTitle",
+            )}
+          </Text>
         </View>
 
         <View
@@ -526,25 +468,6 @@ export default function CustomerMessagesScreen() {
             },
           )}
         </ScrollView>
-
-        <Text
-          style={[
-            styles.resultsTitle,
-            directionStyle(
-              isRTL,
-              textDirection,
-            ),
-          ]}
-        >
-          {formatDigits(
-            filteredRows.length.toString(),
-            language !==
-              "English",
-          )}{" "}
-          {t(
-            "customerMessagesConversationCount",
-          )}
-        </Text>
 
         {filteredRows.length >
         0 ? (
@@ -763,57 +686,9 @@ function CustomerConversationCard({
           }
         />
 
-        <MetaRow
-          icon="location-outline"
-          value={
-            booking.address
-              .label
-          }
-          isRTL={isRTL}
-          rowDirection={
-            rowDirection
-          }
-          textDirection={
-            textDirection
-          }
-        />
+
       </View>
 
-      <View
-        style={[
-          styles.openRow,
-          {
-            flexDirection:
-              rowDirection,
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.openText,
-            {
-              writingDirection:
-                textDirection,
-            },
-          ]}
-        >
-          {t(
-            "customerMessagesOpenBooking",
-          )}
-        </Text>
-
-        <Ionicons
-          name={
-            isRTL
-              ? "chevron-back"
-              : "chevron-forward"
-          }
-          size={18}
-          color={
-            KhedmatPalette.blue500
-          }
-        />
-      </View>
     </Pressable>
   );
 }
@@ -826,8 +701,7 @@ function MetaRow({
   textDirection,
 }: {
   icon:
-    | "calendar-outline"
-    | "location-outline";
+    | "calendar-outline";
   value: string;
   isRTL: boolean;
   rowDirection:
@@ -1229,80 +1103,41 @@ const styles =
       width: "100%",
     },
 
-    eyebrow: {
-      ...Typography.captionStyle,
-      color:
-        KhedmatPalette.blue500,
-      fontWeight: "600",
-    },
-
     title: {
       ...Typography.screenTitle,
-      marginTop:
-        Spacing.xs,
       color:
-        KhedmatPalette.textPrimary,
-    },
-
-    subtitle: {
-      ...Typography.bodyStyle,
-      marginTop:
-        Spacing.xs,
-      color:
-        KhedmatPalette.textSecondary,
-      lineHeight: 21,
+        KhedmatPalette.navy900,
+      fontSize: 28,
+      lineHeight: 35,
     },
 
     backendNotice: {
       width: "100%",
-      alignItems:
-        "flex-start",
-      gap: Spacing.md,
+      minHeight: 42,
+      alignItems: "center",
+      gap: Spacing.sm,
       marginTop:
-        Spacing.lg,
-      padding:
         Spacing.md,
+      paddingHorizontal:
+        Spacing.md,
+      paddingVertical:
+        Spacing.sm,
       borderRadius:
         Radius.lg,
       borderWidth:
         StyleSheet.hairlineWidth,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
-        KhedmatPalette.blue050,
-    },
-
-    backendNoticeIcon: {
-      width: 42,
-      height: 42,
-      flexShrink: 0,
-      alignItems:
-        "center",
-      justifyContent:
-        "center",
-      borderRadius:
-        Radius.md,
-      backgroundColor:
-        KhedmatPalette.white,
-    },
-
-    backendNoticeCopy: {
-      flex: 1,
-      minWidth: 0,
+        KhedmatPalette.surfaceSoft,
     },
 
     backendNoticeTitle: {
-      ...Typography.label,
-      color:
-        KhedmatPalette.textPrimary,
-    },
-
-    backendNoticeMessage: {
       ...Typography.captionStyle,
-      marginTop: 3,
+      flex: 1,
       color:
         KhedmatPalette.textSecondary,
-      lineHeight: 18,
+      fontWeight: "600",
     },
 
     searchBox: {
@@ -1311,15 +1146,14 @@ const styles =
       alignItems: "center",
       gap: Spacing.sm,
       marginTop:
-        Spacing.lg,
+        Spacing.md,
       paddingHorizontal:
         Spacing.md,
       borderRadius:
-        Radius.lg,
-      borderWidth:
-        StyleSheet.hairlineWidth,
+        Radius.xl,
+      borderWidth: 1,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
         KhedmatPalette.white,
     },
@@ -1348,19 +1182,18 @@ const styles =
         Spacing.md,
       borderRadius:
         Radius.pill,
-      borderWidth:
-        StyleSheet.hairlineWidth,
+      borderWidth: 1,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
         KhedmatPalette.white,
     },
 
     filterChipSelected: {
       borderColor:
-        KhedmatPalette.blue500,
+        KhedmatPalette.navy900,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.navy900,
     },
 
     filterLabel: {
@@ -1372,23 +1205,13 @@ const styles =
 
     filterLabelSelected: {
       color:
-        KhedmatPalette.blue500,
-    },
-
-    resultsTitle: {
-      ...Typography.sectionTitle,
-      width: "100%",
-      marginTop:
-        Spacing.lg,
-      marginBottom:
-        Spacing.sm,
-      color:
-        KhedmatPalette.textPrimary,
-      fontSize: 16,
+        KhedmatPalette.white,
     },
 
     conversationList: {
       width: "100%",
+      marginTop:
+        Spacing.lg,
       gap: Spacing.md,
     },
 
@@ -1397,11 +1220,10 @@ const styles =
       padding:
         Spacing.md,
       borderRadius:
-        Radius.lg,
-      borderWidth:
-        StyleSheet.hairlineWidth,
+        Radius.xl,
+      borderWidth: 1,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
         KhedmatPalette.white,
     },
@@ -1410,7 +1232,7 @@ const styles =
       borderColor:
         KhedmatPalette.blue500,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.surfaceSoft,
     },
 
     cardHeader: {
@@ -1431,13 +1253,13 @@ const styles =
       borderRadius:
         Radius.pill,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.navy900,
     },
 
     avatarText: {
       ...Typography.label,
       color:
-        KhedmatPalette.blue500,
+        KhedmatPalette.white,
     },
 
     cardCopy: {
@@ -1493,29 +1315,6 @@ const styles =
       flex: 1,
       color:
         KhedmatPalette.textSecondary,
-    },
-
-    openRow: {
-      width: "100%",
-      alignItems: "center",
-      justifyContent:
-        "space-between",
-      gap: Spacing.sm,
-      marginTop:
-        Spacing.md,
-      paddingTop:
-        Spacing.sm,
-      borderTopWidth:
-        StyleSheet.hairlineWidth,
-      borderTopColor:
-        KhedmatPalette.blue200,
-    },
-
-    openText: {
-      ...Typography.label,
-      color:
-        KhedmatPalette.blue500,
-      fontSize: 13,
     },
 
     emptyState: {

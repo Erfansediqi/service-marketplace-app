@@ -26,8 +26,8 @@ import {
 } from "../constants/theme";
 import { useBooking } from "../context/booking-context";
 import { useLanguage } from "../context/languagecontext";
-import type { ProviderProfile } from "../types/provider";
 import { getProviderById } from "../services/provider-repository";
+import type { ProviderProfile } from "../types/provider";
 
 type IconName =
   ComponentProps<typeof Ionicons>["name"];
@@ -585,64 +585,16 @@ function BookingScheduleContent({
           </View>
 
           <View style={styles.header}>
-            <View
-              style={
-                styles.headerIcon
-              }
-            >
-              <Ionicons
-                name="calendar-outline"
-                size={30}
-                color={
-                  KhedmatPalette
-                    .white
-                }
-              />
-            </View>
-
-            <View
+            <Text
               style={[
-                styles.headerCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
+                styles.title,
+                directionStyle(
+                  isRtl,
+                ),
               ]}
             >
-              <Text
-                style={[
-                  styles.eyebrow,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.eyebrow}
-              </Text>
-
-              <Text
-                style={[
-                  styles.title,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.title}
-              </Text>
-
-              <Text
-                style={[
-                  styles.subtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.subtitle}
-              </Text>
-            </View>
+              {copy.title}
+            </Text>
           </View>
 
           <View
@@ -681,17 +633,6 @@ function BookingScheduleContent({
               ]}
             >
               <Text
-                style={[
-                  styles.bookingSummaryEyebrow,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.yourBooking}
-              </Text>
-
-              <Text
                 numberOfLines={1}
                 style={[
                   styles.bookingSummaryTitle,
@@ -715,9 +656,6 @@ function BookingScheduleContent({
               >
                 {bookingDraft.providerName ||
                   copy.providerFallback}
-                {" · "}
-                {bookingDraft.providerProfession ||
-                  copy.professionFallback}
               </Text>
             </View>
 
@@ -779,16 +717,6 @@ function BookingScheduleContent({
                 {copy.selectDay}
               </Text>
 
-              <Text
-                style={[
-                  styles.sectionSubtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.selectDaySubtitle}
-              </Text>
             </View>
 
             <ScrollView
@@ -840,75 +768,16 @@ function BookingScheduleContent({
           </View>
 
           <View style={styles.section}>
-            <View
+            <Text
               style={[
-                styles.timeSectionHeader,
-                {
-                  flexDirection: isRtl
-                    ? "row-reverse"
-                    : "row",
-                },
+                styles.sectionTitle,
+                directionStyle(
+                  isRtl,
+                ),
               ]}
             >
-              <View
-                style={[
-                  styles.sectionHeaderCopy,
-                  {
-                    alignItems: isRtl
-                      ? "flex-end"
-                      : "flex-start",
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {copy.selectTime}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.sectionSubtitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {copy.selectTimeSubtitle}
-                </Text>
-              </View>
-
-              <View
-                style={[
-                  styles.legend,
-                  {
-                    flexDirection: isRtl
-                      ? "row-reverse"
-                      : "row",
-                  },
-                ]}
-              >
-                <LegendItem
-                  label={copy.available}
-                  color={SUCCESS}
-                  isRtl={isRtl}
-                />
-
-                <LegendItem
-                  label={copy.full}
-                  color={
-                    KhedmatPalette
-                      .textMuted
-                  }
-                  isRtl={isRtl}
-                />
-              </View>
-            </View>
+              {copy.selectTime}
+            </Text>
 
             {timeSlots.length > 0 ? (
               <View
@@ -1025,153 +894,7 @@ function BookingScheduleContent({
             )}
           </View>
 
-          {selectedDate &&
-          selectedTime ? (
-            <View
-              style={[
-                styles.selectedSummaryCard,
-                {
-                  flexDirection: isRtl
-                    ? "row-reverse"
-                    : "row",
-                },
-              ]}
-            >
-              <View
-                style={
-                  styles.selectedSummaryIcon
-                }
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={23}
-                  color={
-                    KhedmatPalette
-                      .white
-                  }
-                />
-              </View>
 
-              <View
-                style={[
-                  styles.selectedSummaryCopy,
-                  {
-                    alignItems: isRtl
-                      ? "flex-end"
-                      : "flex-start",
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.selectedSummaryLabel,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {
-                    copy.selectedSchedule
-                  }
-                </Text>
-
-                <Text
-                  style={[
-                    styles.selectedSummaryTitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {formatFullDate(
-                    selectedDate.date,
-                    activeLanguage,
-                  )}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.selectedSummaryTime,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {copy.atTime(
-                    formatTime(
-                      selectedTime.id,
-                      activeLanguage,
-                    ),
-                  )}
-                </Text>
-              </View>
-
-              <Ionicons
-                name="checkmark-circle"
-                size={25}
-                color={SUCCESS}
-              />
-            </View>
-          ) : null}
-
-          <View
-            style={[
-              styles.noticeCard,
-              {
-                flexDirection: isRtl
-                  ? "row-reverse"
-                  : "row",
-              },
-            ]}
-          >
-            <View
-              style={
-                styles.noticeIcon
-              }
-            >
-              <Ionicons
-                name="information-circle-outline"
-                size={22}
-                color={
-                  KhedmatPalette
-                    .blue500
-                }
-              />
-            </View>
-
-            <View
-              style={[
-                styles.noticeCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.noticeTitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.noticeTitle}
-              </Text>
-
-              <Text
-                style={[
-                  styles.noticeText,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.noticeText}
-              </Text>
-            </View>
-          </View>
         </ScrollView>
 
         <View style={styles.footer}>
@@ -1251,26 +974,6 @@ function BookingScheduleContent({
               </View>
             </Pressable>
 
-            <Text
-              style={[
-                styles.footerSummary,
-                directionStyle(isRtl),
-              ]}
-            >
-              {selectedDate &&
-              selectedTime
-                ? copy.footerSelected(
-                    formatShortDate(
-                      selectedDate.date,
-                      activeLanguage,
-                    ),
-                    formatTime(
-                      selectedTime.id,
-                      activeLanguage,
-                    ),
-                  )
-                : copy.footerEmpty}
-            </Text>
           </View>
         </View>
       </View>
@@ -2117,14 +1820,14 @@ function getScheduleCopy(
         ) =>
           `${start} تا ${end}`,
       selectDay:
-        "انتخاب روز",
+        "روز",
       selectDaySubtitle:
         "یکی از روزهای کاری موجود را انتخاب کنید.",
       today: "امروز",
       tomorrow: "فردا",
       closed: "تعطیل",
       selectTime:
-        "انتخاب زمان",
+        "زمان",
       selectTimeSubtitle:
         "زمان‌های پُر یا خارج از برنامه قابل انتخاب نیستند.",
       available: "موجود",
@@ -2193,14 +1896,14 @@ function getScheduleCopy(
         ) =>
           `له ${start} تر ${end}`,
       selectDay:
-        "ورځ وټاکئ",
+        "ورځ",
       selectDaySubtitle:
         "له شته کاري ورځو څخه یوه وټاکئ.",
       today: "نن",
       tomorrow: "سبا",
       closed: "تړلی",
       selectTime:
-        "وخت وټاکئ",
+        "وخت",
       selectTimeSubtitle:
         "ډک یا له مهال‌وېش بهر وختونه نه شي ټاکل کېدای.",
       available: "شته",
@@ -2266,14 +1969,14 @@ function getScheduleCopy(
       ) =>
         `${start} to ${end}`,
     selectDay:
-      "Choose a day",
+      "Day",
     selectDaySubtitle:
       "Select one of the provider’s available working days.",
     today: "Today",
     tomorrow: "Tomorrow",
     closed: "Closed",
     selectTime:
-      "Choose a time",
+      "Time",
     selectTimeSubtitle:
       "Full or out-of-schedule times cannot be selected.",
     available: "Available",
@@ -2298,7 +2001,7 @@ function getScheduleCopy(
     noticeText:
       "Submitting the request does not confirm the booking. The provider will review the details and schedule first.",
     continue:
-      "Continue to details",
+      "Continue",
     footerSelected:
       (
         date: string,
@@ -2363,7 +2066,7 @@ const styles =
     safeArea: {
       flex: 1,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
 
     root: {
@@ -2378,7 +2081,7 @@ const styles =
       paddingHorizontal:
         Layout.screenPadding,
       paddingTop: Spacing.md,
-      paddingBottom: 164,
+      paddingBottom: 120,
     },
 
     topBar: {
@@ -2400,7 +2103,7 @@ const styles =
       borderColor:
         KhedmatPalette.border,
       backgroundColor:
-        KhedmatPalette.surface,
+        KhedmatPalette.white,
     },
 
     stepBadge: {
@@ -2423,8 +2126,7 @@ const styles =
 
     header: {
       width: "100%",
-      marginTop: Spacing.xl,
-      gap: Spacing.lg,
+      marginTop: Spacing.lg,
     },
 
     headerIcon: {
@@ -2457,7 +2159,7 @@ const styles =
       maxWidth: 470,
       color:
         KhedmatPalette.textPrimary,
-      fontSize: 27,
+      fontSize: 28,
       lineHeight: 35,
     },
 
@@ -2472,9 +2174,9 @@ const styles =
 
     bookingSummaryCard: {
       width: "100%",
-      minHeight: 112,
-      marginTop: Spacing.xxl,
-      padding: Spacing.lg,
+      minHeight: 88,
+      marginTop: Spacing.lg,
+      padding: Spacing.md,
       alignItems: "center",
       gap: Spacing.md,
       borderWidth: 1,
@@ -2487,8 +2189,8 @@ const styles =
     },
 
     bookingSummaryIcon: {
-      width: 48,
-      height: 48,
+      width: 42,
+      height: 42,
       flexShrink: 0,
       borderRadius: Radius.lg,
       alignItems: "center",
@@ -2553,8 +2255,8 @@ const styles =
     section: {
       width: "100%",
       marginTop:
-        Spacing.section,
-      gap: Spacing.lg,
+        Spacing.xl,
+      gap: Spacing.md,
     },
 
     sectionHeader: {
@@ -2572,8 +2274,8 @@ const styles =
       width: "100%",
       color:
         KhedmatPalette.textPrimary,
-      fontSize: 21,
-      lineHeight: 28,
+      fontSize: 18,
+      lineHeight: 24,
     },
 
     sectionSubtitle: {
@@ -2592,9 +2294,9 @@ const styles =
     },
 
     dateCard: {
-      width: 104,
-      minHeight: 154,
-      padding: Spacing.md,
+      width: 88,
+      minHeight: 116,
+      padding: Spacing.sm,
       alignItems: "center",
       justifyContent: "center",
       gap: 3,
@@ -2644,8 +2346,8 @@ const styles =
       color:
         KhedmatPalette.textPrimary,
       fontFamily: Fonts.bold,
-      fontSize: 29,
-      lineHeight: 35,
+      fontSize: 24,
+      lineHeight: 30,
     },
 
     monthLabel: {
@@ -2779,14 +2481,14 @@ const styles =
 
     timeCard: {
       width: "31.6%",
-      minHeight: 76,
+      minHeight: 58,
       paddingHorizontal:
         Spacing.sm,
       paddingVertical:
         Spacing.md,
       alignItems: "center",
       justifyContent: "center",
-      gap: Spacing.sm,
+      gap: 5,
       borderWidth: 1,
       borderColor:
         KhedmatPalette.border,

@@ -285,16 +285,8 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
         }
       >
         <View style={styles.header}>
-          <Text style={[styles.eyebrow, directionStyle(isRtl)]}>
-            {t("providerCalendarEyebrow")}
-          </Text>
-
           <Text style={[styles.title, directionStyle(isRtl)]}>
             {t("providerCalendarTitle")}
-          </Text>
-
-          <Text style={[styles.subtitle, directionStyle(isRtl)]}>
-            {t("providerCalendarSubtitle")}
           </Text>
         </View>
 
@@ -322,10 +314,6 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
               },
             ]}
           >
-            <Text style={[styles.selectedDateLabel, directionStyle(isRtl)]}>
-              {t("providerCalendarSelectedDay")}
-            </Text>
-
             <Text
               numberOfLines={2}
               style={[styles.selectedDateTitle, directionStyle(isRtl)]}
@@ -379,43 +367,9 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
         </View>
 
         <View style={styles.section}>
-          <View
-            style={[
-              styles.sectionHeader,
-              {
-                flexDirection: isRtl ? "row-reverse" : "row",
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.sectionHeaderCopy,
-                {
-                  alignItems: isRtl ? "flex-end" : "flex-start",
-                },
-              ]}
-            >
-              <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
-                {t("providerCalendarChooseDay")}
-              </Text>
-
-              <Text style={[styles.sectionSubtitle, directionStyle(isRtl)]}>
-                {t("providerCalendarNextFourteenDays")}
-              </Text>
-            </View>
-
-            <View style={styles.calendarRangeBadge}>
-              <Ionicons
-                name="calendar-number-outline"
-                size={16}
-                color={KhedmatPalette.blue500}
-              />
-
-              <Text style={styles.calendarRangeText}>
-                {formatDigits(CALENDAR_DAYS.toString(), localizedDigits)}
-              </Text>
-            </View>
-          </View>
+          <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
+            {t("providerCalendarChooseDay")}
+          </Text>
 
           <ScrollView
             horizontal
@@ -579,34 +533,9 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
               },
             ]}
           >
-            <View
-              style={[
-                styles.sectionHeaderCopy,
-                {
-                  alignItems: isRtl ? "flex-end" : "flex-start",
-                },
-              ]}
-            >
-              <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
-                {t("providerCalendarDailySchedule")}
-              </Text>
-
-              <Text style={[styles.sectionSubtitle, directionStyle(isRtl)]}>
-                {formatCalendarScheduleSummary(
-                  formatDigits(
-                    occupiedSlots.toString(),
-                    localizedDigits,
-                  ),
-                  formatDigits(
-                    freeSlots.toString(),
-                    localizedDigits,
-                  ),
-                  activeLanguage,
-                  t("providerCalendarBookings"),
-                  t("providerCalendarFreeSlots"),
-                )}
-              </Text>
-            </View>
+            <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
+              {t("providerCalendarDailySchedule")}
+            </Text>
 
             <View
               style={[
@@ -616,7 +545,11 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
                 },
               ]}
             >
-              <LegendItem color={SUCCESS} label={t("providerCalendarBooked")} isRtl={isRtl} />
+              <LegendItem
+                color={SUCCESS}
+                label={t("providerCalendarBooked")}
+                isRtl={isRtl}
+              />
 
               <LegendItem
                 color={WARNING}
@@ -652,39 +585,9 @@ function ProviderCalendarContent({ provider }: { provider: ProviderProfile }) {
         </View>
 
         <View style={styles.section}>
-          <View
-            style={[
-              styles.sectionHeader,
-              {
-                flexDirection: isRtl ? "row-reverse" : "row",
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.sectionHeaderCopy,
-                {
-                  alignItems: isRtl ? "flex-end" : "flex-start",
-                },
-              ]}
-            >
-              <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
-                {t("providerCalendarWorkingHours")}
-              </Text>
-
-              <Text style={[styles.sectionSubtitle, directionStyle(isRtl)]}>
-                {t("providerCalendarWorkingHoursSubtitle")}
-              </Text>
-            </View>
-
-            <View style={styles.workingHoursIcon}>
-              <Ionicons
-                name="time-outline"
-                size={21}
-                color={KhedmatPalette.blue500}
-              />
-            </View>
-          </View>
+          <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
+            {t("providerCalendarWorkingHours")}
+          </Text>
 
           <View style={styles.workingHoursCard}>
             <WorkingHoursRow
@@ -2018,36 +1921,21 @@ const styles = StyleSheet.create({
 
   header: {
     width: "100%",
-    gap: Spacing.xs,
-  },
-
-  eyebrow: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: KhedmatPalette.blue500,
-    fontFamily: Fonts.medium,
   },
 
   title: {
     ...Typography.screenTitle,
     width: "100%",
-    color: KhedmatPalette.textPrimary,
-    fontSize: 27,
-    lineHeight: 34,
-  },
-
-  subtitle: {
-    ...Typography.bodyStyle,
-    width: "100%",
-    maxWidth: Layout.readableTextMaxWidth,
-    color: KhedmatPalette.textSecondary,
+    color: KhedmatPalette.navy900,
+    fontSize: 28,
+    lineHeight: 35,
   },
 
   selectedDateCard: {
     width: "100%",
-    minHeight: 112,
-    marginTop: Spacing.xxl,
-    padding: Spacing.lg,
+    minHeight: 88,
+    marginTop: Spacing.lg,
+    padding: Spacing.md,
     alignItems: "center",
     gap: Spacing.md,
     borderWidth: 1,
@@ -2058,8 +1946,8 @@ const styles = StyleSheet.create({
   },
 
   selectedDateIcon: {
-    width: 54,
-    height: 54,
+    width: 36,
+    height: 36,
     flexShrink: 0,
     borderRadius: Radius.lg,
     alignItems: "center",
@@ -2072,18 +1960,12 @@ const styles = StyleSheet.create({
     gap: 3,
   },
 
-  selectedDateLabel: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: KhedmatPalette.textMuted,
-  },
-
   selectedDateTitle: {
     ...Typography.sectionTitle,
     width: "100%",
     color: KhedmatPalette.textPrimary,
-    fontSize: 19,
-    lineHeight: 25,
+    fontSize: 17,
+    lineHeight: 23,
   },
 
   workingTimeRow: {
@@ -2099,8 +1981,8 @@ const styles = StyleSheet.create({
   },
 
   selectedDateCount: {
-    minWidth: 58,
-    minHeight: 58,
+    minWidth: 50,
+    minHeight: 50,
     flexShrink: 0,
     paddingHorizontal: Spacing.sm,
     borderRadius: Radius.lg,
@@ -2125,62 +2007,23 @@ const styles = StyleSheet.create({
 
   section: {
     width: "100%",
-    marginTop: Spacing.section,
-    gap: Spacing.lg,
-  },
-
-  sectionHeader: {
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "space-between",
+    marginTop: Spacing.xl,
     gap: Spacing.md,
   },
 
   scheduleSectionHeader: {
     width: "100%",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: Spacing.md,
-  },
-
-  sectionHeaderCopy: {
-    flex: 1,
-    gap: 2,
   },
 
   sectionTitle: {
     ...Typography.sectionTitle,
     width: "100%",
-    color: KhedmatPalette.textPrimary,
-    fontSize: 21,
-    lineHeight: 28,
-  },
-
-  sectionSubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: KhedmatPalette.textMuted,
-    lineHeight: 18,
-  },
-
-  calendarRangeBadge: {
-    minWidth: 48,
-    height: 38,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    paddingHorizontal: Spacing.sm,
-    borderWidth: 1,
-    borderColor: KhedmatPalette.border,
-    borderRadius: Radius.lg,
-    backgroundColor: KhedmatPalette.surface,
-  },
-
-  calendarRangeText: {
-    fontFamily: Fonts.bold,
-    color: KhedmatPalette.blue500,
-    fontSize: 13,
+    color: KhedmatPalette.navy900,
+    fontSize: 19,
+    lineHeight: 25,
   },
 
   datesRow: {
@@ -2190,8 +2033,8 @@ const styles = StyleSheet.create({
   },
 
   dateCard: {
-    width: 84,
-    minHeight: 142,
+    width: 76,
+    minHeight: 112,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.sm,
     alignItems: "center",
@@ -2246,8 +2089,8 @@ const styles = StyleSheet.create({
   dayNumber: {
     fontFamily: Fonts.bold,
     color: KhedmatPalette.textPrimary,
-    fontSize: 25,
-    lineHeight: 30,
+    fontSize: 22,
+    lineHeight: 27,
   },
 
   dayNumberSelected: {
@@ -2266,8 +2109,8 @@ const styles = StyleSheet.create({
   },
 
   bookingCountBadge: {
-    minWidth: 25,
-    height: 25,
+    minWidth: 22,
+    height: 22,
     paddingHorizontal: 6,
     borderRadius: Radius.pill,
     alignItems: "center",
@@ -2307,8 +2150,8 @@ const styles = StyleSheet.create({
   },
 
   metricCard: {
-    width: "48.7%",
-    minHeight: 132,
+    width: "32%",
+    minHeight: 104,
     padding: Spacing.md,
     alignItems: "center",
     justifyContent: "center",
@@ -2321,7 +2164,8 @@ const styles = StyleSheet.create({
   },
 
   metricCardCompact: {
-    minHeight: 124,
+    width: "48.7%",
+    minHeight: 104,
     paddingHorizontal: Spacing.sm,
   },
 
@@ -2442,7 +2286,7 @@ const styles = StyleSheet.create({
 
   bookingCard: {
     width: "100%",
-    padding: Spacing.md,
+    padding: Spacing.sm,
     borderWidth: 1,
     borderRadius: Radius.xl,
     backgroundColor: KhedmatPalette.surface,
@@ -2456,8 +2300,8 @@ const styles = StyleSheet.create({
   },
 
   serviceIcon: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     flexShrink: 0,
     borderRadius: Radius.md,
     alignItems: "center",
@@ -2614,21 +2458,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
 
-  workingHoursIcon: {
-    width: 44,
-    height: 44,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: KhedmatPalette.surface,
-    borderWidth: 1,
-    borderColor: KhedmatPalette.border,
-  },
-
   workingHoursCard: {
     width: "100%",
-    padding: Spacing.lg,
+    padding: Spacing.md,
     borderWidth: 1,
     borderColor: KhedmatPalette.border,
     borderRadius: Radius.xl,
@@ -2643,8 +2475,8 @@ const styles = StyleSheet.create({
   },
 
   workingHoursRowIcon: {
-    width: 40,
-    height: 40,
+    width: 34,
+    height: 34,
     flexShrink: 0,
     borderRadius: Radius.md,
     alignItems: "center",
@@ -2676,7 +2508,7 @@ const styles = StyleSheet.create({
   workingHoursDivider: {
     width: "100%",
     height: StyleSheet.hairlineWidth,
-    marginVertical: Spacing.md,
+    marginVertical: Spacing.sm,
     backgroundColor: KhedmatPalette.border,
   },
 

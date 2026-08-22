@@ -23,11 +23,11 @@ import {
 import { useLanguage } from "../context/languagecontext";
 import { useSession } from "../context/session-context";
 import { useSupabaseAuth } from "../context/supabase-auth-context";
-import type { ProviderProfile } from "../types/provider";
 import {
   getOwnedProviderProfiles,
   renameProvider,
 } from "../services/provider-repository";
+import type { ProviderProfile } from "../types/provider";
 
 type LanguageName = "English" | "Dari" | "Pashto";
 
@@ -268,9 +268,7 @@ export default function ProviderAccountSelectionScreen() {
               {copy.title}
             </Text>
 
-            <Text style={[styles.subtitle, directionStyle(isRtl)]}>
-              {copy.subtitle}
-            </Text>
+
           </View>
         </View>
 
@@ -508,7 +506,7 @@ function getAccountSelectionCopy(language: LanguageName) {
     return {
       back: "شاته",
       title: "د خدمت چمتو کوونکي حساب وټاکئ",
-      subtitle: "هغه حساب وټاکئ چې اداره کول یې غواړئ، یا نوی حساب جوړ کړئ.",
+      subtitle: "خپل حساب وټاکئ.",
       loading: "د خدمت چمتو کوونکي حسابونه بارېږي...",
       errorTitle: "د حسابونو بارول ناکام شول",
       errorMessage: "مهرباني وکړئ بیا هڅه وکړئ.",
@@ -537,7 +535,7 @@ function getAccountSelectionCopy(language: LanguageName) {
 
   return {
     back: "Back",
-    title: "Choose a provider account",
+    title: "Provider account",
     subtitle:
       "Select the provider account you want to manage, or create a new one.",
     loading: "Loading provider accounts...",
@@ -601,13 +599,6 @@ const styles = StyleSheet.create({
     ...Typography.screenTitle,
     width: "100%",
     color: KhedmatPalette.textPrimary,
-  },
-
-  subtitle: {
-    ...Typography.bodyStyle,
-    width: "100%",
-    marginTop: Spacing.sm,
-    color: KhedmatPalette.textSecondary,
   },
 
   stateContainer: {
@@ -678,7 +669,7 @@ const styles = StyleSheet.create({
   },
 
   createSection: {
-    marginTop: Spacing.xxl,
+    marginTop: Spacing.lg,
   },
 
   createButton: {
@@ -686,7 +677,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.md,
-    padding: Spacing.lg,
+    padding: Spacing.md,
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: KhedmatPalette.blue500,
@@ -695,8 +686,8 @@ const styles = StyleSheet.create({
   },
 
   createIcon: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: Radius.pill,

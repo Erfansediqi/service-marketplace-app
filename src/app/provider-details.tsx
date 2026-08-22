@@ -391,68 +391,16 @@ export default function ProviderDetailsScreen() {
           </View>
 
           <View style={styles.header}>
-            <View
-              style={
-                styles.headerIcon
-              }
-            >
-              <Ionicons
-                name="person-circle-outline"
-                size={31}
-                color={
-                  KhedmatPalette.white
-                }
-              />
-            </View>
-
-            <View
+            <Text
               style={[
-                styles.headerCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
+                styles.title,
+                directionStyle(
+                  isRtl,
+                ),
               ]}
             >
-              <Text
-                style={[
-                  styles.eyebrow,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {getCategoryName(
-                  category?.nameFa,
-                  category?.nameEn,
-                  activeLanguage,
-                  copy.profileFallback,
-                )}
-              </Text>
-
-              <Text
-                style={[
-                  styles.title,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.title}
-              </Text>
-
-              <Text
-                style={[
-                  styles.subtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.subtitle}
-              </Text>
-            </View>
+              {copy.title}
+            </Text>
           </View>
 
           <View
@@ -511,18 +459,7 @@ export default function ProviderDetailsScreen() {
                   )}
                 </Text>
 
-                <Text
-                  style={[
-                    styles.summarySubtitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {
-                    copy.selectedServicesSubtitle
-                  }
-                </Text>
+
               </View>
 
               <View
@@ -632,16 +569,7 @@ export default function ProviderDetailsScreen() {
                 />
               </View>
 
-              <Text
-                style={[
-                  styles.fieldHint,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.businessNameHint}
-              </Text>
+
             </View>
 
             <View style={styles.field}>
@@ -766,20 +694,7 @@ export default function ProviderDetailsScreen() {
                         : copy.experiencePlaceholder}
                     </Text>
 
-                    {selectedExperience ? (
-                      <Text
-                        style={[
-                          styles.selectSecondaryValue,
-                          directionStyle(
-                            isRtl,
-                          ),
-                        ]}
-                      >
-                        {
-                          selectedExperience.secondaryEnglish
-                        }
-                      </Text>
-                    ) : null}
+
                   </View>
 
                   <Ionicons
@@ -798,18 +713,7 @@ export default function ProviderDetailsScreen() {
                   text={experienceError}
                   isRtl={isRtl}
                 />
-              ) : (
-                <Text
-                  style={[
-                    styles.fieldHint,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {copy.experienceHint}
-                </Text>
-              )}
+              ) : null}
             </View>
 
             <View style={styles.field}>
@@ -923,78 +827,6 @@ export default function ProviderDetailsScreen() {
                   ]}
                 />
 
-                <View
-                  style={
-                    styles.descriptionProgressTrack
-                  }
-                >
-                  <View
-                    style={[
-                      styles.descriptionProgressFill,
-
-                      {
-                        width: `${descriptionProgress}%`,
-                      },
-
-                      trimmedDescription.length >=
-                        MINIMUM_DESCRIPTION_LENGTH &&
-                        styles.descriptionProgressValid,
-                    ]}
-                  />
-                </View>
-              </View>
-
-              <View
-                style={[
-                  styles.characterRow,
-                  {
-                    flexDirection: isRtl
-                      ? "row-reverse"
-                      : "row",
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.characterCount,
-
-                    trimmedDescription.length >=
-                      MINIMUM_DESCRIPTION_LENGTH &&
-                      styles.characterCountValid,
-
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {copy.characterCount(
-                    formatDigits(
-                      description.length.toString(),
-                      localizedDigits,
-                    ),
-
-                    formatDigits(
-                      MAXIMUM_DESCRIPTION_LENGTH.toString(),
-                      localizedDigits,
-                    ),
-                  )}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.characterRequirement,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {copy.minimumCharacters(
-                    formatDigits(
-                      MINIMUM_DESCRIPTION_LENGTH.toString(),
-                      localizedDigits,
-                    ),
-                  )}
-                </Text>
               </View>
 
               {descriptionError ? (
@@ -1006,64 +838,6 @@ export default function ProviderDetailsScreen() {
             </View>
           </View>
 
-          <View
-            style={[
-              styles.guidanceCard,
-              {
-                flexDirection: isRtl
-                  ? "row-reverse"
-                  : "row",
-              },
-            ]}
-          >
-            <View
-              style={
-                styles.guidanceIcon
-              }
-            >
-              <Ionicons
-                name="bulb-outline"
-                size={22}
-                color={
-                  KhedmatPalette
-                    .blue500
-                }
-              />
-            </View>
-
-            <View
-              style={[
-                styles.guidanceCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.guidanceTitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.guidanceTitle}
-              </Text>
-
-              <Text
-                style={[
-                  styles.guidanceText,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.guidanceText}
-              </Text>
-            </View>
-          </View>
         </ScrollView>
 
         <View style={styles.footer}>
@@ -1122,36 +896,7 @@ export default function ProviderDetailsScreen() {
               </View>
             </Pressable>
 
-            <View
-              style={[
-                styles.footerHintRow,
-                {
-                  flexDirection: isRtl
-                    ? "row-reverse"
-                    : "row",
-                },
-              ]}
-            >
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={14}
-                color={
-                  KhedmatPalette
-                    .textMuted
-                }
-              />
 
-              <Text
-                style={[
-                  styles.helperText,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.helperText}
-              </Text>
-            </View>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -1556,7 +1301,7 @@ function getDetailsCopy(
         "پروفایل حرفه‌ای",
 
       title:
-        "تجربه و مهارت خود را معرفی کنید",
+        "جزئیات حرفه‌ای",
 
       subtitle:
         "این معلومات در پروفایل عمومی شما نمایش داده می‌شود و به مشتریان کمک می‌کند با اطمینان بیشتری شما را انتخاب کنند.",
@@ -1630,7 +1375,7 @@ function getDetailsCopy(
         "مهارت‌های اصلی، سال‌های تجربه، نوع پروژه‌هایی که انجام داده‌اید و ویژگی‌های کار خود را توضیح دهید. از درج شماره تماس در این بخش خودداری کنید.",
 
       continue:
-        "ادامه به محدودهٔ خدمت",
+        "ادامه",
 
       helperText:
         "معلومات دقیق‌تر باعث افزایش اعتماد مشتریان می‌شود.",
@@ -1654,7 +1399,7 @@ function getDetailsCopy(
         "مسلکي پروفایل",
 
       title:
-        "خپله تجربه او مهارتونه معرفي کړئ",
+        "مسلکي جزیات",
 
       subtitle:
         "دا معلومات به ستاسو په عامه پروفایل کې ښکاره شي او له پیرودونکو سره مرسته کوي چې په ډاډ سره تاسو وټاکي.",
@@ -1825,7 +1570,7 @@ function getDetailsCopy(
       "Describe your core skills, years of experience, completed project types and work standards. Do not include your phone number in this section.",
 
     continue:
-      "Continue to service area",
+      "Continue",
 
     helperText:
       "Accurate information helps customers trust your profile.",
@@ -1838,7 +1583,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor:
-      KhedmatPalette.blue050,
+      KhedmatPalette.white,
   },
 
   root: {
@@ -1898,32 +1643,7 @@ const styles = StyleSheet.create({
 
   header: {
     width: "100%",
-    marginTop: Spacing.xl,
-    gap: Spacing.lg,
-  },
-
-  headerIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: Radius.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.navy900,
-    ...Shadows.small,
-  },
-
-  headerCopy: {
-    width: "100%",
-    gap: Spacing.sm,
-  },
-
-  eyebrow: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color:
-      KhedmatPalette.blue500,
-    fontFamily: Fonts.medium,
+    marginTop: Spacing.lg,
   },
 
   title: {
@@ -1931,29 +1651,21 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 470,
     color:
-      KhedmatPalette.textPrimary,
-    fontSize: 27,
+      KhedmatPalette.navy900,
+    fontSize: 28,
     lineHeight: 35,
-  },
-
-  subtitle: {
-    ...Typography.bodyLarge,
-    width: "100%",
-    maxWidth: 470,
-    color:
-      KhedmatPalette.textSecondary,
-    lineHeight: 25,
   },
 
   summaryCard: {
     width: "100%",
-    marginTop: Spacing.xxl,
-    padding: Spacing.lg,
+    marginTop: Spacing.lg,
+    padding: Spacing.md,
     borderWidth: 1,
     borderColor:
-      KhedmatPalette.blue200,
+      KhedmatPalette.border,
     borderRadius: Radius.xl,
-    backgroundColor: "#F4FBFC",
+    backgroundColor:
+      KhedmatPalette.white,
   },
 
   summaryRow: {
@@ -1963,8 +1675,8 @@ const styles = StyleSheet.create({
   },
 
   summaryIcon: {
-    width: 46,
-    height: 46,
+    width: 40,
+    height: 40,
     flexShrink: 0,
     borderRadius: Radius.md,
     alignItems: "center",
@@ -1984,14 +1696,6 @@ const styles = StyleSheet.create({
     color:
       KhedmatPalette.textPrimary,
     fontSize: 16,
-  },
-
-  summarySubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color:
-      KhedmatPalette.textSecondary,
-    lineHeight: 18,
   },
 
   summaryCount: {
@@ -2015,8 +1719,8 @@ const styles = StyleSheet.create({
 
   form: {
     width: "100%",
-    marginTop: Spacing.section,
-    gap: Spacing.xxl,
+    marginTop: Spacing.xl,
+    gap: Spacing.xl,
   },
 
   field: {
@@ -2068,7 +1772,7 @@ const styles = StyleSheet.create({
       KhedmatPalette.border,
     borderRadius: Radius.lg,
     backgroundColor:
-      KhedmatPalette.surface,
+      KhedmatPalette.white,
   },
 
   textInput: {
@@ -2108,7 +1812,8 @@ const styles = StyleSheet.create({
 
   selectControl: {
     width: "100%",
-    minHeight: 66,
+    minHeight:
+      Layout.controlHeight,
     paddingHorizontal:
       Spacing.md,
     justifyContent: "center",
@@ -2117,7 +1822,7 @@ const styles = StyleSheet.create({
       KhedmatPalette.border,
     borderRadius: Radius.lg,
     backgroundColor:
-      KhedmatPalette.surface,
+      KhedmatPalette.white,
   },
 
   selectContent: {
@@ -2143,14 +1848,6 @@ const styles = StyleSheet.create({
     color:
       KhedmatPalette.textMuted,
     fontFamily: Fonts.regular,
-  },
-
-  selectSecondaryValue: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color:
-      KhedmatPalette.textMuted,
-    fontSize: 10,
   },
 
   descriptionContainer: {
@@ -2204,51 +1901,6 @@ const styles = StyleSheet.create({
     lineHeight: 23,
   },
 
-  descriptionProgressTrack: {
-    width: "100%",
-    height: 5,
-    overflow: "hidden",
-    borderRadius: Radius.pill,
-    backgroundColor:
-      KhedmatPalette.border,
-  },
-
-  descriptionProgressFill: {
-    height: "100%",
-    borderRadius: Radius.pill,
-    backgroundColor:
-      KhedmatPalette.blue500,
-  },
-
-  descriptionProgressValid: {
-    backgroundColor: SUCCESS,
-  },
-
-  characterRow: {
-    width: "100%",
-    alignItems: "center",
-    justifyContent:
-      "space-between",
-    gap: Spacing.md,
-  },
-
-  characterCount: {
-    ...Typography.captionStyle,
-    color:
-      KhedmatPalette.textMuted,
-  },
-
-  characterCountValid: {
-    color: SUCCESS,
-    fontFamily: Fonts.medium,
-  },
-
-  characterRequirement: {
-    ...Typography.captionStyle,
-    color:
-      KhedmatPalette.textMuted,
-  },
-
   controlError: {
     borderColor: ERROR,
     backgroundColor:
@@ -2272,52 +1924,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  guidanceCard: {
-    width: "100%",
-    minHeight: 110,
-    marginTop: Spacing.section,
-    padding: Spacing.lg,
-    alignItems: "flex-start",
-    gap: Spacing.md,
-    borderWidth: 1,
-    borderColor:
-      KhedmatPalette.blue200,
-    borderRadius: Radius.xl,
-    backgroundColor: "#F4FBFC",
-  },
-
-  guidanceIcon: {
-    width: 44,
-    height: 44,
-    flexShrink: 0,
-    borderRadius: Radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.surface,
-  },
-
-  guidanceCopy: {
-    flex: 1,
-    gap: 3,
-  },
-
-  guidanceTitle: {
-    ...Typography.label,
-    width: "100%",
-    color:
-      KhedmatPalette.textPrimary,
-    fontSize: 15,
-  },
-
-  guidanceText: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color:
-      KhedmatPalette.textSecondary,
-    lineHeight: 19,
-  },
-
   footer: {
     position: "absolute",
     right: 0,
@@ -2328,7 +1934,7 @@ const styles = StyleSheet.create({
     borderTopColor:
       KhedmatPalette.border,
     backgroundColor:
-      KhedmatPalette.surface,
+      KhedmatPalette.white,
   },
 
   footerContent: {
@@ -2384,14 +1990,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
-  },
-
-  helperText: {
-    ...Typography.captionStyle,
-    flexShrink: 1,
-    color:
-      KhedmatPalette.textMuted,
-    textAlign: "center",
   },
 
   modalBackdrop: {

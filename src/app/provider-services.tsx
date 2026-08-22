@@ -285,69 +285,16 @@ export default function ProviderServicesScreen() {
           </View>
 
           <View style={styles.header}>
-            <View
-              style={
-                styles.headerIcon
-              }
-            >
-              <Ionicons
-                name={
-                  (category?.icon ??
-                    "construct-outline") as IconName
-                }
-                size={29}
-                color={
-                  KhedmatPalette
-                    .white
-                }
-              />
-            </View>
-
-            <View
+            <Text
               style={[
-                styles.headerCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
+                styles.title,
+                directionStyle(
+                  isRtl,
+                ),
               ]}
             >
-              <Text
-                style={[
-                  styles.eyebrow,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {
-                  categoryDisplay.name
-                }
-              </Text>
-
-              <Text
-                style={[
-                  styles.title,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.title}
-              </Text>
-
-              <Text
-                style={[
-                  styles.subtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.subtitle}
-              </Text>
-            </View>
+              {copy.title}
+            </Text>
           </View>
 
           <View
@@ -420,18 +367,7 @@ export default function ProviderServicesScreen() {
                   )}
                 </Text>
 
-                <Text
-                  style={[
-                    styles.selectionSubtitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {limitReached
-                    ? copy.limitReached
-                    : copy.selectionGuidance}
-                </Text>
+
               </View>
 
               {selectedCount > 0 ? (
@@ -555,21 +491,7 @@ export default function ProviderServicesScreen() {
                 }
               </Text>
 
-              <Text
-                style={[
-                  styles.resultsSubtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.servicesCount(
-                  formatDigits(
-                    services.length.toString(),
-                    localizedDigits,
-                  ),
-                )}
-              </Text>
+
             </View>
 
             <View
@@ -1454,7 +1376,7 @@ const styles = StyleSheet.create({
       KhedmatPalette.border,
 
     backgroundColor:
-      KhedmatPalette.surface,
+      KhedmatPalette.white,
   },
 
   stepBadge: {
@@ -1490,39 +1412,6 @@ const styles = StyleSheet.create({
     gap: Spacing.lg,
   },
 
-  headerIcon: {
-    width: 64,
-    height: 64,
-
-    borderRadius: Radius.xl,
-
-    alignItems: "center",
-
-    justifyContent: "center",
-
-    backgroundColor:
-      KhedmatPalette.navy900,
-
-    ...Shadows.small,
-  },
-
-  headerCopy: {
-    width: "100%",
-
-    gap: Spacing.sm,
-  },
-
-  eyebrow: {
-    ...Typography.captionStyle,
-
-    width: "100%",
-
-    color:
-      KhedmatPalette.blue500,
-
-    fontFamily: Fonts.medium,
-  },
-
   title: {
     ...Typography.screenTitle,
 
@@ -1536,19 +1425,6 @@ const styles = StyleSheet.create({
     fontSize: 27,
 
     lineHeight: 35,
-  },
-
-  subtitle: {
-    ...Typography.bodyLarge,
-
-    width: "100%",
-
-    maxWidth: 470,
-
-    color:
-      KhedmatPalette.textSecondary,
-
-    lineHeight: 25,
   },
 
   selectionCard: {
@@ -1614,17 +1490,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
 
     lineHeight: 22,
-  },
-
-  selectionSubtitle: {
-    ...Typography.captionStyle,
-
-    width: "100%",
-
-    color:
-      KhedmatPalette.textSecondary,
-
-    lineHeight: 18,
   },
 
   clearSelectionButton: {
@@ -1742,15 +1607,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
 
     lineHeight: 27,
-  },
-
-  resultsSubtitle: {
-    ...Typography.captionStyle,
-
-    width: "100%",
-
-    color:
-      KhedmatPalette.textMuted,
   },
 
   resultsIcon: {

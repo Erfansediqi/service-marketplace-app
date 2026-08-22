@@ -386,23 +386,6 @@ export default function ProviderProfessionalProfileScreen() {
             )}
           </Text>
 
-          <Text
-            style={[
-              styles.subtitle,
-              {
-                textAlign:
-                  isRTL
-                    ? "right"
-                    : "left",
-                writingDirection:
-                  textDirection,
-              },
-            ]}
-          >
-            {t(
-              "providerProfessionalProfileSubtitle",
-            )}
-          </Text>
         </View>
       </View>
 
@@ -587,14 +570,14 @@ const styles =
       alignSelf: "center",
       alignItems:
         "flex-start",
-      gap: Spacing.md,
+      gap: Spacing.sm,
       marginBottom:
-        Spacing.xl,
+        Spacing.lg,
     },
 
     backButton: {
-      width: 48,
-      height: 48,
+      width: 40,
+      height: 40,
       alignItems: "center",
       justifyContent:
         "center",
@@ -602,29 +585,19 @@ const styles =
         Radius.pill,
       borderWidth: 1,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
         KhedmatPalette.white,
     },
 
     headerText: {
       flex: 1,
-      paddingTop:
-        Spacing.xs,
     },
 
     title: {
       ...Typography.screenTitle,
       color:
-        KhedmatPalette.textPrimary,
-    },
-
-    subtitle: {
-      ...Typography.bodyStyle,
-      marginTop:
-        Spacing.xs,
-      color:
-        KhedmatPalette.textSecondary,
+        KhedmatPalette.navy900,
     },
 
     formCard: {
@@ -632,7 +605,7 @@ const styles =
     },
 
     formContent: {
-      gap: Spacing.xl,
+      gap: Spacing.lg,
     },
 
     introductionContainer: {
@@ -640,7 +613,7 @@ const styles =
     },
 
     introductionInput: {
-      minHeight: 140,
+      minHeight: 120,
       paddingTop:
         Spacing.md,
     },
@@ -651,7 +624,7 @@ const styles =
     },
 
     stateContainer: {
-      minHeight: 220,
+      minHeight: 180,
       alignItems: "center",
       justifyContent:
         "center",
@@ -661,8 +634,8 @@ const styles =
     },
 
     stateIcon: {
-      width: 56,
-      height: 56,
+      width: 48,
+      height: 48,
       alignItems: "center",
       justifyContent:
         "center",
@@ -675,7 +648,7 @@ const styles =
     stateTitle: {
       ...Typography.sectionTitle,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       textAlign: "center",
     },
 

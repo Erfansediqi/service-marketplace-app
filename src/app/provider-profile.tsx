@@ -152,6 +152,11 @@ function ProviderProfileContent({
 
   const localizedDigits = activeLanguage !== "English";
 
+  const localizedProfession = getLocalizedCategoryTitle(
+    provider.categoryId,
+    activeLanguage,
+  );
+
   const relatedProviders = useMemo(
     () =>
       providers
@@ -188,7 +193,7 @@ function ProviderProfileContent({
         message: formatPublicProviderShare(
           t("publicProviderProfileShareTemplate"),
           provider.name,
-          provider.profession,
+          localizedProfession,
         ),
       });
     } catch (error) {
@@ -307,7 +312,7 @@ function ProviderProfileContent({
               </View>
 
               <Text style={[styles.profession, directionStyle(isRtl)]}>
-                {provider.profession}
+                {localizedProfession}
               </Text>
 
               <View
@@ -1085,6 +1090,94 @@ function getStatusTone(tone: "success" | "warning" | "info" | "muted") {
     color: KhedmatPalette.textMuted,
     backgroundColor: KhedmatPalette.surfaceSoft,
   };
+}
+
+function getLocalizedCategoryTitle(
+  categoryId: ProviderProfile["categoryId"],
+  language: LanguageName,
+): string {
+  const titles: Record<
+    ProviderProfile["categoryId"],
+    Record<LanguageName, string>
+  > = {
+    electrician: {
+      English: "Electrician",
+      Dari: "برق‌کار",
+      Pashto: "برېښناکار",
+    },
+    plumber: {
+      English: "Plumber",
+      Dari: "لوله‌کش",
+      Pashto: "نلدوان",
+    },
+    carpenter: {
+      English: "Carpenter",
+      Dari: "نجار",
+      Pashto: "ترکاڼ",
+    },
+    construction: {
+      English: "Construction",
+      Dari: "ساختمان",
+      Pashto: "ساختماني کار",
+    },
+    painter: {
+      English: "Painter",
+      Dari: "رنگ‌مال",
+      Pashto: "رنګمال",
+    },
+    cleaner: {
+      English: "Cleaner",
+      Dari: "نظافت‌چی",
+      Pashto: "پاک‌کار",
+    },
+    "ac-technician": {
+      English: "AC technician",
+      Dari: "تخنیکر کولر",
+      Pashto: "د اې سي تخنیکر",
+    },
+    driver: {
+      English: "Driver",
+      Dari: "راننده",
+      Pashto: "موټر چلوونکی",
+    },
+    "phone-repair": {
+      English: "Phone repair",
+      Dari: "ترمیم موبایل",
+      Pashto: "د موبایل ترمیم",
+    },
+    "computer-repair": {
+      English: "Computer repair",
+      Dari: "ترمیم کمپیوتر",
+      Pashto: "د کمپیوټر ترمیم",
+    },
+    tailor: {
+      English: "Tailor",
+      Dari: "خیاط",
+      Pashto: "خیاط",
+    },
+    barber: {
+      English: "Barber",
+      Dari: "آرایشگر",
+      Pashto: "سلماني",
+    },
+    tutor: {
+      English: "Tutor",
+      Dari: "معلم خصوصی",
+      Pashto: "خصوصي ښوونکی",
+    },
+    photographer: {
+      English: "Photographer",
+      Dari: "عکاس",
+      Pashto: "عکاس",
+    },
+    other: {
+      English: "Service provider",
+      Dari: "ارائه‌دهندهٔ خدمات",
+      Pashto: "خدمت وړاندې کوونکی",
+    },
+  };
+
+  return titles[categoryId][language];
 }
 
 function getSingleParam(value: string | string[] | undefined): string {

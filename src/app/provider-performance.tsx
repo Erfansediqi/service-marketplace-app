@@ -204,9 +204,6 @@ export default function ProviderPerformanceScreen() {
           title={t(
             "providerPerformanceTitle",
           )}
-          subtitle={t(
-            "providerPerformanceSubtitle",
-          )}
           backLabel={t("back")}
           onBack={() =>
             router.back()
@@ -245,9 +242,6 @@ export default function ProviderPerformanceScreen() {
           }
           title={t(
             "providerPerformanceTitle",
-          )}
-          subtitle={t(
-            "providerPerformanceSubtitle",
           )}
           backLabel={t("back")}
           onBack={() =>
@@ -346,9 +340,6 @@ export default function ProviderPerformanceScreen() {
         }
         title={t(
           "providerPerformanceTitle",
-        )}
-        subtitle={t(
-          "providerPerformanceSubtitle",
         )}
         backLabel={t("back")}
         onBack={() =>
@@ -708,7 +699,6 @@ type HeaderProps = {
     | "ltr"
     | "rtl";
   title: string;
-  subtitle: string;
   backLabel: string;
   onBack: () => void;
 };
@@ -718,7 +708,6 @@ function Header({
   rowDirection,
   textDirection,
   title,
-  subtitle,
   backLabel,
   onBack,
 }: HeaderProps) {
@@ -777,20 +766,6 @@ function Header({
           {title}
         </Text>
 
-        <Text
-          style={[
-            styles.subtitle,
-            {
-              textAlign: isRTL
-                ? "right"
-                : "left",
-              writingDirection:
-                textDirection,
-            },
-          ]}
-        >
-          {subtitle}
-        </Text>
       </View>
     </View>
   );
@@ -1038,8 +1013,8 @@ const styles =
     },
 
     backButton: {
-      width: 40,
-      height: 40,
+      width: 36,
+      height: 36,
       flexShrink: 0,
       alignItems: "center",
       justifyContent:
@@ -1058,17 +1033,9 @@ const styles =
     title: {
       ...Typography.screenTitle,
       color:
-        KhedmatPalette.textPrimary,
-      fontSize: 22,
+        KhedmatPalette.navy900,
+      fontSize: 24,
       lineHeight: 28,
-    },
-
-    subtitle: {
-      ...Typography.captionStyle,
-      marginTop: 3,
-      color:
-        KhedmatPalette.textSecondary,
-      lineHeight: 18,
     },
 
     loadingState: {
@@ -1104,7 +1071,7 @@ const styles =
     errorTitle: {
       ...Typography.sectionTitle,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       textAlign: "center",
     },
 
@@ -1124,7 +1091,7 @@ const styles =
       marginBottom:
         Spacing.sm,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       fontSize: 18,
       lineHeight: 24,
     },
@@ -1136,7 +1103,7 @@ const styles =
 
     metricRow: {
       width: "100%",
-      minHeight: 68,
+      minHeight: 62,
       alignItems: "center",
       gap: Spacing.md,
       paddingHorizontal:
@@ -1148,7 +1115,7 @@ const styles =
       borderWidth:
         StyleSheet.hairlineWidth,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
         KhedmatPalette.white,
     },
@@ -1163,7 +1130,7 @@ const styles =
       borderRadius:
         Radius.md,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.surfaceSoft,
     },
 
     metricLabel: {
@@ -1201,8 +1168,8 @@ const styles =
     },
 
     valueIcon: {
-      width: 48,
-      height: 48,
+      width: 42,
+      height: 42,
       flexShrink: 0,
       alignItems: "center",
       justifyContent:
@@ -1210,7 +1177,7 @@ const styles =
       borderRadius:
         Radius.pill,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.surfaceSoft,
     },
 
     valueCopy: {
@@ -1255,7 +1222,7 @@ const styles =
     activityCard: {
       flexGrow: 1,
       minWidth: "46%",
-      minHeight: 92,
+      minHeight: 82,
       justifyContent:
         "center",
       padding:
@@ -1272,9 +1239,9 @@ const styles =
 
     activityCardInfo: {
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
 
     activityCardSuccess: {
@@ -1321,9 +1288,9 @@ const styles =
       borderWidth:
         StyleSheet.hairlineWidth,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.surfaceSoft,
     },
 
     recordedNoteText: {

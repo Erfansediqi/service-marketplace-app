@@ -549,64 +549,16 @@ export default function ProviderServiceAreaScreen() {
           </View>
 
           <View style={styles.header}>
-            <View
-              style={
-                styles.headerIcon
-              }
-            >
-              <Ionicons
-                name="map-outline"
-                size={31}
-                color={
-                  KhedmatPalette
-                    .white
-                }
-              />
-            </View>
-
-            <View
+            <Text
               style={[
-                styles.headerCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
+                styles.title,
+                directionStyle(
+                  isRtl,
+                ),
               ]}
             >
-              <Text
-                style={[
-                  styles.eyebrow,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.eyebrow}
-              </Text>
-
-              <Text
-                style={[
-                  styles.title,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.title}
-              </Text>
-
-              <Text
-                style={[
-                  styles.subtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.subtitle}
-              </Text>
-            </View>
+              {copy.title}
+            </Text>
           </View>
 
           <View style={styles.form}>
@@ -625,15 +577,6 @@ export default function ProviderServiceAreaScreen() {
                       activeLanguage,
                     )
                   : ""
-              }
-              secondaryValue={
-                selectedProvince
-                  ? getSecondaryLocationName(
-                      selectedProvince.nameFa,
-                      selectedProvince.nameEn,
-                      activeLanguage,
-                    )
-                  : undefined
               }
               icon="map-outline"
               error={provinceError}
@@ -665,15 +608,6 @@ export default function ProviderServiceAreaScreen() {
                       activeLanguage,
                     )
                   : ""
-              }
-              secondaryValue={
-                selectedDistrict
-                  ? getSecondaryLocationName(
-                      selectedDistrict.nameFa,
-                      selectedDistrict.nameEn,
-                      activeLanguage,
-                    )
-                  : undefined
               }
               icon="location-outline"
               error={districtError}
@@ -735,18 +669,7 @@ export default function ProviderServiceAreaScreen() {
                   </Text>
                 </View>
 
-                <Text
-                  style={[
-                    styles.sectionSubtitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {
-                    copy.serviceModeSubtitle
-                  }
-                </Text>
+
               </View>
 
               <View
@@ -905,81 +828,12 @@ export default function ProviderServiceAreaScreen() {
                     )}
                   </Text>
 
-                  <Text
-                    style={[
-                      styles.summarySubtitle,
-                      directionStyle(
-                        isRtl,
-                      ),
-                    ]}
-                  >
-                    {
-                      copy.summarySubtitle
-                    }
-                  </Text>
+
                 </View>
               </View>
             ) : null}
           </View>
 
-          <View
-            style={[
-              styles.noticeCard,
-              {
-                flexDirection: isRtl
-                  ? "row-reverse"
-                  : "row",
-              },
-            ]}
-          >
-            <View
-              style={
-                styles.noticeIcon
-              }
-            >
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={22}
-                color={
-                  KhedmatPalette
-                    .blue500
-                }
-              />
-            </View>
-
-            <View
-              style={[
-                styles.noticeCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.noticeTitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.noticeTitle}
-              </Text>
-
-              <Text
-                style={[
-                  styles.noticeText,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.noticeText}
-              </Text>
-            </View>
-          </View>
         </ScrollView>
 
         <View style={styles.footer}>
@@ -1038,14 +892,7 @@ export default function ProviderServiceAreaScreen() {
               </View>
             </Pressable>
 
-            <Text
-              style={[
-                styles.helperText,
-                directionStyle(isRtl),
-              ]}
-            >
-              {copy.helperText}
-            </Text>
+
           </View>
         </View>
       </View>
@@ -2314,7 +2161,7 @@ function getServiceAreaCopy(
     noticeText:
       "Accurate location and travel-radius settings help you receive requests you can genuinely complete.",
     continue:
-      "Continue to availability",
+      "Continue",
     helperText:
       "This information is used to show nearby and relevant requests.",
     close: "Close",
@@ -2325,7 +2172,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor:
-      KhedmatPalette.blue050,
+      KhedmatPalette.white,
   },
   root: {
     flex: 1,
@@ -2378,8 +2225,7 @@ const styles = StyleSheet.create({
   },
   header: {
     width: "100%",
-    marginTop: Spacing.xl,
-    gap: Spacing.lg,
+    marginTop: Spacing.lg,
   },
   headerIcon: {
     width: 64,
@@ -2407,8 +2253,8 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 470,
     color:
-      KhedmatPalette.textPrimary,
-    fontSize: 27,
+      KhedmatPalette.navy900,
+    fontSize: 28,
     lineHeight: 35,
   },
   subtitle: {
@@ -2421,8 +2267,8 @@ const styles = StyleSheet.create({
   },
   form: {
     width: "100%",
-    marginTop: Spacing.section,
-    gap: Spacing.xxl,
+    marginTop: Spacing.xl,
+    gap: Spacing.xl,
   },
   field: {
     width: "100%",
@@ -2579,7 +2425,7 @@ const styles = StyleSheet.create({
   modeContent: {
     width: "100%",
     minHeight: 100,
-    padding: Spacing.lg,
+    padding: Spacing.md,
     alignItems: "center",
     gap: Spacing.md,
   },
@@ -2713,8 +2559,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#F4FBFC",
   },
   noticeIcon: {
-    width: 46,
-    height: 46,
+    width: 40,
+    height: 40,
     flexShrink: 0,
     borderRadius: Radius.lg,
     alignItems: "center",
@@ -2750,7 +2596,7 @@ const styles = StyleSheet.create({
     borderTopColor:
       KhedmatPalette.border,
     backgroundColor:
-      KhedmatPalette.surface,
+      KhedmatPalette.white,
   },
   footerContent: {
     width: "100%",

@@ -217,7 +217,10 @@ export default function BookingDetailsScreen() {
           style={[
             styles.topBar,
             {
-              flexDirection: isRtl ? "row-reverse" : "row",
+              flexDirection:
+                isRtl
+                  ? "row-reverse"
+                  : "row",
             },
           ]}
         >
@@ -231,28 +234,24 @@ export default function BookingDetailsScreen() {
             ]}
           >
             <Ionicons
-              name={isRtl ? "arrow-forward" : "arrow-back"}
+              name={
+                isRtl
+                  ? "arrow-forward"
+                  : "arrow-back"
+              }
               size={22}
               color={KhedmatPalette.navy900}
             />
           </Pressable>
 
-          <View
+          <Text
             style={[
-              styles.topBarCopy,
-              {
-                alignItems: isRtl ? "flex-end" : "flex-start",
-              },
+              styles.title,
+              directionStyle(isRtl),
             ]}
           >
-            <Text style={[styles.eyebrow, directionStyle(isRtl)]}>
-              {copy.eyebrow}
-            </Text>
-
-            <Text style={[styles.title, directionStyle(isRtl)]}>
-              {copy.title}
-            </Text>
-          </View>
+            {copy.title}
+          </Text>
 
           <View style={styles.iconButtonSpacer} />
         </View>
@@ -435,19 +434,29 @@ export default function BookingDetailsScreen() {
           </View>
         </Section>
 
-        <Section title={copy.notesSection} isRtl={isRtl}>
-          <View style={styles.notesCard}>
-            <Ionicons
-              name="document-text-outline"
-              size={20}
-              color={KhedmatPalette.blue500}
-            />
+        {booking.notes.trim() ? (
+          <Section
+            title={copy.notesSection}
+            isRtl={isRtl}
+          >
+            <View style={styles.notesCard}>
+              <Ionicons
+                name="document-text-outline"
+                size={18}
+                color={KhedmatPalette.blue500}
+              />
 
-            <Text style={[styles.notesText, directionStyle(isRtl)]}>
-              {booking.notes.trim() || copy.noNotes}
-            </Text>
-          </View>
-        </Section>
+              <Text
+                style={[
+                  styles.notesText,
+                  directionStyle(isRtl),
+                ]}
+              >
+                {booking.notes.trim()}
+              </Text>
+            </View>
+          </Section>
+        ) : null}
 
         <View style={styles.actions}>
           {canMessage ? (
@@ -862,11 +871,11 @@ function getDetailsCopy(language: LanguageName) {
   if (language === "Dari") {
     return {
       eyebrow: "رزرو شما",
-      title: "جزئیات رزرو",
+      title: "جزئیات",
       reference: "شماره",
       providerSection: "ارائه‌دهنده",
-      scheduleSection: "زمان و محل",
-      priceSection: "خلاصهٔ هزینه",
+      scheduleSection: "زمان و آدرس",
+      priceSection: "هزینه",
       notesSection: "یادداشت",
       date: "تاریخ",
       time: "زمان",
@@ -899,11 +908,11 @@ function getDetailsCopy(language: LanguageName) {
   if (language === "Pashto") {
     return {
       eyebrow: "ستاسو رزرف",
-      title: "د رزرف جزیات",
+      title: "جزیات",
       reference: "شمېره",
       providerSection: "خدمت وړاندې کوونکی",
-      scheduleSection: "وخت او ځای",
-      priceSection: "د لګښت لنډیز",
+      scheduleSection: "وخت او پته",
+      priceSection: "لګښت",
       notesSection: "یادښت",
       date: "نېټه",
       time: "وخت",
@@ -935,11 +944,11 @@ function getDetailsCopy(language: LanguageName) {
 
   return {
     eyebrow: "Your booking",
-    title: "Booking details",
+    title: "Details",
     reference: "Reference",
     providerSection: "Provider",
-    scheduleSection: "Schedule & location",
-    priceSection: "Price summary",
+    scheduleSection: "Schedule & address",
+    priceSection: "Price",
     notesSection: "Notes",
     date: "Date",
     time: "Time",

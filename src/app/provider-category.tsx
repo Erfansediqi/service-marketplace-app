@@ -40,8 +40,6 @@ type LanguageName =
 
 type CategoryDisplay = {
   name: string;
-  description: string;
-  secondaryName?: string;
 };
 
 type CategoryCardProps = {
@@ -104,7 +102,6 @@ export default function ProviderCategoryScreen() {
             category.nameEn,
             category.descriptionFa,
             display.name,
-            display.description,
           ]
             .filter(Boolean)
             .join(" ")
@@ -234,67 +231,19 @@ export default function ProviderCategoryScreen() {
             </View>
           </View>
 
-          <View
+                    <View
             style={styles.header}
           >
-            <View
-              style={
-                styles.headerIcon
-              }
-            >
-              <Ionicons
-                name="grid-outline"
-                size={29}
-                color={
-                  KhedmatPalette
-                    .white
-                }
-              />
-            </View>
-
-            <View
+            <Text
               style={[
-                styles.headerCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
+                styles.title,
+                directionStyle(
+                  isRtl,
+                ),
               ]}
             >
-              <Text
-                style={[
-                  styles.eyebrow,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.eyebrow}
-              </Text>
-
-              <Text
-                style={[
-                  styles.title,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.title}
-              </Text>
-
-              <Text
-                style={[
-                  styles.subtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.subtitle}
-              </Text>
-            </View>
+              {copy.title}
+            </Text>
           </View>
 
           <View
@@ -376,43 +325,16 @@ export default function ProviderCategoryScreen() {
               },
             ]}
           >
-            <View
+            <Text
               style={[
-                styles.resultsCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
+                styles.resultsTitle,
+                directionStyle(
+                  isRtl,
+                ),
               ]}
             >
-              <Text
-                style={[
-                  styles.resultsTitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.categoriesTitle}
-              </Text>
-
-              <Text
-                style={[
-                  styles.resultsSubtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.resultCount(
-                  formatDigits(
-                    filteredCategories.length.toString(),
-                    localizedDigits,
-                  ),
-                )}
-              </Text>
-            </View>
+              {copy.categoriesTitle}
+            </Text>
 
             {selectedCategory ? (
               <View
@@ -486,64 +408,6 @@ export default function ProviderCategoryScreen() {
             ) : null}
           </View>
 
-          <View
-            style={[
-              styles.guidanceCard,
-              {
-                flexDirection: isRtl
-                  ? "row-reverse"
-                  : "row",
-              },
-            ]}
-          >
-            <View
-              style={
-                styles.guidanceIcon
-              }
-            >
-              <Ionicons
-                name="information-circle-outline"
-                size={22}
-                color={
-                  KhedmatPalette
-                    .blue500
-                }
-              />
-            </View>
-
-            <View
-              style={[
-                styles.guidanceCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.guidanceTitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.guidanceTitle}
-              </Text>
-
-              <Text
-                style={[
-                  styles.guidanceText,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.guidanceText}
-              </Text>
-            </View>
-          </View>
         </ScrollView>
 
         <View style={styles.footer}>
@@ -616,14 +480,7 @@ export default function ProviderCategoryScreen() {
               </View>
             </Pressable>
 
-            <Text
-              style={[
-                styles.helperText,
-                directionStyle(isRtl),
-              ]}
-            >
-              {copy.helperText}
-            </Text>
+
           </View>
         </View>
       </View>
@@ -714,31 +571,7 @@ function CategoryCard({
             {display.name}
           </Text>
 
-          <Text
-            numberOfLines={3}
-            style={[
-              styles.categoryDescription,
-              directionStyle(isRtl),
-            ]}
-          >
-            {display.description}
-          </Text>
 
-          {display.secondaryName ? (
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.categorySecondaryName,
-                directionStyle(
-                  isRtl,
-                ),
-              ]}
-            >
-              {
-                display.secondaryName
-              }
-            </Text>
-          ) : null}
         </View>
 
         <View
@@ -834,34 +667,97 @@ function getCategoryDisplay(
   category: ServiceProfession,
   language: LanguageName,
 ): CategoryDisplay {
-  if (language === "English") {
-    return {
-      name:
-        category.nameEn,
-      description:
-        category.descriptionFa,
-      secondaryName:
-        category.nameFa,
-    };
-  }
-
-  if (language === "Pashto") {
-    return {
-      name:
-        category.nameFa,
-      description:
-        category.descriptionFa,
-      secondaryName:
-        category.nameEn,
-    };
-  }
+  const localizedNames: Partial<
+    Record<
+      ServiceProfession["id"],
+      Record<LanguageName, string>
+    >
+  > = {
+    electrician: {
+      English: "Electrician",
+      Dari: "برق‌کاری",
+      Pashto: "برېښناکار",
+    },
+    plumber: {
+      English: "Plumber",
+      Dari: "لوله‌کشی",
+      Pashto: "نلدوان",
+    },
+    carpenter: {
+      English: "Carpenter",
+      Dari: "نجاری",
+      Pashto: "ترکاڼ",
+    },
+    construction: {
+      English: "Construction",
+      Dari: "ساختمان",
+      Pashto: "ساختماني کار",
+    },
+    painter: {
+      English: "Painter",
+      Dari: "رنگ‌مالی",
+      Pashto: "رنګمالي",
+    },
+    cleaner: {
+      English: "Cleaning",
+      Dari: "نظافت",
+      Pashto: "پاک‌کاري",
+    },
+    "ac-technician": {
+      English: "AC technician",
+      Dari: "تخنیکر کولر",
+      Pashto: "د اې سي تخنیکر",
+    },
+    driver: {
+      English: "Driver",
+      Dari: "راننده",
+      Pashto: "موټر چلوونکی",
+    },
+    "phone-repair": {
+      English: "Phone repair",
+      Dari: "ترمیم موبایل",
+      Pashto: "د موبایل ترمیم",
+    },
+    "computer-repair": {
+      English: "Computer repair",
+      Dari: "ترمیم کمپیوتر",
+      Pashto: "د کمپیوټر ترمیم",
+    },
+    tailor: {
+      English: "Tailor",
+      Dari: "خیاطی",
+      Pashto: "خیاطي",
+    },
+    barber: {
+      English: "Barber",
+      Dari: "آرایشگری",
+      Pashto: "سلماني",
+    },
+    tutor: {
+      English: "Tutor",
+      Dari: "آموزش خصوصی",
+      Pashto: "خصوصي ښوونکی",
+    },
+    photographer: {
+      English: "Photographer",
+      Dari: "عکاسی",
+      Pashto: "عکاسي",
+    },
+    other: {
+      English: "Other",
+      Dari: "سایر",
+      Pashto: "نور",
+    },
+  };
 
   return {
-    name: category.nameFa,
-    description:
-      category.descriptionFa,
-    secondaryName:
-      category.nameEn,
+    name:
+      localizedNames[
+        category.id
+      ]?.[language] ??
+      (language === "English"
+        ? category.nameEn
+        : category.nameFa),
   };
 }
 
@@ -941,7 +837,7 @@ function getCategoryCopy(
       eyebrow: "نوع فعالیت",
 
       title:
-        "در کدام بخش خدمات ارائه می‌کنید؟",
+        "بخش خدمات",
 
       subtitle:
         "یک بخش اصلی را انتخاب کنید. در مرحلهٔ بعد، خدمات مشخص مربوط به همان بخش را انتخاب خواهید کرد.",
@@ -953,7 +849,7 @@ function getCategoryCopy(
         "پاک کردن جستجو",
 
       categoriesTitle:
-        "بخش‌های خدمات",
+        "بخش‌ها",
 
       resultCount:
         (value: string) =>
@@ -968,7 +864,7 @@ function getCategoryCopy(
         "بعداً می‌توانید خدمات دقیق و قیمت‌های مربوط به این بخش را تنظیم کنید.",
 
       continue:
-        "ادامه به انتخاب خدمات",
+        "ادامه",
 
       selectCategory:
         "ابتدا یک بخش را انتخاب کنید",
@@ -999,7 +895,7 @@ function getCategoryCopy(
         "د فعالیت ډول",
 
       title:
-        "تاسو په کومه برخه کې خدمتونه وړاندې کوئ؟",
+        "د خدمت برخه",
 
       subtitle:
         "یوه اصلي برخه وټاکئ. په راتلونکې مرحله کې به د همدې برخې مشخص خدمتونه انتخاب کړئ.",
@@ -1056,7 +952,7 @@ function getCategoryCopy(
       "Type of work",
 
     title:
-      "Which service category do you work in?",
+      "Service category",
 
     subtitle:
       "Choose one primary category. On the next step, you will select the specific services you provide.",
@@ -1068,7 +964,7 @@ function getCategoryCopy(
       "Clear search",
 
     categoriesTitle:
-      "Service categories",
+      "Categories",
 
     resultCount:
       (value: string) =>
@@ -1083,7 +979,7 @@ function getCategoryCopy(
       "You can configure the specific services and prices within this category on the following steps.",
 
     continue:
-      "Continue to services",
+      "Continue",
 
     selectCategory:
       "Select a category first",
@@ -1103,7 +999,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor:
-      KhedmatPalette.blue050,
+      KhedmatPalette.white,
   },
 
   root: {
@@ -1162,32 +1058,7 @@ const styles = StyleSheet.create({
 
   header: {
     width: "100%",
-    marginTop: Spacing.xl,
-    gap: Spacing.lg,
-  },
-
-  headerIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: Radius.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.navy900,
-    ...Shadows.small,
-  },
-
-  headerCopy: {
-    width: "100%",
-    gap: Spacing.sm,
-  },
-
-  eyebrow: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color:
-      KhedmatPalette.blue500,
-    fontFamily: Fonts.medium,
+    marginTop: Spacing.lg,
   },
 
   title: {
@@ -1195,25 +1066,16 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 470,
     color:
-      KhedmatPalette.textPrimary,
-    fontSize: 27,
+      KhedmatPalette.navy900,
+    fontSize: 28,
     lineHeight: 35,
-  },
-
-  subtitle: {
-    ...Typography.bodyLarge,
-    width: "100%",
-    maxWidth: 470,
-    color:
-      KhedmatPalette.textSecondary,
-    lineHeight: 25,
   },
 
   searchBox: {
     width: "100%",
     minHeight:
       Layout.controlHeight,
-    marginTop: Spacing.xxl,
+    marginTop: Spacing.lg,
     paddingHorizontal: Spacing.lg,
     alignItems: "center",
     gap: Spacing.md,
@@ -1253,25 +1115,13 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
 
-  resultsCopy: {
-    flex: 1,
-    gap: 2,
-  },
-
   resultsTitle: {
     ...Typography.sectionTitle,
-    width: "100%",
+    flex: 1,
     color:
-      KhedmatPalette.textPrimary,
-    fontSize: 20,
-    lineHeight: 27,
-  },
-
-  resultsSubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color:
-      KhedmatPalette.textMuted,
+      KhedmatPalette.navy900,
+    fontSize: 18,
+    lineHeight: 24,
   },
 
   selectedSummary: {
@@ -1304,7 +1154,7 @@ const styles = StyleSheet.create({
 
   categoryCard: {
     width: "100%",
-    minHeight: 118,
+    minHeight: 82,
     borderWidth: 1,
     borderColor:
       KhedmatPalette.border,
@@ -1317,7 +1167,8 @@ const styles = StyleSheet.create({
   categoryCardSelected: {
     borderColor:
       KhedmatPalette.blue500,
-    backgroundColor: "#F4FBFC",
+    backgroundColor:
+      KhedmatPalette.white,
   },
 
   categoryCardPressed: {
@@ -1331,15 +1182,15 @@ const styles = StyleSheet.create({
 
   categoryContent: {
     width: "100%",
-    minHeight: 118,
-    padding: Spacing.lg,
+    minHeight: 82,
+    padding: Spacing.md,
     alignItems: "center",
     gap: Spacing.md,
   },
 
   categoryIcon: {
-    width: 54,
-    height: 54,
+    width: 42,
+    height: 42,
     flexShrink: 0,
     borderRadius: Radius.lg,
     alignItems: "center",
@@ -1363,31 +1214,14 @@ const styles = StyleSheet.create({
     width: "100%",
     color:
       KhedmatPalette.textPrimary,
-    fontSize: 17,
-    lineHeight: 23,
+    fontSize: 16,
+    lineHeight: 22,
   },
 
   categoryTitleSelected: {
     color:
       KhedmatPalette.navy900,
     fontFamily: Fonts.bold,
-  },
-
-  categoryDescription: {
-    ...Typography.bodyStyle,
-    width: "100%",
-    color:
-      KhedmatPalette.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-
-  categorySecondaryName: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color:
-      KhedmatPalette.textMuted,
-    fontSize: 11,
   },
 
   radioOuter: {
@@ -1417,54 +1251,8 @@ const styles = StyleSheet.create({
       KhedmatPalette.blue500,
   },
 
-  guidanceCard: {
-    width: "100%",
-    minHeight: 100,
-    marginTop: Spacing.xl,
-    padding: Spacing.lg,
-    alignItems: "flex-start",
-    gap: Spacing.md,
-    borderWidth: 1,
-    borderColor:
-      KhedmatPalette.blue200,
-    borderRadius: Radius.xl,
-    backgroundColor: "#F4FBFC",
-  },
-
-  guidanceIcon: {
-    width: 44,
-    height: 44,
-    flexShrink: 0,
-    borderRadius: Radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.surface,
-  },
-
-  guidanceCopy: {
-    flex: 1,
-    gap: 3,
-  },
-
-  guidanceTitle: {
-    ...Typography.label,
-    width: "100%",
-    color:
-      KhedmatPalette.textPrimary,
-    fontSize: 15,
-  },
-
-  guidanceText: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color:
-      KhedmatPalette.textSecondary,
-    lineHeight: 19,
-  },
-
   emptyState: {
-    minHeight: 300,
+    minHeight: 250,
     paddingHorizontal: Spacing.xl,
     alignItems: "center",
     justifyContent: "center",
@@ -1525,7 +1313,7 @@ const styles = StyleSheet.create({
     borderTopColor:
       KhedmatPalette.border,
     backgroundColor:
-      KhedmatPalette.surface,
+      KhedmatPalette.white,
   },
 
   footerContent: {
@@ -1581,14 +1369,6 @@ const styles = StyleSheet.create({
       KhedmatPalette.white,
     fontFamily: Fonts.medium,
     fontSize: 16,
-    textAlign: "center",
-  },
-
-  helperText: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color:
-      KhedmatPalette.textMuted,
     textAlign: "center",
   },
 

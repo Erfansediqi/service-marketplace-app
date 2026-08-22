@@ -1346,17 +1346,17 @@ const styles =
     title: {
       ...Typography.screenTitle,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       fontSize: 22,
       lineHeight: 28,
     },
 
     subtitle: {
       ...Typography.captionStyle,
-      marginTop: 3,
+      marginTop: 2,
       color:
-        KhedmatPalette.textSecondary,
-      lineHeight: 18,
+        KhedmatPalette.textMuted,
+      lineHeight: 17,
     },
 
     scrollContent: {
@@ -1373,22 +1373,21 @@ const styles =
       width: "100%",
       alignItems:
         "flex-start",
-      gap: Spacing.md,
+      gap: Spacing.sm,
       padding:
         Spacing.md,
       borderRadius:
-        Radius.lg,
-      borderWidth:
-        StyleSheet.hairlineWidth,
+        Radius.xl,
+      borderWidth: 1,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
 
     statusIcon: {
-      width: 42,
-      height: 42,
+      width: 38,
+      height: 38,
       flexShrink: 0,
       alignItems:
         "center",
@@ -1397,7 +1396,7 @@ const styles =
       borderRadius:
         Radius.md,
       backgroundColor:
-        KhedmatPalette.white,
+        KhedmatPalette.surfaceSoft,
     },
 
     statusCopy: {
@@ -1408,7 +1407,7 @@ const styles =
     statusLabel: {
       ...Typography.sectionTitle,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       fontSize: 16,
       lineHeight: 21,
     },
@@ -1429,7 +1428,7 @@ const styles =
       marginBottom:
         Spacing.sm,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       fontSize: 17,
       lineHeight: 23,
     },
@@ -1443,7 +1442,7 @@ const styles =
       borderWidth:
         StyleSheet.hairlineWidth,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
         KhedmatPalette.white,
     },
@@ -1468,7 +1467,7 @@ const styles =
       borderRadius:
         Radius.md,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.surfaceSoft,
     },
 
     infoCopy: {
@@ -1486,7 +1485,7 @@ const styles =
       ...Typography.bodyStyle,
       marginTop: 2,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       lineHeight: 20,
     },
 
@@ -1496,7 +1495,7 @@ const styles =
       marginHorizontal:
         Spacing.md,
       backgroundColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
     },
 
     notesCard: {
@@ -1506,10 +1505,9 @@ const styles =
         Spacing.md,
       borderRadius:
         Radius.lg,
-      borderWidth:
-        StyleSheet.hairlineWidth,
+      borderWidth: 1,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
         KhedmatPalette.white,
     },

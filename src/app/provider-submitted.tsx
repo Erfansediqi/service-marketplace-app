@@ -158,35 +158,9 @@ export default function ProviderSubmittedScreen() {
                 </View>
               </View>
 
-              <View
-                style={
-                  styles.successDecorationTop
-                }
-              >
-                <Ionicons
-                  name="sparkles"
-                  size={16}
-                  color={
-                    KhedmatPalette
-                      .blue500
-                  }
-                />
-              </View>
 
-              <View
-                style={
-                  styles.successDecorationBottom
-                }
-              >
-                <Ionicons
-                  name="shield-checkmark"
-                  size={16}
-                  color={
-                    KhedmatPalette
-                      .white
-                  }
-                />
-              </View>
+
+
             </View>
 
             <View
@@ -194,14 +168,7 @@ export default function ProviderSubmittedScreen() {
                 styles.heroCopy
               }
             >
-              <Text
-                style={[
-                  styles.eyebrow,
-                  directionStyle(isRtl),
-                ]}
-              >
-                {copy.eyebrow}
-              </Text>
+
 
               <Text
                 style={[
@@ -212,14 +179,7 @@ export default function ProviderSubmittedScreen() {
                 {copy.title}
               </Text>
 
-              <Text
-                style={[
-                  styles.subtitle,
-                  directionStyle(isRtl),
-                ]}
-              >
-                {copy.subtitle}
-              </Text>
+
             </View>
           </View>
 
@@ -255,14 +215,7 @@ export default function ProviderSubmittedScreen() {
                 },
               ]}
             >
-              <Text
-                style={[
-                  styles.statusLabel,
-                  directionStyle(isRtl),
-                ]}
-              >
-                {copy.statusLabel}
-              </Text>
+
 
               <Text
                 style={[
@@ -321,16 +274,7 @@ export default function ProviderSubmittedScreen() {
                 {copy.nextStepsTitle}
               </Text>
 
-              <Text
-                style={[
-                  styles.sectionSubtitle,
-                  directionStyle(isRtl),
-                ]}
-              >
-                {
-                  copy.nextStepsSubtitle
-                }
-              </Text>
+
             </View>
 
             <View
@@ -355,61 +299,6 @@ export default function ProviderSubmittedScreen() {
                   />
                 ),
               )}
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.noticeCard,
-              {
-                flexDirection: isRtl
-                  ? "row-reverse"
-                  : "row",
-              },
-            ]}
-          >
-            <View
-              style={
-                styles.noticeIcon
-              }
-            >
-              <Ionicons
-                name="notifications-outline"
-                size={22}
-                color={
-                  KhedmatPalette
-                    .blue500
-                }
-              />
-            </View>
-
-            <View
-              style={[
-                styles.noticeCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.noticeTitle,
-                  directionStyle(isRtl),
-                ]}
-              >
-                {copy.noticeTitle}
-              </Text>
-
-              <Text
-                style={[
-                  styles.noticeText,
-                  directionStyle(isRtl),
-                ]}
-              >
-                {copy.noticeText}
-              </Text>
             </View>
           </View>
 
@@ -457,14 +346,7 @@ export default function ProviderSubmittedScreen() {
                 {copy.workspaceTitle}
               </Text>
 
-              <Text
-                style={[
-                  styles.accessText,
-                  directionStyle(isRtl),
-                ]}
-              >
-                {copy.workspaceText}
-              </Text>
+
             </View>
           </View>
         </ScrollView>
@@ -482,7 +364,7 @@ export default function ProviderSubmittedScreen() {
               accessibilityLabel={
                 copy.openProviderPanel
               }
-              
+
               onPress={
                 handleContinue
               }
@@ -572,14 +454,7 @@ export default function ProviderSubmittedScreen() {
               </View>
             </Pressable>
 
-            <Text
-              style={[
-                styles.helperText,
-                directionStyle(isRtl),
-              ]}
-            >
-              {copy.helperText}
-            </Text>
+
           </View>
         </View>
       </View>
@@ -784,7 +659,7 @@ function getSubmittedCopy(
       eyebrow:
         "درخواست ارسال شد",
       title:
-        "ثبت‌نام حرفه‌ای شما تکمیل شد",
+        "درخواست شما ارسال شد",
       subtitle:
         "درخواست شما برای بررسی ارسال شده است. پس از تأیید، حساب ارائه‌دهندهٔ شما به‌صورت کامل فعال خواهد شد.",
       statusLabel:
@@ -796,7 +671,7 @@ function getSubmittedCopy(
       pending:
         "در انتظار",
       nextStepsTitle:
-        "مراحل بعدی",
+        "بعد چه می‌شود؟",
       nextStepsSubtitle:
         "درخواست شما از مراحل زیر عبور خواهد کرد.",
       stepTitle:
@@ -828,9 +703,9 @@ function getSubmittedCopy(
       workspaceText:
         "می‌توانید وارد پنل شوید و وضعیت بررسی، برنامهٔ کاری و تنظیمات پروفایل خود را مشاهده کنید.",
       openProviderPanel:
-        "رفتن به پنل ارائه‌دهنده",
+        "پنل ارائه‌دهنده",
       customerHome:
-        "رفتن به صفحهٔ مشتری",
+        "صفحهٔ مشتری",
       helperText:
         "تا زمان پایان بررسی، برخی قابلیت‌های حرفه‌ای ممکن است محدود باشند.",
     };
@@ -841,7 +716,7 @@ function getSubmittedCopy(
       eyebrow:
         "غوښتنلیک ولېږل شو",
       title:
-        "ستاسو مسلکي نوم‌لیکنه بشپړه شوه",
+        "ستاسو غوښتنلیک ولېږل شو",
       subtitle:
         "ستاسو غوښتنلیک د ارزونې لپاره لېږل شوی. له تایید وروسته به ستاسو د خدمت وړاندې کوونکي حساب بشپړ فعال شي.",
       statusLabel:
@@ -853,7 +728,7 @@ function getSubmittedCopy(
       pending:
         "په تمه",
       nextStepsTitle:
-        "راتلونکې مرحلې",
+        "وروسته څه کېږي؟",
       nextStepsSubtitle:
         "ستاسو غوښتنلیک به له لاندې مرحلو تېر شي.",
       stepTitle:
@@ -885,9 +760,9 @@ function getSubmittedCopy(
       workspaceText:
         "تاسو کولی شئ پینل ته ننوځئ او د ارزونې حالت، کاري مهال‌وېش او د پروفایل تنظیمات وګورئ.",
       openProviderPanel:
-        "د خدمت وړاندې کوونکي پینل ته لاړ شئ",
+        "د خدمت وړاندې کوونکي پینل",
       customerHome:
-        "د پیرودونکي کورپاڼې ته لاړ شئ",
+        "د پیرودونکي کورپاڼه",
       helperText:
         "تر ارزونې بشپړېدو پورې ښايي ځینې مسلکي ځانګړنې محدودې وي.",
     };
@@ -897,7 +772,7 @@ function getSubmittedCopy(
     eyebrow:
       "Application submitted",
     title:
-      "Your professional registration is complete",
+      "Application submitted",
     subtitle:
       "Your application has been submitted for review. Your provider account will become fully active after approval.",
     statusLabel:
@@ -941,9 +816,9 @@ function getSubmittedCopy(
     workspaceText:
       "You can open the provider panel to view review status, manage your schedule and update profile settings.",
     openProviderPanel:
-      "Open provider panel",
+      "Provider panel",
     customerHome:
-      "Go to customer home",
+      "Customer home",
     helperText:
       "Some professional features may remain limited until the review is completed.",
   };
@@ -953,7 +828,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor:
-      KhedmatPalette.blue050,
+      KhedmatPalette.white,
   },
 
   root: {
@@ -967,26 +842,26 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     paddingHorizontal:
       Layout.screenPadding,
-    paddingTop: Spacing.xxl,
+    paddingTop: Spacing.xl,
     paddingBottom: 220,
   },
 
   hero: {
     width: "100%",
     alignItems: "center",
-    gap: Spacing.xxl,
+    gap: Spacing.lg,
   },
 
   successIllustration: {
-    width: 128,
-    height: 128,
+    width: 96,
+    height: 96,
     alignItems: "center",
     justifyContent: "center",
   },
 
   successOuter: {
-    width: 118,
-    height: 118,
+    width: 90,
+    height: 90,
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
@@ -995,45 +870,13 @@ const styles = StyleSheet.create({
   },
 
   successInner: {
-    width: 76,
-    height: 76,
+    width: 62,
+    height: 62,
     borderRadius: Radius.xxl,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: SUCCESS,
     ...Shadows.medium,
-  },
-
-  successDecorationTop: {
-    position: "absolute",
-    top: 2,
-    right: 8,
-    width: 34,
-    height: 34,
-    borderRadius: Radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor:
-      KhedmatPalette.blue050,
-    backgroundColor:
-      KhedmatPalette.surface,
-  },
-
-  successDecorationBottom: {
-    position: "absolute",
-    bottom: 1,
-    left: 9,
-    width: 34,
-    height: 34,
-    borderRadius: Radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor:
-      KhedmatPalette.blue050,
-    backgroundColor:
-      KhedmatPalette.blue500,
   },
 
   heroCopy: {
@@ -1042,40 +885,22 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
 
-  eyebrow: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: SUCCESS,
-    fontFamily: Fonts.medium,
-    textAlign: "center",
-  },
-
   title: {
     ...Typography.screenTitle,
     width: "100%",
     maxWidth: 470,
     color:
-      KhedmatPalette.textPrimary,
+      KhedmatPalette.navy900,
     fontSize: 28,
     lineHeight: 36,
     textAlign: "center",
   },
 
-  subtitle: {
-    ...Typography.bodyLarge,
-    width: "100%",
-    maxWidth: 460,
-    color:
-      KhedmatPalette.textSecondary,
-    lineHeight: 25,
-    textAlign: "center",
-  },
-
   statusCard: {
     width: "100%",
-    minHeight: 122,
-    marginTop: Spacing.section,
-    padding: Spacing.lg,
+    minHeight: 96,
+    marginTop: Spacing.xl,
+    padding: Spacing.md,
     alignItems: "center",
     gap: Spacing.md,
     borderWidth: 1,
@@ -1086,8 +911,8 @@ const styles = StyleSheet.create({
   },
 
   statusIcon: {
-    width: 50,
-    height: 50,
+    width: 42,
+    height: 42,
     flexShrink: 0,
     borderRadius: Radius.lg,
     alignItems: "center",
@@ -1099,13 +924,6 @@ const styles = StyleSheet.create({
   statusCopy: {
     flex: 1,
     gap: 3,
-  },
-
-  statusLabel: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: WARNING,
-    fontFamily: Fonts.medium,
   },
 
   statusTitle: {
@@ -1146,8 +964,8 @@ const styles = StyleSheet.create({
 
   section: {
     width: "100%",
-    marginTop: Spacing.section,
-    gap: Spacing.lg,
+    marginTop: Spacing.xl,
+    gap: Spacing.md,
   },
 
   sectionHeader: {
@@ -1159,17 +977,9 @@ const styles = StyleSheet.create({
     ...Typography.sectionTitle,
     width: "100%",
     color:
-      KhedmatPalette.textPrimary,
-    fontSize: 21,
+      KhedmatPalette.navy900,
+    fontSize: 19,
     lineHeight: 28,
-  },
-
-  sectionSubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color:
-      KhedmatPalette.textMuted,
-    lineHeight: 18,
   },
 
   steps: {
@@ -1182,8 +992,8 @@ const styles = StyleSheet.create({
 
   stepCard: {
     width: "100%",
-    minHeight: 108,
-    padding: Spacing.lg,
+    minHeight: 82,
+    padding: Spacing.md,
     alignItems: "center",
     gap: Spacing.md,
     borderWidth: 1,
@@ -1196,8 +1006,8 @@ const styles = StyleSheet.create({
   },
 
   stepIcon: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     flexShrink: 0,
     borderRadius: Radius.lg,
     alignItems: "center",
@@ -1268,58 +1078,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  noticeCard: {
-    width: "100%",
-    minHeight: 108,
-    marginTop: Spacing.section,
-    padding: Spacing.lg,
-    alignItems: "flex-start",
-    gap: Spacing.md,
-    borderWidth: 1,
-    borderColor:
-      KhedmatPalette.blue200,
-    borderRadius: Radius.xl,
-    backgroundColor:
-      "#F4FBFC",
-  },
-
-  noticeIcon: {
-    width: 46,
-    height: 46,
-    flexShrink: 0,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor:
-      KhedmatPalette.surface,
-  },
-
-  noticeCopy: {
-    flex: 1,
-    gap: 3,
-  },
-
-  noticeTitle: {
-    ...Typography.label,
-    width: "100%",
-    color:
-      KhedmatPalette.textPrimary,
-    fontSize: 15,
-  },
-
-  noticeText: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color:
-      KhedmatPalette.textSecondary,
-    lineHeight: 19,
-  },
-
   accessCard: {
     width: "100%",
-    minHeight: 108,
-    marginTop: Spacing.md,
-    padding: Spacing.lg,
+    minHeight: 72,
+    marginTop: Spacing.lg,
+    padding: Spacing.md,
     alignItems: "flex-start",
     gap: Spacing.md,
     borderWidth: 1,
@@ -1327,8 +1090,7 @@ const styles = StyleSheet.create({
       KhedmatPalette.border,
     borderRadius: Radius.xl,
     backgroundColor:
-      KhedmatPalette.surface,
-    ...Shadows.small,
+      KhedmatPalette.white,
   },
 
   accessIcon: {
@@ -1355,14 +1117,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  accessText: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color:
-      KhedmatPalette.textSecondary,
-    lineHeight: 19,
-  },
-
   footer: {
     position: "absolute",
     right: 0,
@@ -1373,7 +1127,7 @@ const styles = StyleSheet.create({
     borderTopColor:
       KhedmatPalette.border,
     backgroundColor:
-      KhedmatPalette.surface,
+      KhedmatPalette.white,
   },
 
   footerContent: {
@@ -1438,7 +1192,7 @@ const styles = StyleSheet.create({
       KhedmatPalette.border,
     borderRadius: Radius.lg,
     backgroundColor:
-      KhedmatPalette.surfaceSoft,
+      KhedmatPalette.white,
   },
 
   secondaryButtonPressed: {

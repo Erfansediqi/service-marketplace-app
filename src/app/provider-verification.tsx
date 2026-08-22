@@ -455,34 +455,9 @@ export default function ProviderVerificationScreen() {
           </View>
 
           <View style={styles.header}>
-            <View style={styles.headerIcon}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={32}
-                color={KhedmatPalette.white}
-              />
-            </View>
-
-            <View
-              style={[
-                styles.headerCopy,
-                {
-                  alignItems: isRtl ? "flex-end" : "flex-start",
-                },
-              ]}
-            >
-              <Text style={[styles.eyebrow, directionStyle(isRtl)]}>
-                {copy.eyebrow}
-              </Text>
-
-              <Text style={[styles.title, directionStyle(isRtl)]}>
-                {copy.title}
-              </Text>
-
-              <Text style={[styles.subtitle, directionStyle(isRtl)]}>
-                {copy.subtitle}
-              </Text>
-            </View>
+            <Text style={[styles.title, directionStyle(isRtl)]}>
+              {copy.title}
+            </Text>
           </View>
 
           <View style={styles.progressCard}>
@@ -584,9 +559,6 @@ export default function ProviderVerificationScreen() {
                   </Text>
                 </View>
 
-                <Text style={[styles.sectionSubtitle, directionStyle(isRtl)]}>
-                  {copy.profilePhotoSubtitle}
-                </Text>
               </View>
 
               <UploadCard
@@ -635,9 +607,6 @@ export default function ProviderVerificationScreen() {
                   </Text>
                 </View>
 
-                <Text style={[styles.sectionSubtitle, directionStyle(isRtl)]}>
-                  {copy.identityInformationSubtitle}
-                </Text>
               </View>
 
               <View style={styles.field}>
@@ -1288,7 +1257,7 @@ function getVerificationCopy(language: LanguageName) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: KhedmatPalette.blue050,
+    backgroundColor: KhedmatPalette.white,
   },
   root: {
     flex: 1,
@@ -1315,7 +1284,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: KhedmatPalette.border,
-    backgroundColor: KhedmatPalette.surface,
+    backgroundColor: KhedmatPalette.surfaceSoft,
   },
   stepBadge: {
     minHeight: 34,
@@ -1332,8 +1301,7 @@ const styles = StyleSheet.create({
   },
   header: {
     width: "100%",
-    marginTop: Spacing.xl,
-    gap: Spacing.lg,
+    marginTop: Spacing.lg,
   },
   headerIcon: {
     width: 64,
@@ -1358,8 +1326,8 @@ const styles = StyleSheet.create({
     ...Typography.screenTitle,
     width: "100%",
     maxWidth: 470,
-    color: KhedmatPalette.textPrimary,
-    fontSize: 27,
+    color: KhedmatPalette.navy900,
+    fontSize: 28,
     lineHeight: 35,
   },
   subtitle: {
@@ -1371,12 +1339,12 @@ const styles = StyleSheet.create({
   },
   progressCard: {
     width: "100%",
-    marginTop: Spacing.xxl,
-    padding: Spacing.lg,
+    marginTop: Spacing.lg,
+    padding: Spacing.md,
     borderWidth: 1,
-    borderColor: KhedmatPalette.blue200,
+    borderColor: KhedmatPalette.border,
     borderRadius: Radius.xl,
-    backgroundColor: "#F4FBFC",
+    backgroundColor: KhedmatPalette.white,
   },
   progressTopRow: {
     width: "100%",
@@ -1384,8 +1352,8 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   progressIcon: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     flexShrink: 0,
     borderRadius: Radius.md,
     alignItems: "center",
@@ -1402,7 +1370,7 @@ const styles = StyleSheet.create({
   progressTitle: {
     ...Typography.label,
     width: "100%",
-    color: KhedmatPalette.textPrimary,
+    color: KhedmatPalette.navy900,
     fontSize: 16,
   },
   progressSubtitle: {
@@ -1433,8 +1401,8 @@ const styles = StyleSheet.create({
   },
   form: {
     width: "100%",
-    marginTop: Spacing.section,
-    gap: Spacing.section,
+    marginTop: Spacing.xl,
+    gap: Spacing.xl,
   },
   section: {
     width: "100%",
@@ -1453,9 +1421,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...Typography.sectionTitle,
     flex: 1,
-    color: KhedmatPalette.textPrimary,
-    fontSize: 20,
-    lineHeight: 27,
+    color: KhedmatPalette.navy900,
+    fontSize: 19,
+    lineHeight: 25,
   },
   sectionSubtitle: {
     ...Typography.captionStyle,
@@ -1488,8 +1456,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: KhedmatPalette.border,
     borderRadius: Radius.lg,
-    backgroundColor: KhedmatPalette.surface,
-    ...Shadows.small,
+    backgroundColor: KhedmatPalette.white,
   },
   inputIcon: {
     width: 38,
@@ -1523,12 +1490,11 @@ const styles = StyleSheet.create({
   },
   uploadCard: {
     width: "100%",
-    minHeight: 112,
+    minHeight: 96,
     borderWidth: 1,
     borderColor: KhedmatPalette.border,
     borderRadius: Radius.xl,
-    backgroundColor: KhedmatPalette.surface,
-    ...Shadows.small,
+    backgroundColor: KhedmatPalette.white,
   },
   uploadCardComplete: {
     borderColor: "#A9D9BD",
@@ -1544,14 +1510,14 @@ const styles = StyleSheet.create({
   },
   uploadContent: {
     width: "100%",
-    minHeight: 112,
-    padding: Spacing.lg,
+    minHeight: 96,
+    padding: Spacing.md,
     alignItems: "center",
     gap: Spacing.md,
   },
   uploadIcon: {
-    width: 58,
-    height: 58,
+    width: 46,
+    height: 46,
     flexShrink: 0,
     borderRadius: Radius.lg,
     alignItems: "center",
@@ -1648,8 +1614,8 @@ const styles = StyleSheet.create({
   },
   securityCard: {
     width: "100%",
-    minHeight: 108,
-    padding: Spacing.lg,
+    minHeight: 88,
+    padding: Spacing.md,
     alignItems: "flex-start",
     gap: Spacing.md,
     borderWidth: 1,
@@ -1658,8 +1624,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5FCF8",
   },
   securityIcon: {
-    width: 46,
-    height: 46,
+    width: 38,
+    height: 38,
     flexShrink: 0,
     borderRadius: Radius.lg,
     alignItems: "center",
@@ -1684,7 +1650,7 @@ const styles = StyleSheet.create({
   },
   declarationCard: {
     width: "100%",
-    minHeight: 112,
+    minHeight: 96,
     borderWidth: 1,
     borderColor: KhedmatPalette.border,
     borderRadius: Radius.xl,
@@ -1693,7 +1659,7 @@ const styles = StyleSheet.create({
   },
   declarationCardSelected: {
     borderColor: KhedmatPalette.blue500,
-    backgroundColor: "#F4FBFC",
+    backgroundColor: KhedmatPalette.white,
   },
   declarationCardError: {
     borderColor: ERROR,

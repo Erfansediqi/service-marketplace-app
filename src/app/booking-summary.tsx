@@ -35,8 +35,6 @@ const PLATFORM_FEE = 50;
 
 const SUCCESS = "#268A57";
 const SUCCESS_SOFT = "#E8F6EE";
-const WARNING = "#8A5A00";
-const WARNING_SOFT = "#FFF4D6";
 const ERROR = "#B3261E";
 
 export default function BookingSummaryScreen() {
@@ -187,34 +185,9 @@ export default function BookingSummaryScreen() {
           </View>
 
           <View style={styles.header}>
-            <View style={styles.headerIcon}>
-              <Ionicons
-                name="receipt-outline"
-                size={30}
-                color={KhedmatPalette.white}
-              />
-            </View>
-
-            <View
-              style={[
-                styles.headerCopy,
-                {
-                  alignItems: isRtl ? "flex-end" : "flex-start",
-                },
-              ]}
-            >
-              <Text style={[styles.eyebrow, directionStyle(isRtl)]}>
-                {copy.eyebrow}
-              </Text>
-
-              <Text style={[styles.title, directionStyle(isRtl)]}>
-                {copy.title}
-              </Text>
-
-              <Text style={[styles.subtitle, directionStyle(isRtl)]}>
-                {copy.subtitle}
-              </Text>
-            </View>
+            <Text style={[styles.title, directionStyle(isRtl)]}>
+              {copy.title}
+            </Text>
           </View>
 
           <View
@@ -241,10 +214,6 @@ export default function BookingSummaryScreen() {
                 },
               ]}
             >
-              <Text style={[styles.providerEyebrow, directionStyle(isRtl)]}>
-                {copy.provider}
-              </Text>
-
               <Text
                 numberOfLines={1}
                 style={[styles.providerName, directionStyle(isRtl)]}
@@ -252,12 +221,7 @@ export default function BookingSummaryScreen() {
                 {bookingDraft.providerName || copy.providerFallback}
               </Text>
 
-              <Text
-                numberOfLines={2}
-                style={[styles.providerProfession, directionStyle(isRtl)]}
-              >
-                {bookingDraft.providerProfession || copy.professionFallback}
-              </Text>
+
             </View>
 
             <View style={styles.verifiedBadge}>
@@ -338,22 +302,9 @@ export default function BookingSummaryScreen() {
           </SummarySection>
 
           <View style={styles.section}>
-            <View
-              style={[
-                styles.sectionHeader,
-                {
-                  alignItems: isRtl ? "flex-end" : "flex-start",
-                },
-              ]}
-            >
-              <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
-                {copy.priceTitle}
-              </Text>
-
-              <Text style={[styles.sectionSubtitle, directionStyle(isRtl)]}>
-                {copy.priceSubtitle}
-              </Text>
-            </View>
+            <Text style={[styles.sectionTitle, directionStyle(isRtl)]}>
+              {copy.priceTitle}
+            </Text>
 
             <View style={styles.priceCard}>
               <PriceLine
@@ -377,40 +328,6 @@ export default function BookingSummaryScreen() {
                 isRtl={isRtl}
                 emphasized
               />
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.priceNotice,
-              {
-                flexDirection: isRtl ? "row-reverse" : "row",
-              },
-            ]}
-          >
-            <View style={styles.priceNoticeIcon}>
-              <Ionicons
-                name="information-circle-outline"
-                size={22}
-                color={WARNING}
-              />
-            </View>
-
-            <View
-              style={[
-                styles.priceNoticeCopy,
-                {
-                  alignItems: isRtl ? "flex-end" : "flex-start",
-                },
-              ]}
-            >
-              <Text style={[styles.priceNoticeTitle, directionStyle(isRtl)]}>
-                {copy.priceNoticeTitle}
-              </Text>
-
-              <Text style={[styles.priceNoticeText, directionStyle(isRtl)]}>
-                {copy.priceNoticeText}
-              </Text>
             </View>
           </View>
 
@@ -469,39 +386,6 @@ export default function BookingSummaryScreen() {
             </View>
           </Pressable>
 
-          <View
-            style={[
-              styles.statusNotice,
-              {
-                flexDirection: isRtl ? "row-reverse" : "row",
-              },
-            ]}
-          >
-            <View style={styles.statusNoticeIcon}>
-              <Ionicons
-                name="time-outline"
-                size={22}
-                color={KhedmatPalette.blue500}
-              />
-            </View>
-
-            <View
-              style={[
-                styles.statusNoticeCopy,
-                {
-                  alignItems: isRtl ? "flex-end" : "flex-start",
-                },
-              ]}
-            >
-              <Text style={[styles.statusNoticeTitle, directionStyle(isRtl)]}>
-                {copy.pendingTitle}
-              </Text>
-
-              <Text style={[styles.statusNoticeText, directionStyle(isRtl)]}>
-                {copy.pendingText}
-              </Text>
-            </View>
-          </View>
         </ScrollView>
 
         <View style={styles.footer}>
@@ -564,9 +448,7 @@ export default function BookingSummaryScreen() {
               )}
             </Pressable>
 
-            <Text style={[styles.footerHint, directionStyle(isRtl)]}>
-              {acceptedTerms ? copy.ready : copy.acceptTermsHint}
-            </Text>
+
           </View>
         </View>
       </View>
@@ -1028,7 +910,7 @@ function getSummaryCopy(language: LanguageName) {
       selectedService: "خدمت انتخاب‌شده",
       serviceFallback: "خدمت انتخاب نشده",
       estimatedServicePrice: (value: string) => `هزینهٔ ابتدایی: ${value}`,
-      scheduleTitle: "تاریخ و زمان",
+      scheduleTitle: "زمان‌بندی",
       date: "تاریخ",
       time: "زمان",
       detailsTitle: "آدرس و جزئیات",
@@ -1053,7 +935,7 @@ function getSummaryCopy(language: LanguageName) {
       pendingTitle: "درخواست ابتدا در انتظار پاسخ خواهد بود",
       pendingText:
         "پس از ارسال، ارائه‌دهنده جزئیات و زمان را بررسی می‌کند. رزرو تنها پس از تأیید ارائه‌دهنده نهایی می‌شود.",
-      submit: "ارسال درخواست رزرو",
+      submit: "ارسال رزرو",
       ready: "درخواست آمادهٔ ارسال است.",
       acceptTermsHint: "برای ارسال، تأیید بالا را انتخاب کنید.",
       incompleteTitle: "اطلاعات ناقص است",
@@ -1083,7 +965,7 @@ function getSummaryCopy(language: LanguageName) {
       selectedService: "ټاکل شوی خدمت",
       serviceFallback: "خدمت نه دی ټاکل شوی",
       estimatedServicePrice: (value: string) => `لومړنی لګښت: ${value}`,
-      scheduleTitle: "نېټه او وخت",
+      scheduleTitle: "وخت",
       date: "نېټه",
       time: "وخت",
       detailsTitle: "پته او جزئیات",
@@ -1108,7 +990,7 @@ function getSummaryCopy(language: LanguageName) {
       pendingTitle: "غوښتنه به لومړی د ځواب په تمه وي",
       pendingText:
         "له لېږلو وروسته خدمت وړاندې کوونکی جزئیات او وخت ګوري. رزرف یوازې د هغه له تایید وروسته وروستی کېږي.",
-      submit: "د رزرف غوښتنه ولېږئ",
+      submit: "رزرف ولېږئ",
       ready: "غوښتنه لېږلو ته چمتو ده.",
       acceptTermsHint: "د لېږلو لپاره پورته تایید وټاکئ.",
       incompleteTitle: "معلومات بشپړ نه دي",
@@ -1138,7 +1020,7 @@ function getSummaryCopy(language: LanguageName) {
     selectedService: "Selected service",
     serviceFallback: "No service selected",
     estimatedServicePrice: (value: string) => `Starting cost: ${value}`,
-    scheduleTitle: "Date and time",
+    scheduleTitle: "Schedule",
     date: "Date",
     time: "Time",
     detailsTitle: "Address and details",
@@ -1147,7 +1029,7 @@ function getSummaryCopy(language: LanguageName) {
     requestDetails: "Request details",
     notesFallback: "No description was provided.",
     edit: "Edit",
-    priceTitle: "Price summary",
+    priceTitle: "Price",
     priceSubtitle:
       "Amounts are estimates and may change before work begins after the provider assesses the request.",
     servicePrice: "Starting service price",
@@ -1183,7 +1065,7 @@ function getSummaryCopy(language: LanguageName) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: KhedmatPalette.blue050,
+    backgroundColor: KhedmatPalette.white,
   },
   root: {
     flex: 1,
@@ -1227,8 +1109,7 @@ const styles = StyleSheet.create({
   },
   header: {
     width: "100%",
-    marginTop: Spacing.xl,
-    gap: Spacing.lg,
+    marginTop: Spacing.lg,
   },
   headerIcon: {
     width: 64,
@@ -1254,7 +1135,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 470,
     color: KhedmatPalette.textPrimary,
-    fontSize: 27,
+    fontSize: 28,
     lineHeight: 35,
   },
   subtitle: {
@@ -1266,9 +1147,9 @@ const styles = StyleSheet.create({
   },
   providerCard: {
     width: "100%",
-    minHeight: 112,
-    marginTop: Spacing.xxl,
-    padding: Spacing.lg,
+    minHeight: 82,
+    marginTop: Spacing.lg,
+    padding: Spacing.md,
     alignItems: "center",
     gap: Spacing.md,
     borderWidth: 1,
@@ -1278,8 +1159,8 @@ const styles = StyleSheet.create({
     ...Shadows.small,
   },
   providerAvatar: {
-    width: 52,
-    height: 52,
+    width: 42,
+    height: 42,
     flexShrink: 0,
     borderRadius: Radius.pill,
     alignItems: "center",
@@ -1320,7 +1201,7 @@ const styles = StyleSheet.create({
   },
   section: {
     width: "100%",
-    marginTop: Spacing.section,
+    marginTop: Spacing.xl,
     gap: Spacing.md,
   },
   sectionHeader: {
@@ -1337,8 +1218,8 @@ const styles = StyleSheet.create({
     ...Typography.sectionTitle,
     flex: 1,
     color: KhedmatPalette.textPrimary,
-    fontSize: 21,
-    lineHeight: 28,
+    fontSize: 18,
+    lineHeight: 24,
   },
   sectionSubtitle: {
     ...Typography.captionStyle,
@@ -1362,8 +1243,8 @@ const styles = StyleSheet.create({
   },
   summaryItem: {
     width: "100%",
-    minHeight: 112,
-    padding: Spacing.lg,
+    minHeight: 88,
+    padding: Spacing.md,
     alignItems: "center",
     gap: Spacing.md,
     borderWidth: 1,
@@ -1373,8 +1254,8 @@ const styles = StyleSheet.create({
     ...Shadows.small,
   },
   summaryItemIcon: {
-    width: 50,
-    height: 50,
+    width: 42,
+    height: 42,
     flexShrink: 0,
     borderRadius: Radius.lg,
     alignItems: "center",
@@ -1405,7 +1286,7 @@ const styles = StyleSheet.create({
   },
   groupCard: {
     width: "100%",
-    padding: Spacing.lg,
+    padding: Spacing.md,
     borderWidth: 1,
     borderColor: KhedmatPalette.border,
     borderRadius: Radius.xl,
@@ -1526,7 +1407,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: WARNING_SOFT,
+    backgroundColor: "#FFF4D6",
   },
   priceNoticeCopy: {
     flex: 1,
@@ -1546,8 +1427,8 @@ const styles = StyleSheet.create({
   },
   consentCard: {
     width: "100%",
-    minHeight: 124,
-    marginTop: Spacing.section,
+    minHeight: 96,
+    marginTop: Spacing.xl,
     borderWidth: 1,
     borderColor: KhedmatPalette.border,
     borderRadius: Radius.xl,
@@ -1560,8 +1441,8 @@ const styles = StyleSheet.create({
   },
   consentContent: {
     width: "100%",
-    minHeight: 124,
-    padding: Spacing.lg,
+    minHeight: 96,
+    padding: Spacing.md,
     alignItems: "flex-start",
     gap: Spacing.md,
   },
@@ -1641,7 +1522,7 @@ const styles = StyleSheet.create({
     left: 0,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: KhedmatPalette.border,
-    backgroundColor: KhedmatPalette.surface,
+    backgroundColor: KhedmatPalette.white,
   },
   footerContent: {
     width: "100%",

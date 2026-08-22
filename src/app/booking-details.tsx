@@ -445,64 +445,16 @@ export default function BookingDetailsScreen() {
           <View
             style={styles.header}
           >
-            <View
-              style={
-                styles.headerIcon
-              }
-            >
-              <Ionicons
-                name="document-text-outline"
-                size={30}
-                color={
-                  KhedmatPalette
-                    .white
-                }
-              />
-            </View>
-
-            <View
+            <Text
               style={[
-                styles.headerCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
+                styles.title,
+                directionStyle(
+                  isRtl,
+                ),
               ]}
             >
-              <Text
-                style={[
-                  styles.eyebrow,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.eyebrow}
-              </Text>
-
-              <Text
-                style={[
-                  styles.title,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.title}
-              </Text>
-
-              <Text
-                style={[
-                  styles.subtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.subtitle}
-              </Text>
-            </View>
+              {copy.title}
+            </Text>
           </View>
 
           <View
@@ -540,17 +492,6 @@ export default function BookingDetailsScreen() {
                 },
               ]}
             >
-              <Text
-                style={[
-                  styles.bookingSummaryEyebrow,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.currentBooking}
-              </Text>
-
               <Text
                 numberOfLines={1}
                 style={[
@@ -617,60 +558,16 @@ export default function BookingDetailsScreen() {
           <View
             style={styles.section}
           >
-            <View
+            <Text
               style={[
-                styles.sectionHeader,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
+                styles.sectionTitle,
+                directionStyle(
+                  isRtl,
+                ),
               ]}
             >
-              <View
-                style={[
-                  styles.sectionTitleRow,
-                  {
-                    flexDirection: isRtl
-                      ? "row-reverse"
-                      : "row",
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {copy.addressTitle}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.requiredLabel,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {copy.required}
-                </Text>
-              </View>
-
-              <Text
-                style={[
-                  styles.sectionSubtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.addressSubtitle}
-              </Text>
-            </View>
+              {copy.addressTitle}
+            </Text>
 
             <View
               style={styles.addresses}
@@ -919,60 +816,16 @@ export default function BookingDetailsScreen() {
           <View
             style={styles.section}
           >
-            <View
+            <Text
               style={[
-                styles.sectionHeader,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
+                styles.sectionTitle,
+                directionStyle(
+                  isRtl,
+                ),
               ]}
             >
-              <View
-                style={[
-                  styles.sectionTitleRow,
-                  {
-                    flexDirection: isRtl
-                      ? "row-reverse"
-                      : "row",
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {copy.problemTitle}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.requiredLabel,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {copy.required}
-                </Text>
-              </View>
-
-              <Text
-                style={[
-                  styles.sectionSubtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.problemSubtitle}
-              </Text>
-            </View>
+              {copy.problemTitle}
+            </Text>
 
             <View
               style={[
@@ -982,43 +835,6 @@ export default function BookingDetailsScreen() {
                   styles.inputShellError,
               ]}
             >
-              <View
-                style={[
-                  styles.inputHeader,
-                  {
-                    flexDirection: isRtl
-                      ? "row-reverse"
-                      : "row",
-                  },
-                ]}
-              >
-                <View
-                  style={
-                    styles.inputHeaderIcon
-                  }
-                >
-                  <Ionicons
-                    name="create-outline"
-                    size={19}
-                    color={
-                      KhedmatPalette
-                        .blue500
-                    }
-                  />
-                </View>
-
-                <Text
-                  style={[
-                    styles.inputHeaderText,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {copy.requestDescription}
-                </Text>
-              </View>
-
               <TextInput
                 value={notes}
                 onChangeText={
@@ -1050,73 +866,6 @@ export default function BookingDetailsScreen() {
                 ]}
               />
 
-              <View
-                style={
-                  styles.progressTrack
-                }
-              >
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${notesProgress}%`,
-                    },
-                    notes.trim().length >=
-                      MINIMUM_NOTES_LENGTH &&
-                      styles.progressFillValid,
-                  ]}
-                />
-              </View>
-            </View>
-
-            <View
-              style={[
-                styles.characterRow,
-                {
-                  flexDirection: isRtl
-                    ? "row-reverse"
-                    : "row",
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.characterCount,
-                  notes.trim().length >=
-                    MINIMUM_NOTES_LENGTH &&
-                    styles.characterCountValid,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.characterCount(
-                  formatDigits(
-                    notes.length.toString(),
-                    localizedDigits,
-                  ),
-                  formatDigits(
-                    MAXIMUM_NOTES_LENGTH.toString(),
-                    localizedDigits,
-                  ),
-                )}
-              </Text>
-
-              <Text
-                style={[
-                  styles.characterRequirement,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.minimumCharacters(
-                  formatDigits(
-                    MINIMUM_NOTES_LENGTH.toString(),
-                    localizedDigits,
-                  ),
-                )}
-              </Text>
             </View>
 
             {notesError ? (
@@ -1130,60 +879,16 @@ export default function BookingDetailsScreen() {
           <View
             style={styles.section}
           >
-            <View
+            <Text
               style={[
-                styles.sectionHeader,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
+                styles.sectionTitle,
+                directionStyle(
+                  isRtl,
+                ),
               ]}
             >
-              <View
-                style={[
-                  styles.sectionTitleRow,
-                  {
-                    flexDirection: isRtl
-                      ? "row-reverse"
-                      : "row",
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {copy.accessTitle}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.optionalLabel,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {copy.optional}
-                </Text>
-              </View>
-
-              <Text
-                style={[
-                  styles.sectionSubtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.accessSubtitle}
-              </Text>
-            </View>
+              {copy.accessTitle}
+            </Text>
 
             <View
               style={[
@@ -1191,43 +896,6 @@ export default function BookingDetailsScreen() {
                 styles.mediumInputShell,
               ]}
             >
-              <View
-                style={[
-                  styles.inputHeader,
-                  {
-                    flexDirection: isRtl
-                      ? "row-reverse"
-                      : "row",
-                  },
-                ]}
-              >
-                <View
-                  style={
-                    styles.inputHeaderIcon
-                  }
-                >
-                  <Ionicons
-                    name="call-outline"
-                    size={19}
-                    color={
-                      KhedmatPalette
-                        .blue500
-                    }
-                  />
-                </View>
-
-                <Text
-                  style={[
-                    styles.inputHeaderText,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {copy.extraNote}
-                </Text>
-              </View>
-
               <TextInput
                 value={
                   accessNotes
@@ -1261,157 +929,8 @@ export default function BookingDetailsScreen() {
                 ]}
               />
             </View>
-
-            <Text
-              style={[
-                styles.fieldHint,
-                directionStyle(isRtl),
-              ]}
-            >
-              {copy.accessHint(
-                formatDigits(
-                  accessNotes.length.toString(),
-                  localizedDigits,
-                ),
-                formatDigits(
-                  MAXIMUM_ACCESS_NOTES_LENGTH.toString(),
-                  localizedDigits,
-                ),
-              )}
-            </Text>
           </View>
 
-          <View
-            style={[
-              styles.photoCard,
-              {
-                flexDirection: isRtl
-                  ? "row-reverse"
-                  : "row",
-              },
-            ]}
-          >
-            <View
-              style={
-                styles.photoIcon
-              }
-            >
-              <Ionicons
-                name="images-outline"
-                size={24}
-                color={
-                  KhedmatPalette
-                    .textMuted
-                }
-              />
-            </View>
-
-            <View
-              style={[
-                styles.photoCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.photoTitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.photosTitle}
-              </Text>
-
-              <Text
-                style={[
-                  styles.photoSubtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.photosSubtitle}
-              </Text>
-            </View>
-
-            <View
-              style={
-                styles.comingSoonBadge
-              }
-            >
-              <Text
-                style={[
-                  styles.comingSoonText,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.comingSoon}
-              </Text>
-            </View>
-          </View>
-
-          <View
-            style={[
-              styles.privacyCard,
-              {
-                flexDirection: isRtl
-                  ? "row-reverse"
-                  : "row",
-              },
-            ]}
-          >
-            <View
-              style={
-                styles.privacyIcon
-              }
-            >
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={22}
-                color={SUCCESS}
-              />
-            </View>
-
-            <View
-              style={[
-                styles.privacyCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.privacyTitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.privacyTitle}
-              </Text>
-
-              <Text
-                style={[
-                  styles.privacyText,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.privacyText}
-              </Text>
-            </View>
-          </View>
         </ScrollView>
 
         <View style={styles.footer}>
@@ -1479,16 +998,7 @@ export default function BookingDetailsScreen() {
               </View>
             </Pressable>
 
-            <Text
-              style={[
-                styles.footerHint,
-                directionStyle(isRtl),
-              ]}
-            >
-              {formIsValid
-                ? copy.ready
-                : copy.completeRequired}
-            </Text>
+
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -2152,7 +1662,7 @@ function getDetailsCopy(
         (value: string) =>
           `حداقل ${value} حرف`,
       accessTitle:
-        "راهنمای دسترسی و تماس",
+        "یادداشت دسترسی (اختیاری)",
       accessSubtitle:
         "معلوماتی را اضافه کنید که پیدا کردن محل یا تماس پیش از رسیدن را آسان‌تر می‌کند.",
       extraNote:
@@ -2283,7 +1793,7 @@ function getDetailsCopy(
       privacyText:
         "د ځای دقیق جزئیات به په مناسب پړاو کې یوازې اړوند خدمت وړاندې کوونکي ته ښکاره شي.",
       continue:
-        "د رزرف لنډیز وګورئ",
+        "دوام",
       ready:
         "پته او د غوښتنې تشریح چمتو ده.",
       completeRequired:
@@ -2339,7 +1849,7 @@ function getDetailsCopy(
       (value: string) =>
         `Enter a complete and valid address using at least ${value} characters.`,
     problemTitle:
-      "Describe the problem or work",
+      "Describe the job",
     problemSubtitle:
       "A clear description helps the provider prepare the right tools, time and materials.",
     requestDescription:
@@ -2359,7 +1869,7 @@ function getDetailsCopy(
       (value: string) =>
         `Minimum ${value} characters`,
     accessTitle:
-      "Access and contact guidance",
+      "Access note (optional)",
     accessSubtitle:
       "Add details that make the location easier to find or explain how the provider should contact you before arrival.",
     extraNote:
@@ -2385,7 +1895,7 @@ function getDetailsCopy(
     privacyText:
       "Exact location details will be visible only to the relevant provider at the appropriate stage.",
     continue:
-      "Review booking summary",
+      "Continue",
     ready:
       "The address and request description are ready.",
     completeRequired:
@@ -2398,7 +1908,7 @@ const styles =
     safeArea: {
       flex: 1,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
     root: {
       flex: 1,
@@ -2411,7 +1921,7 @@ const styles =
       paddingHorizontal:
         Layout.screenPadding,
       paddingTop: Spacing.md,
-      paddingBottom: 166,
+      paddingBottom: 120,
     },
     topBar: {
       width: "100%",
@@ -2451,8 +1961,7 @@ const styles =
     },
     header: {
       width: "100%",
-      marginTop: Spacing.xl,
-      gap: Spacing.lg,
+      marginTop: Spacing.lg,
     },
     headerIcon: {
       width: 64,
@@ -2481,7 +1990,7 @@ const styles =
       maxWidth: 470,
       color:
         KhedmatPalette.textPrimary,
-      fontSize: 27,
+      fontSize: 28,
       lineHeight: 35,
     },
     subtitle: {
@@ -2494,9 +2003,9 @@ const styles =
     },
     bookingSummaryCard: {
       width: "100%",
-      minHeight: 112,
-      marginTop: Spacing.xxl,
-      padding: Spacing.lg,
+      minHeight: 84,
+      marginTop: Spacing.lg,
+      padding: Spacing.md,
       alignItems: "center",
       gap: Spacing.md,
       borderWidth: 1,
@@ -2508,8 +2017,8 @@ const styles =
       ...Shadows.small,
     },
     bookingSummaryIcon: {
-      width: 48,
-      height: 48,
+      width: 40,
+      height: 40,
       flexShrink: 0,
       borderRadius: Radius.lg,
       alignItems: "center",
@@ -2567,7 +2076,7 @@ const styles =
     section: {
       width: "100%",
       marginTop:
-        Spacing.section,
+        Spacing.xl,
       gap: Spacing.md,
     },
     sectionHeader: {
@@ -2586,8 +2095,8 @@ const styles =
       flex: 1,
       color:
         KhedmatPalette.textPrimary,
-      fontSize: 21,
-      lineHeight: 28,
+      fontSize: 18,
+      lineHeight: 24,
     },
     sectionSubtitle: {
       ...Typography.captionStyle,
@@ -2642,7 +2151,7 @@ const styles =
 
     addressCard: {
       width: "100%",
-      minHeight: 110,
+      minHeight: 82,
       borderWidth: 1,
       borderColor:
         KhedmatPalette.border,
@@ -2659,14 +2168,14 @@ const styles =
     },
     addressCardContent: {
       width: "100%",
-      minHeight: 110,
-      padding: Spacing.lg,
+      minHeight: 82,
+      padding: Spacing.md,
       alignItems: "center",
       gap: Spacing.md,
     },
     addressIcon: {
-      width: 50,
-      height: 50,
+      width: 42,
+      height: 42,
       flexShrink: 0,
       borderRadius: Radius.lg,
       alignItems: "center",
@@ -2780,10 +2289,10 @@ const styles =
         "#FFF9F8",
     },
     largeInputShell: {
-      minHeight: 240,
+      minHeight: 170,
     },
     mediumInputShell: {
-      minHeight: 170,
+      minHeight: 122,
     },
     inputHeader: {
       width: "100%",
@@ -2824,10 +2333,10 @@ const styles =
       minHeight: 104,
     },
     notesInput: {
-      minHeight: 150,
+      minHeight: 118,
     },
     accessInput: {
-      minHeight: 96,
+      minHeight: 82,
     },
     progressTrack: {
       width: "100%",
@@ -2990,7 +2499,7 @@ const styles =
       borderTopColor:
         KhedmatPalette.border,
       backgroundColor:
-        KhedmatPalette.surface,
+        KhedmatPalette.white,
     },
     footerContent: {
       width: "100%",

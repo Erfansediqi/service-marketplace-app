@@ -1,26 +1,26 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
-    useMemo,
-    useState,
+  useMemo,
+  useState,
 } from "react";
 import {
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 import { KhedmatButton } from "../components/khedmat/khedmat-button";
 import {
-    KhedmatPalette,
-    Layout,
-    Radius,
-    Spacing,
-    Typography,
+  KhedmatPalette,
+  Layout,
+  Radius,
+  Spacing,
+  Typography,
 } from "../constants/theme";
 import { useLanguage } from "../context/languagecontext";
 
@@ -261,22 +261,6 @@ export default function ProviderHelpCenterScreen() {
             )}
           </Text>
 
-          <Text
-            style={[
-              styles.subtitle,
-              {
-                textAlign: isRTL
-                  ? "right"
-                  : "left",
-                writingDirection:
-                  textDirection,
-              },
-            ]}
-          >
-            {t(
-              "providerHelpCenterSubtitle",
-            )}
-          </Text>
         </View>
       </View>
 
@@ -647,17 +631,9 @@ const styles =
     title: {
       ...Typography.screenTitle,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       fontSize: 22,
       lineHeight: 28,
-    },
-
-    subtitle: {
-      ...Typography.captionStyle,
-      marginTop: 3,
-      color:
-        KhedmatPalette.textSecondary,
-      lineHeight: 18,
     },
 
     scrollContent: {
@@ -672,7 +648,7 @@ const styles =
 
     searchContainer: {
       width: "100%",
-      minHeight: 52,
+      minHeight: 48,
       alignItems: "center",
       gap: Spacing.sm,
       paddingHorizontal:
@@ -681,14 +657,14 @@ const styles =
         Radius.lg,
       borderWidth: 1,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
         KhedmatPalette.white,
     },
 
     searchInput: {
       flex: 1,
-      minHeight: 50,
+      minHeight: 46,
       ...Typography.bodyStyle,
       color:
         KhedmatPalette.textPrimary,
@@ -703,7 +679,7 @@ const styles =
       marginBottom:
         Spacing.sm,
       color:
-        KhedmatPalette.textPrimary,
+        KhedmatPalette.navy900,
       fontSize: 18,
       lineHeight: 24,
     },
@@ -716,7 +692,7 @@ const styles =
       borderWidth:
         StyleSheet.hairlineWidth,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
         KhedmatPalette.white,
     },
@@ -725,14 +701,14 @@ const styles =
       height:
         StyleSheet.hairlineWidth,
       backgroundColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
     },
 
     faqRow: {
       width: "100%",
       alignItems:
         "flex-start",
-      gap: Spacing.md,
+      gap: Spacing.sm,
       padding:
         Spacing.md,
     },
@@ -772,7 +748,7 @@ const styles =
       borderWidth:
         StyleSheet.hairlineWidth,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
         KhedmatPalette.white,
     },
@@ -787,7 +763,7 @@ const styles =
       borderRadius:
         Radius.pill,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.surfaceSoft,
       marginBottom:
         Spacing.md,
     },
@@ -815,20 +791,19 @@ const styles =
       marginTop:
         Spacing.xl,
       padding:
-        Spacing.xl,
+        Spacing.lg,
       borderRadius:
-        Radius.lg,
-      borderWidth:
-        StyleSheet.hairlineWidth,
+        Radius.xl,
+      borderWidth: 1,
       borderColor:
-        KhedmatPalette.blue200,
+        KhedmatPalette.border,
       backgroundColor:
-        KhedmatPalette.blue050,
+        KhedmatPalette.white,
     },
 
     contactIcon: {
-      width: 52,
-      height: 52,
+      width: 44,
+      height: 44,
       alignItems:
         "center",
       justifyContent:

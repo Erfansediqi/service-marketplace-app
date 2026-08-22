@@ -1,14 +1,14 @@
 import {
-    categoryServices,
+  categoryServices,
 } from "../data/category-services";
-import type {
-    ProviderCategoryId,
-    ProviderProfile,
-    ProviderService,
-} from "../types/provider";
 import {
-    serviceProfessions,
+  serviceProfessions,
 } from "../data/service-professions";
+import type {
+  ProviderCategoryId,
+  ProviderProfile,
+  ProviderService,
+} from "../types/provider";
 
 export type ProviderRegistrationData = {
   category: string;
@@ -155,16 +155,48 @@ function createServices(
               categoryId,
         );
 
+      const titleEnglish =
+        service?.nameEn?.trim() ||
+        serviceId;
+
+      const titleDari =
+        service?.nameFa?.trim() ||
+        titleEnglish;
+
+      /*
+       * The local category-services fixture does not currently contain Pashto
+       * names. Keep English as a compatibility fallback here; live Supabase
+       * services get their real Pashto names in provider-profile-mapper.ts.
+       */
+      const titlePashto =
+        titleEnglish;
+
+      const descriptionEnglish =
+        "";
+
+      const descriptionDari =
+        service?.descriptionFa?.trim() ||
+        "";
+
+      const descriptionPashto =
+        "";
+
       return {
         id: serviceId,
+
         title:
-          service?.nameFa ??
-          service?.nameEn ??
-          serviceId,
+          titleEnglish,
         description:
-          service?.descriptionFa ??
-          service?.nameEn ??
-          "",
+          descriptionEnglish,
+
+        titleEnglish,
+        titleDari,
+        titlePashto,
+
+        descriptionEnglish,
+        descriptionDari,
+        descriptionPashto,
+
         estimatedPrice: 500,
       };
     },

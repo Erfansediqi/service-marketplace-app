@@ -29,11 +29,11 @@ import {
 } from "../constants/theme";
 import { useBooking } from "../context/booking-context";
 import { useLanguage } from "../context/languagecontext";
+import { getProviderById } from "../services/provider-repository";
 import type {
   ProviderProfile,
   ProviderService,
 } from "../types/provider";
-import { getProviderById } from "../services/provider-repository";
 
 type IconName =
   ComponentProps<typeof Ionicons>["name"];
@@ -49,10 +49,6 @@ type BookingCreateCopy = ReturnType<
 
 const SUCCESS = "#268A57";
 const SUCCESS_SOFT = "#E8F6EE";
-const WARNING = "#8A5A00";
-const WARNING_SOFT = "#FFF4D6";
-const ERROR = "#B3261E";
-const INFO_SOFT = "#E5F4F8";
 
 const CURRENT_STEP = 1;
 const TOTAL_STEPS = 4;
@@ -374,12 +370,18 @@ function BookingCreateContent({
       providerName:
         provider.name,
       providerProfession:
-        provider.profession,
+  getLocalizedCategoryTitle(
+    provider.categoryId,
+    activeLanguage,
+  ),
 
       serviceId:
         selectedService.id,
       serviceName:
-        selectedService.title,
+        getLocalizedServiceTitle(
+          selectedService,
+          activeLanguage,
+        ),
       estimatedPrice:
         selectedService.estimatedPrice,
       currency:
@@ -488,64 +490,16 @@ function BookingCreateContent({
           <View
             style={styles.header}
           >
-            <View
-              style={
-                styles.headerIcon
-              }
-            >
-              <Ionicons
-                name="construct-outline"
-                size={30}
-                color={
-                  KhedmatPalette
-                    .white
-                }
-              />
-            </View>
-
-            <View
+            <Text
               style={[
-                styles.headerCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
+                styles.title,
+                directionStyle(
+                  isRtl,
+                ),
               ]}
             >
-              <Text
-                style={[
-                  styles.eyebrow,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.eyebrow}
-              </Text>
-
-              <Text
-                style={[
-                  styles.title,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.title}
-              </Text>
-
-              <Text
-                style={[
-                  styles.subtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {copy.subtitle}
-              </Text>
-            </View>
+              {copy.title}
+            </Text>
           </View>
 
           <View
@@ -642,104 +596,11 @@ function BookingCreateContent({
                   ),
                 ]}
               >
-                {provider.profession}
+                {getLocalizedCategoryTitle(
+                  provider.categoryId,
+                  activeLanguage,
+                )}
               </Text>
-
-              <View
-                style={[
-                  styles.providerMetaRow,
-                  {
-                    flexDirection: isRtl
-                      ? "row-reverse"
-                      : "row",
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.providerMetaItem,
-                    {
-                      flexDirection: isRtl
-                        ? "row-reverse"
-                        : "row",
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="star"
-                    size={14}
-                    color={WARNING}
-                  />
-
-                  <Text
-                    style={[
-                      styles.providerMetaStrong,
-                      directionStyle(
-                        isRtl,
-                      ),
-                    ]}
-                  >
-                    {formatDigits(
-                      provider.rating.toFixed(
-                        1,
-                      ),
-                      localizedDigits,
-                    )}
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.providerMetaText,
-                      directionStyle(
-                        isRtl,
-                      ),
-                    ]}
-                  >
-                    {copy.reviews(
-                      formatDigits(
-                        provider.reviewCount.toString(),
-                        localizedDigits,
-                      ),
-                    )}
-                  </Text>
-                </View>
-
-                <View
-                  style={[
-                    styles.providerMetaItem,
-                    {
-                      flexDirection: isRtl
-                        ? "row-reverse"
-                        : "row",
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="briefcase-outline"
-                    size={14}
-                    color={
-                      KhedmatPalette
-                        .textMuted
-                    }
-                  />
-
-                  <Text
-                    style={[
-                      styles.providerMetaText,
-                      directionStyle(
-                        isRtl,
-                      ),
-                    ]}
-                  >
-                    {copy.jobs(
-                      formatDigits(
-                        provider.completedJobs.toString(),
-                        localizedDigits,
-                      ),
-                    )}
-                  </Text>
-                </View>
-              </View>
 
               <View
                 style={[
@@ -849,42 +710,16 @@ function BookingCreateContent({
           <View
             style={styles.section}
           >
-            <View
+            <Text
               style={[
-                styles.sectionHeader,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
+                styles.sectionTitle,
+                directionStyle(
+                  isRtl,
+                ),
               ]}
             >
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {
-                  copy.servicesTitle
-                }
-              </Text>
-
-              <Text
-                style={[
-                  styles.sectionSubtitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {
-                  copy.servicesSubtitle
-                }
-              </Text>
-            </View>
+              {copy.servicesTitle}
+            </Text>
 
             <View
               style={styles.services}
@@ -969,148 +804,6 @@ function BookingCreateContent({
             </View>
           </View>
 
-          <View
-            style={[
-              styles.priceNoticeCard,
-              {
-                flexDirection: isRtl
-                  ? "row-reverse"
-                  : "row",
-              },
-            ]}
-          >
-            <View
-              style={
-                styles.priceNoticeIcon
-              }
-            >
-              <Ionicons
-                name="information-circle-outline"
-                size={22}
-                color={
-                  KhedmatPalette
-                    .blue500
-                }
-              />
-            </View>
-
-            <View
-              style={[
-                styles.priceNoticeCopy,
-                {
-                  alignItems: isRtl
-                    ? "flex-end"
-                    : "flex-start",
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.priceNoticeTitle,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {
-                  copy.priceNoticeTitle
-                }
-              </Text>
-
-              <Text
-                style={[
-                  styles.priceNoticeText,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {
-                  copy.priceNoticeText
-                }
-              </Text>
-            </View>
-          </View>
-
-          {selectedService ? (
-            <View
-              style={[
-                styles.selectionSummary,
-                {
-                  flexDirection: isRtl
-                    ? "row-reverse"
-                    : "row",
-                },
-              ]}
-            >
-              <View
-                style={
-                  styles.selectionSummaryIcon
-                }
-              >
-                <Ionicons
-                  name="checkmark"
-                  size={20}
-                  color={
-                    KhedmatPalette
-                      .white
-                  }
-                />
-              </View>
-
-              <View
-                style={[
-                  styles.selectionSummaryCopy,
-                  {
-                    alignItems: isRtl
-                      ? "flex-end"
-                      : "flex-start",
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.selectionSummaryLabel,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {
-                    copy.selectedService
-                  }
-                </Text>
-
-                <Text
-                  style={[
-                    styles.selectionSummaryTitle,
-                    directionStyle(
-                      isRtl,
-                    ),
-                  ]}
-                >
-                  {
-                    selectedService.title
-                  }
-                </Text>
-              </View>
-
-              <Text
-                style={[
-                  styles.selectionSummaryPrice,
-                  directionStyle(
-                    isRtl,
-                  ),
-                ]}
-              >
-                {formatPrice(
-                  selectedService.estimatedPrice,
-                  activeLanguage,
-                  copy,
-                )}
-              </Text>
-            </View>
-          ) : null}
         </ScrollView>
 
         <View
@@ -1197,23 +890,6 @@ function BookingCreateContent({
               </View>
             </Pressable>
 
-            <Text
-              style={[
-                styles.footerSummary,
-                directionStyle(isRtl),
-              ]}
-            >
-              {selectedService
-                ? copy.footerSelected(
-                    selectedService.title,
-                    formatPrice(
-                      selectedService.estimatedPrice,
-                      activeLanguage,
-                      copy,
-                    ),
-                  )
-                : copy.footerEmpty}
-            </Text>
           </View>
         </View>
       </View>
@@ -1242,7 +918,10 @@ function ServiceCard({
     <Pressable
       accessibilityRole="radio"
       accessibilityLabel={
-        service.title
+        getLocalizedServiceTitle(
+          service,
+          language,
+        )
       }
       accessibilityState={{
         selected,
@@ -1306,18 +985,29 @@ function ServiceCard({
               directionStyle(isRtl),
             ]}
           >
-            {service.title}
+            {getLocalizedServiceTitle(
+              service,
+              language,
+            )}
           </Text>
 
-          <Text
-            numberOfLines={3}
-            style={[
-              styles.serviceDescription,
-              directionStyle(isRtl),
-            ]}
-          >
-            {service.description}
-          </Text>
+          {getLocalizedServiceDescription(
+            service,
+            language,
+          ) ? (
+            <Text
+              numberOfLines={2}
+              style={[
+                styles.serviceDescription,
+                directionStyle(isRtl),
+              ]}
+            >
+              {getLocalizedServiceDescription(
+                service,
+                language,
+              )}
+            </Text>
+          ) : null}
 
           <View
             style={[
@@ -1342,14 +1032,6 @@ function ServiceCard({
               )}
             </Text>
 
-            <Text
-              style={[
-                styles.estimatedLabel,
-                directionStyle(isRtl),
-              ]}
-            >
-              {copy.estimated}
-            </Text>
           </View>
         </View>
 
@@ -1370,6 +1052,118 @@ function ServiceCard({
         </View>
       </View>
     </Pressable>
+  );
+}
+
+function getLocalizedServiceTitle(
+  service: ProviderService,
+  language: LanguageName,
+): string {
+  if (language === "Dari") {
+    return (
+      service.titleDari ||
+      service.titleEnglish ||
+      service.title
+    );
+  }
+
+  if (language === "Pashto") {
+    return (
+      service.titlePashto ||
+      service.titleEnglish ||
+      service.title
+    );
+  }
+
+  return (
+    service.titleEnglish ||
+    service.title
+  );
+}
+
+function getLocalizedServiceDescription(
+  service: ProviderService,
+  language: LanguageName,
+): string {
+  if (language === "Dari") {
+    return (
+      service.descriptionDari ||
+      service.description
+    );
+  }
+
+  if (language === "Pashto") {
+    return (
+      service.descriptionPashto ||
+      service.description
+    );
+  }
+
+  return (
+    service.descriptionEnglish ||
+    service.description
+  );
+}
+
+function getLocalizedCategoryTitle(
+  categoryId: ProviderProfile["categoryId"],
+  language: LanguageName,
+): string {
+  const titles: Partial<
+    Record<
+      ProviderProfile["categoryId"],
+      Record<LanguageName, string>
+    >
+  > = {
+    electrician: {
+      English: "Electrician",
+      Dari: "برق‌کار",
+      Pashto: "برېښناکار",
+    },
+    plumber: {
+      English: "Plumber",
+      Dari: "لوله‌کش",
+      Pashto: "نلدوان",
+    },
+    carpenter: {
+      English: "Carpenter",
+      Dari: "نجار",
+      Pashto: "ترکاڼ",
+    },
+    construction: {
+      English: "Construction",
+      Dari: "ساختمان",
+      Pashto: "ساختماني کار",
+    },
+    painter: {
+      English: "Painter",
+      Dari: "رنگ‌مال",
+      Pashto: "رنګمال",
+    },
+    cleaner: {
+      English: "Cleaner",
+      Dari: "نظافت‌چی",
+      Pashto: "پاک‌کار",
+    },
+    "computer-repair": {
+      English: "Computer repair",
+      Dari: "ترمیم کمپیوتر",
+      Pashto: "د کمپیوټر ترمیم",
+    },
+    "phone-repair": {
+      English: "Phone repair",
+      Dari: "ترمیم موبایل",
+      Pashto: "د موبایل ترمیم",
+    },
+  };
+
+  return (
+    titles[categoryId]?.[language] ??
+    (language === "Dari"
+      ? "ارائه‌دهندهٔ خدمات"
+      : language === "Pashto"
+        ? "خدمت وړاندې کوونکی"
+        : "Service provider")
   );
 }
 
@@ -1605,7 +1399,7 @@ function getBookingCreateCopy(
       eyebrow:
         "ایجاد رزرو",
       title:
-        "کدام خدمت را نیاز دارید؟",
+        "یک خدمت را انتخاب کنید",
       subtitle:
         "یکی از خدمات ارائه‌شده توسط این متخصص را انتخاب کنید.",
       reviews:
@@ -1620,7 +1414,7 @@ function getBookingCreateCopy(
       available: "آماده",
       unavailable: "مصروف",
       servicesTitle:
-        "خدمات ارائه‌شده",
+        "خدمات",
       servicesSubtitle:
         "یک خدمت را انتخاب کنید. قیمت‌ها تخمینی‌اند و مبلغ نهایی پس از بررسی کار مشخص می‌شود.",
       price:
@@ -1634,7 +1428,7 @@ function getBookingCreateCopy(
       selectedService:
         "خدمت انتخاب‌شده",
       continue:
-        "انتخاب تاریخ و زمان",
+        "ادامه",
       footerSelected:
         (
           service: string,
@@ -1662,7 +1456,7 @@ function getBookingCreateCopy(
       eyebrow:
         "رزرف جوړول",
       title:
-        "کوم خدمت ته اړتیا لرئ؟",
+        "یو خدمت وټاکئ",
       subtitle:
         "د دې خدمت وړاندې کوونکي له خدمتونو څخه یو خدمت وټاکئ.",
       reviews:
@@ -1677,7 +1471,7 @@ function getBookingCreateCopy(
       available: "چمتو",
       unavailable: "بوخت",
       servicesTitle:
-        "وړاندې کېدونکي خدمتونه",
+        "خدمتونه",
       servicesSubtitle:
         "یو خدمت وټاکئ. بیې اټکلي دي او وروستۍ بیه به د کار له ارزونې وروسته وټاکل شي.",
       price:
@@ -1691,7 +1485,7 @@ function getBookingCreateCopy(
       selectedService:
         "ټاکل شوی خدمت",
       continue:
-        "نېټه او وخت وټاکئ",
+        "دوام",
       footerSelected:
         (
           service: string,
@@ -1718,7 +1512,7 @@ function getBookingCreateCopy(
     eyebrow:
       "Create booking",
     title:
-      "Which service do you need?",
+      "Choose a service",
     subtitle:
       "Choose one of the services offered by this provider.",
     reviews:
@@ -1733,7 +1527,7 @@ function getBookingCreateCopy(
     available: "Available",
     unavailable: "Busy",
     servicesTitle:
-      "Services offered",
+      "Services",
     servicesSubtitle:
       "Choose one service. Prices are estimates and the final amount is confirmed after the provider assesses the work.",
     price:
@@ -1747,7 +1541,7 @@ function getBookingCreateCopy(
     selectedService:
       "Selected service",
     continue:
-      "Choose date and time",
+      "Continue",
     footerSelected:
       (
         service: string,
@@ -1814,7 +1608,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor:
-      KhedmatPalette.blue050,
+      KhedmatPalette.white,
   },
 
   root: {
@@ -1829,7 +1623,7 @@ const styles = StyleSheet.create({
     paddingHorizontal:
       Layout.screenPadding,
     paddingTop: Spacing.md,
-    paddingBottom: 164,
+    paddingBottom: 120,
   },
 
   topBar: {
@@ -1851,7 +1645,7 @@ const styles = StyleSheet.create({
     borderColor:
       KhedmatPalette.border,
     backgroundColor:
-      KhedmatPalette.surface,
+      KhedmatPalette.white,
   },
 
   stepBadge: {
@@ -1874,13 +1668,12 @@ const styles = StyleSheet.create({
 
   header: {
     width: "100%",
-    marginTop: Spacing.xl,
-    gap: Spacing.lg,
+    marginTop: Spacing.lg,
   },
 
   headerIcon: {
-    width: 64,
-    height: 64,
+    width: 44,
+    height: 44,
     borderRadius: Radius.xl,
     alignItems: "center",
     justifyContent: "center",
@@ -1908,7 +1701,7 @@ const styles = StyleSheet.create({
     maxWidth: 470,
     color:
       KhedmatPalette.textPrimary,
-    fontSize: 27,
+    fontSize: 28,
     lineHeight: 35,
   },
 
@@ -1923,9 +1716,9 @@ const styles = StyleSheet.create({
 
   providerCard: {
     width: "100%",
-    minHeight: 142,
-    marginTop: Spacing.xxl,
-    padding: Spacing.lg,
+    minHeight: 104,
+    marginTop: Spacing.lg,
+    padding: Spacing.md,
     alignItems: "center",
     gap: Spacing.md,
     borderWidth: 1,
@@ -1952,7 +1745,7 @@ const styles = StyleSheet.create({
     color:
       KhedmatPalette.white,
     fontFamily: Fonts.bold,
-    fontSize: 19,
+    fontSize: 16,
   },
 
   verifiedBadge: {
@@ -1996,8 +1789,8 @@ const styles = StyleSheet.create({
     width: "100%",
     color:
       KhedmatPalette.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
   },
 
   providerMetaRow: {
@@ -2086,7 +1879,7 @@ const styles = StyleSheet.create({
 
   section: {
     width: "100%",
-    marginTop: Spacing.section,
+    marginTop: Spacing.xl,
     gap: Spacing.md,
   },
 
@@ -2100,8 +1893,8 @@ const styles = StyleSheet.create({
     width: "100%",
     color:
       KhedmatPalette.textPrimary,
-    fontSize: 21,
-    lineHeight: 28,
+    fontSize: 18,
+    lineHeight: 24,
   },
 
   sectionSubtitle: {
@@ -2120,7 +1913,7 @@ const styles = StyleSheet.create({
 
   serviceCard: {
     width: "100%",
-    minHeight: 126,
+    minHeight: 92,
     borderWidth: 1,
     borderColor:
       KhedmatPalette.border,
@@ -2148,8 +1941,8 @@ const styles = StyleSheet.create({
 
   serviceContent: {
     width: "100%",
-    minHeight: 126,
-    padding: Spacing.lg,
+    minHeight: 92,
+    padding: Spacing.md,
     alignItems: "center",
     gap: Spacing.md,
   },
@@ -2180,8 +1973,8 @@ const styles = StyleSheet.create({
     width: "100%",
     color:
       KhedmatPalette.textPrimary,
-    fontSize: 17,
-    lineHeight: 23,
+    fontSize: 15,
+    lineHeight: 21,
   },
 
   serviceTitleSelected: {
@@ -2195,7 +1988,7 @@ const styles = StyleSheet.create({
     width: "100%",
     color:
       KhedmatPalette.textSecondary,
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 20,
   },
 

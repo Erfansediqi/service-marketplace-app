@@ -5,6 +5,13 @@ export type BookingRow = Tables<"bookings">;
 export type BookingStatus = Enums<"booking_status">;
 export type PaymentStatus = Enums<"payment_status">;
 
+export type BookingLocalization = {
+  serviceNameEnglish: string;
+  serviceNameDari: string;
+  serviceNamePashto: string;
+  providerCategoryId: string;
+};
+
 export type CreateBookingInput = {
   clientRequestId: string;
   providerId: string;
@@ -82,6 +89,97 @@ export async function resolveProviderServiceId(
   }
 
   return data.id;
+}
+
+/**
+ * Resolve language-neutral metadata for booking rows in two batched queries.
+ *
+ * Booking snapshot columns are intentionally preserved in PostgreSQL for
+ * historical/audit purposes, but UI language must not depend on whichever
+ * language happened to be used when the booking was created.
+ */
+export async function resolveBookingLocalizations(
+  rows: BookingRow[],
+): Promise<Record<string, BookingLocalization>> {
+  if (rows.length === 0) {
+    return {};
+  }
+
+  const serviceIds = Array.from(
+    new Set(rows.map((row) => row.service_id).filter(Boolean)),
+  );
+
+  const providerIds = Array.from(
+    new Set(rows.map((row) => row.provider_id).filter(Boolean)),
+  );
+
+  const [servicesResult, providersResult] = await Promise.all([
+    serviceIds.length > 0
+      ? supabase
+          .from("services")
+          .select("id, name_english, name_dari, name_pashto")
+          .in("id", serviceIds)
+      : Promise.resolve({
+          data: [],
+          error: null,
+        }),
+    providerIds.length > 0
+      ? supabase
+          .from("provider_accounts")
+          .select("id, category_id")
+          .in("id", providerIds)
+      : Promise.resolve({
+          data: [],
+          error: null,
+        }),
+  ]);
+
+  if (servicesResult.error) {
+    throw new Error(
+      `Failed to load localized booking services: ${servicesResult.error.message}`,
+    );
+  }
+
+  if (providersResult.error) {
+    throw new Error(
+      `Failed to load booking provider categories: ${providersResult.error.message}`,
+    );
+  }
+
+  const serviceById = new Map(
+    (servicesResult.data ?? []).map((service) => [service.id, service]),
+  );
+
+  const providerById = new Map(
+    (providersResult.data ?? []).map((provider) => [provider.id, provider]),
+  );
+
+  return Object.fromEntries(
+    rows.map((row) => {
+      const service = serviceById.get(row.service_id);
+      const provider = providerById.get(row.provider_id);
+
+      const snapshot = row.service_name_snapshot?.trim() || row.service_id;
+
+      return [
+        row.id,
+        {
+          serviceNameEnglish:
+            service?.name_english?.trim() || snapshot,
+          serviceNameDari:
+            service?.name_dari?.trim() ||
+            service?.name_english?.trim() ||
+            snapshot,
+          serviceNamePashto:
+            service?.name_pashto?.trim() ||
+            service?.name_english?.trim() ||
+            snapshot,
+          providerCategoryId:
+            provider?.category_id?.trim() || "",
+        },
+      ];
+    }),
+  );
 }
 
 export async function createBooking(
@@ -209,6 +307,7 @@ export async function updateBookingStatus(
 
 export const BookingRepository = {
   resolveProviderServiceId,
+  resolveBookingLocalizations,
   createBooking,
   listCustomerBookings,
   listProviderBookings,

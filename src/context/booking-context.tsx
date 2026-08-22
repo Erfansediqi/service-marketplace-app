@@ -1,6 +1,5 @@
 import { StorageService } from "@/services/storage";
 import {
-  type PropsWithChildren,
   createContext,
   useCallback,
   useContext,
@@ -8,13 +7,16 @@ import {
   useMemo,
   useRef,
   useState,
+  type PropsWithChildren,
 } from "react";
 
 import { hasInternetConnection } from "../offline/network";
 import {
   BookingRepository,
+  type BookingLocalization,
   type BookingRow,
 } from "../repositories/booking-repository";
+import { useLanguage } from "./languagecontext";
 import { useSession } from "./session-context";
 import { useSupabaseAuth } from "./supabase-auth-context";
 
@@ -34,9 +36,13 @@ export type BookingDraft = {
   providerId: string;
   providerName: string;
   providerProfession: string;
+  providerCategoryId?: string;
 
   serviceId: string;
   serviceName: string;
+  serviceNameEnglish?: string;
+  serviceNameDari?: string;
+  serviceNamePashto?: string;
 
   date: string;
   time: string;
@@ -67,9 +73,13 @@ export type BookingRecord = {
   providerId: string;
   providerName: string;
   providerProfession: string;
+  providerCategoryId?: string;
 
   serviceId: string;
   serviceName: string;
+  serviceNameEnglish?: string;
+  serviceNameDari?: string;
+  serviceNamePashto?: string;
 
   date: string;
   time: string;
@@ -195,7 +205,163 @@ function normalizeServiceTime(value: string): string {
   return normalized;
 }
 
-function mapBookingRow(row: BookingRow): BookingRecord {
+type BookingLanguage =
+  | "English"
+  | "Dari"
+  | "Pashto";
+
+function normalizeLanguage(
+  language: string,
+): BookingLanguage {
+  if (language === "Dari") {
+    return "Dari";
+  }
+
+  if (language === "Pashto") {
+    return "Pashto";
+  }
+
+  return "English";
+}
+
+function getLocalizedCategoryTitle(
+  categoryId: string | undefined,
+  language: BookingLanguage,
+  fallback: string,
+): string {
+  const titles: Record<
+    string,
+    Record<BookingLanguage, string>
+  > = {
+    electrician: {
+      English: "Electrician",
+      Dari: "برق‌کار",
+      Pashto: "برېښناکار",
+    },
+    plumber: {
+      English: "Plumber",
+      Dari: "لوله‌کش",
+      Pashto: "نلدوان",
+    },
+    carpenter: {
+      English: "Carpenter",
+      Dari: "نجار",
+      Pashto: "ترکاڼ",
+    },
+    construction: {
+      English: "Construction",
+      Dari: "ساختمان",
+      Pashto: "ساختماني کار",
+    },
+    painter: {
+      English: "Painter",
+      Dari: "رنگ‌مال",
+      Pashto: "رنګمال",
+    },
+    cleaner: {
+      English: "Cleaner",
+      Dari: "نظافت‌چی",
+      Pashto: "پاک‌کار",
+    },
+    "ac-technician": {
+      English: "AC technician",
+      Dari: "تخنیکر کولر",
+      Pashto: "د اې سي تخنیکر",
+    },
+    driver: {
+      English: "Driver",
+      Dari: "راننده",
+      Pashto: "موټر چلوونکی",
+    },
+    "phone-repair": {
+      English: "Phone repair",
+      Dari: "ترمیم موبایل",
+      Pashto: "د موبایل ترمیم",
+    },
+    "computer-repair": {
+      English: "Computer repair",
+      Dari: "ترمیم کمپیوتر",
+      Pashto: "د کمپیوټر ترمیم",
+    },
+    tailor: {
+      English: "Tailor",
+      Dari: "خیاط",
+      Pashto: "خیاط",
+    },
+    barber: {
+      English: "Barber",
+      Dari: "آرایشگر",
+      Pashto: "سلماني",
+    },
+    tutor: {
+      English: "Tutor",
+      Dari: "معلم خصوصی",
+      Pashto: "خصوصي ښوونکی",
+    },
+    photographer: {
+      English: "Photographer",
+      Dari: "عکاس",
+      Pashto: "عکاس",
+    },
+    other: {
+      English: "Service provider",
+      Dari: "ارائه‌دهندهٔ خدمات",
+      Pashto: "خدمت وړاندې کوونکی",
+    },
+  };
+
+  if (
+    categoryId &&
+    titles[categoryId]
+  ) {
+    return titles[categoryId][language];
+  }
+
+  return fallback;
+}
+
+function getLocalizedServiceName(
+  localization: BookingLocalization | undefined,
+  language: BookingLanguage,
+  fallback: string,
+): string {
+  if (!localization) {
+    return fallback;
+  }
+
+  if (language === "Dari") {
+    return (
+      localization.serviceNameDari ||
+      localization.serviceNameEnglish ||
+      fallback
+    );
+  }
+
+  if (language === "Pashto") {
+    return (
+      localization.serviceNamePashto ||
+      localization.serviceNameEnglish ||
+      fallback
+    );
+  }
+
+  return (
+    localization.serviceNameEnglish ||
+    fallback
+  );
+}
+
+function mapBookingRow(
+  row: BookingRow,
+  localization: BookingLocalization | undefined,
+  language: BookingLanguage,
+): BookingRecord {
+  const snapshotServiceName =
+    row.service_name_snapshot;
+
+  const snapshotProfession =
+    row.provider_profession_snapshot;
+
   return {
     id: row.id,
 
@@ -204,46 +370,82 @@ function mapBookingRow(row: BookingRow): BookingRecord {
     customerPhone: row.customer_phone_snapshot,
 
     providerId: row.provider_id,
-
     providerName: row.provider_name_snapshot,
-
-    providerProfession: row.provider_profession_snapshot,
+    providerProfession:
+      getLocalizedCategoryTitle(
+        localization?.providerCategoryId,
+        language,
+        snapshotProfession,
+      ),
+    providerCategoryId:
+      localization?.providerCategoryId ||
+      undefined,
 
     serviceId: row.service_id,
-
-    serviceName: row.service_name_snapshot,
+    serviceName:
+      getLocalizedServiceName(
+        localization,
+        language,
+        snapshotServiceName,
+      ),
+    serviceNameEnglish:
+      localization?.serviceNameEnglish,
+    serviceNameDari:
+      localization?.serviceNameDari,
+    serviceNamePashto:
+      localization?.serviceNamePashto,
 
     date: row.service_date,
-
     time: normalizeServiceTime(row.service_time),
 
     address: {
       id: row.address_id ?? undefined,
-
       label: row.address_label,
-
       fullAddress: row.full_address,
-
       latitude: row.latitude ?? undefined,
-
       longitude: row.longitude ?? undefined,
     },
 
     notes: row.notes,
-
     servicePrice: row.service_price,
-
     platformFee: row.platform_fee,
-
-    total: row.total ?? row.service_price + row.platform_fee,
-
+    total:
+      row.total ??
+      row.service_price +
+        row.platform_fee,
     currency: "AFN",
-
     status: row.status,
-
-    paymentStatus: row.payment_status,
-
+    paymentStatus:
+      row.payment_status,
     createdAt: row.created_at,
+  };
+}
+
+function relocalizeBookingRecord(
+  booking: BookingRecord,
+  language: BookingLanguage,
+): BookingRecord {
+  const serviceName =
+    language === "Dari"
+      ? booking.serviceNameDari ||
+        booking.serviceNameEnglish ||
+        booking.serviceName
+      : language === "Pashto"
+        ? booking.serviceNamePashto ||
+          booking.serviceNameEnglish ||
+          booking.serviceName
+        : booking.serviceNameEnglish ||
+          booking.serviceName;
+
+  return {
+    ...booking,
+    serviceName,
+    providerProfession:
+      getLocalizedCategoryTitle(
+        booking.providerCategoryId,
+        language,
+        booking.providerProfession,
+      ),
   };
 }
 
@@ -292,8 +494,16 @@ function isBookingDraft(value: unknown): value is BookingDraft {
     typeof value.providerId === "string" &&
     typeof value.providerName === "string" &&
     typeof value.providerProfession === "string" &&
+    (value.providerCategoryId === undefined ||
+      typeof value.providerCategoryId === "string") &&
     typeof value.serviceId === "string" &&
     typeof value.serviceName === "string" &&
+    (value.serviceNameEnglish === undefined ||
+      typeof value.serviceNameEnglish === "string") &&
+    (value.serviceNameDari === undefined ||
+      typeof value.serviceNameDari === "string") &&
+    (value.serviceNamePashto === undefined ||
+      typeof value.serviceNamePashto === "string") &&
     typeof value.date === "string" &&
     typeof value.time === "string" &&
     (value.address === null || isBookingAddress(value.address)) &&
@@ -358,6 +568,11 @@ function replaceBooking(
 
 export function BookingProvider({ children }: PropsWithChildren) {
   const { user, isHydrated: authIsHydrated } = useSupabaseAuth();
+
+  const { language } = useLanguage();
+
+  const activeLanguage =
+    normalizeLanguage(language);
 
   const {
     role,
@@ -424,7 +639,19 @@ export function BookingProvider({ children }: PropsWithChildren) {
         rows = await BookingRepository.listCustomerBookings();
       }
 
-      const nextBookings = rows.map(mapBookingRow);
+      const localizations =
+        await BookingRepository.resolveBookingLocalizations(
+          rows,
+        );
+
+      const nextBookings =
+        rows.map((row) =>
+          mapBookingRow(
+            row,
+            localizations[row.id],
+            activeLanguage,
+          ),
+        );
 
       bookingsRef.current = nextBookings;
 
@@ -434,7 +661,13 @@ export function BookingProvider({ children }: PropsWithChildren) {
     } finally {
       setIsRefreshing(false);
     }
-  }, [activeProviderId, persistBookings, role, user]);
+  }, [
+    activeLanguage,
+    activeProviderId,
+    persistBookings,
+    role,
+    user,
+  ]);
 
   /*
    * Hydrate only local cached state first. Remote refresh happens after the
@@ -530,6 +763,34 @@ export function BookingProvider({ children }: PropsWithChildren) {
     user,
   ]);
 
+  /*
+   * Re-render cached bookings immediately when the user changes language.
+   * Live bookings carry localized service names/category IDs in the cache, so
+   * this also works offline after at least one successful server refresh.
+   */
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    const relocalized =
+      bookingsRef.current.map(
+        (booking) =>
+          relocalizeBookingRecord(
+            booking,
+            activeLanguage,
+          ),
+      );
+
+    bookingsRef.current =
+      relocalized;
+
+    setBookings(relocalized);
+  }, [
+    activeLanguage,
+    isHydrated,
+  ]);
+
   useEffect(() => {
     if (!isHydrated) {
       return;
@@ -577,7 +838,10 @@ export function BookingProvider({ children }: PropsWithChildren) {
 
       await persistBookings(updatedBookings);
     },
-    [persistBookings],
+    [
+      activeLanguage,
+      persistBookings,
+    ],
   );
 
   const bookingReadyForSummary = useMemo(
@@ -645,7 +909,17 @@ export function BookingProvider({ children }: PropsWithChildren) {
       notes: bookingDraft.notes,
     });
 
-    const booking = mapBookingRow(row);
+    const localizations =
+      await BookingRepository.resolveBookingLocalizations(
+        [row],
+      );
+
+    const booking =
+      mapBookingRow(
+        row,
+        localizations[row.id],
+        activeLanguage,
+      );
 
     const updatedBookings = replaceBooking(bookingsRef.current, booking);
 
@@ -656,7 +930,13 @@ export function BookingProvider({ children }: PropsWithChildren) {
     await persistBookings(updatedBookings);
 
     return booking;
-  }, [bookingDraft, bookingReadyForSummary, persistBookings, user]);
+  }, [
+    activeLanguage,
+    bookingDraft,
+    bookingReadyForSummary,
+    persistBookings,
+    user,
+  ]);
 
   const updateBookingStatus = useCallback(
     async (bookingId: string, status: BookingStatus): Promise<void> => {
@@ -707,7 +987,17 @@ export function BookingProvider({ children }: PropsWithChildren) {
         status,
       );
 
-      const updatedBooking = mapBookingRow(row);
+      const localizations =
+        await BookingRepository.resolveBookingLocalizations(
+          [row],
+        );
+
+      const updatedBooking =
+        mapBookingRow(
+          row,
+          localizations[row.id],
+          activeLanguage,
+        );
 
       const updatedBookings = replaceBooking(currentBookings, updatedBooking);
 

@@ -236,52 +236,9 @@ export default function ProviderRequestsScreen() {
         }
       >
         <View style={styles.header}>
-          <Text style={[styles.eyebrow, directionStyle(isRtl)]}>
-            {t("providerRequestsEyebrow")}
-          </Text>
-
           <Text style={[styles.title, directionStyle(isRtl)]}>
             {t("providerRequestsTitle")}
           </Text>
-
-          <Text style={[styles.subtitle, directionStyle(isRtl)]}>
-            {t("providerRequestsSubtitle")}
-          </Text>
-        </View>
-
-        <View style={styles.overviewGrid}>
-          <OverviewCard
-            icon="time-outline"
-            label={t("providerRequestsPending")}
-            value={counts.pending}
-            color={WARNING}
-            backgroundColor={WARNING_SOFT}
-            isRtl={isRtl}
-            localizedDigits={localizedDigits}
-            compact={compactLayout}
-          />
-
-          <OverviewCard
-            icon="briefcase-outline"
-            label={t("providerRequestsActive")}
-            value={counts.active}
-            color={KhedmatPalette.blue500}
-            backgroundColor={INFO_SOFT}
-            isRtl={isRtl}
-            localizedDigits={localizedDigits}
-            compact={compactLayout}
-          />
-
-          <OverviewCard
-            icon="checkmark-circle-outline"
-            label={t("providerRequestsCompleted")}
-            value={counts.completed}
-            color={SUCCESS}
-            backgroundColor={SUCCESS_SOFT}
-            isRtl={isRtl}
-            localizedDigits={localizedDigits}
-            compact={compactLayout}
-          />
         </View>
 
         <ScrollView
@@ -352,40 +309,17 @@ export default function ProviderRequestsScreen() {
           })}
         </ScrollView>
 
-        <View
+        <Text
           style={[
-            styles.resultsHeader,
-            {
-              flexDirection: isRtl ? "row-reverse" : "row",
-            },
+            styles.resultsCountLabel,
+            directionStyle(isRtl),
           ]}
         >
-          <View
-            style={[
-              styles.resultsCopy,
-              {
-                alignItems: isRtl ? "flex-end" : "flex-start",
-              },
-            ]}
-          >
-            <Text style={[styles.resultsTitle, directionStyle(isRtl)]}>
-              {t(getFilterTitleKey(selectedFilter))}
-            </Text>
-
-            <Text style={[styles.resultsSubtitle, directionStyle(isRtl)]}>
-              {t(getFilterSubtitleKey(selectedFilter))}
-            </Text>
-          </View>
-
-          <View style={styles.resultsCountBadge}>
-            <Text style={styles.resultsCountText}>
-              {formatDigits(
-                filteredBookings.length.toString(),
-                localizedDigits,
-              )}
-            </Text>
-          </View>
-        </View>
+          {formatRequestCount(
+            filteredBookings.length,
+            activeLanguage,
+          )}
+        </Text>
 
         <View style={styles.requestsList}>
           {filteredBookings.map((booking) => (
@@ -394,12 +328,7 @@ export default function ProviderRequestsScreen() {
               booking={booking}
               language={activeLanguage}
               isRtl={isRtl}
-              customerLabel={t("providerRequestsCustomer")}
               customerFallback={t("providerRequestsCustomer")}
-              dateLabel={t("providerRequestsDate")}
-              timeLabel={t("providerRequestsTime")}
-              locationLabel={t("providerRequestsLocation")}
-              estimatedCostLabel={t("providerRequestsEstimatedCost")}
               viewDetailsLabel={t("providerRequestsViewDetails")}
               statusLabel={t(getStatusLabelKey(booking.status))}
               onPress={() =>
@@ -423,76 +352,8 @@ export default function ProviderRequestsScreen() {
           ) : null}
         </View>
 
-        <View
-          style={[
-            styles.noticeCard,
-            {
-              flexDirection: isRtl ? "row-reverse" : "row",
-            },
-          ]}
-        >
-          <View style={styles.noticeIcon}>
-            <Ionicons
-              name="information-circle-outline"
-              size={23}
-              color={KhedmatPalette.blue500}
-            />
-          </View>
-
-          <Text style={[styles.noticeText, directionStyle(isRtl)]}>
-            {t("providerRequestsReviewNotice")}
-          </Text>
-        </View>
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-type OverviewCardProps = {
-  icon: IconName;
-  label: string;
-  value: number;
-  color: string;
-  backgroundColor: string;
-  isRtl: boolean;
-  localizedDigits: boolean;
-  compact: boolean;
-};
-
-function OverviewCard({
-  icon,
-  label,
-  value,
-  color,
-  backgroundColor,
-  isRtl,
-  localizedDigits,
-  compact,
-}: OverviewCardProps) {
-  return (
-    <View style={[styles.overviewCard, compact && styles.overviewCardCompact]}>
-      <View
-        style={[
-          styles.overviewIcon,
-          {
-            backgroundColor,
-          },
-        ]}
-      >
-        <Ionicons name={icon} size={20} color={color} />
-      </View>
-
-      <Text style={[styles.overviewValue, directionStyle(isRtl)]}>
-        {formatDigits(value.toString(), localizedDigits)}
-      </Text>
-
-      <Text
-        numberOfLines={2}
-        style={[styles.overviewLabel, directionStyle(isRtl)]}
-      >
-        {label}
-      </Text>
-    </View>
   );
 }
 
@@ -500,12 +361,7 @@ type ProviderRequestCardProps = {
   booking: BookingRecord;
   language: LanguageName;
   isRtl: boolean;
-  customerLabel: string;
   customerFallback: string;
-  dateLabel: string;
-  timeLabel: string;
-  locationLabel: string;
-  estimatedCostLabel: string;
   viewDetailsLabel: string;
   statusLabel: string;
   onPress: () => void;
@@ -515,12 +371,7 @@ function ProviderRequestCard({
   booking,
   language,
   isRtl,
-  customerLabel,
   customerFallback,
-  dateLabel,
-  timeLabel,
-  locationLabel,
-  estimatedCostLabel,
   viewDetailsLabel,
   statusLabel,
   onPress,
@@ -552,16 +403,15 @@ function ProviderRequestCard({
           style={[
             styles.serviceIcon,
             {
-              backgroundColor: isPending
-                ? WARNING_SOFT
-                : KhedmatPalette.surfaceSoft,
+              backgroundColor:
+                KhedmatPalette.surfaceSoft,
             },
           ]}
         >
           <Ionicons
             name={getServiceIcon(booking.serviceId)}
             size={22}
-            color={isPending ? WARNING : KhedmatPalette.blue500}
+            color={KhedmatPalette.blue500}
           />
         </View>
 
@@ -584,7 +434,6 @@ function ProviderRequestCard({
             numberOfLines={1}
             style={[styles.requestReference, directionStyle(isRtl)]}
           >
-            {customerLabel}:{" "}
             {booking.customerName?.trim() || customerFallback}
           </Text>
         </View>
@@ -611,37 +460,83 @@ function ProviderRequestCard({
         </View>
       </View>
 
-      <View style={styles.summaryGrid}>
-        <RequestSummary
-          icon="calendar-outline"
-          label={`${dateLabel} · ${timeLabel}`}
-          value={`${formatBookingDate(
+      <View
+        style={[
+          styles.compactMetaRow,
+          {
+            flexDirection: isRtl ? "row-reverse" : "row",
+          },
+        ]}
+      >
+        <Ionicons
+          name="calendar-outline"
+          size={15}
+          color={KhedmatPalette.textMuted}
+        />
+
+        <Text
+          numberOfLines={1}
+          style={[
+            styles.compactMetaText,
+            directionStyle(isRtl),
+          ]}
+        >
+          {formatBookingDate(
             booking.date,
             language,
-          )} · ${formatTime(
+          )}
+          {" · "}
+          {formatTime(
             booking.time,
             language,
-          )}`}
-          isRtl={isRtl}
+          )}
+        </Text>
+      </View>
+
+      <View
+        style={[
+          styles.compactMetaRow,
+          {
+            flexDirection: isRtl ? "row-reverse" : "row",
+          },
+        ]}
+      >
+        <Ionicons
+          name="location-outline"
+          size={15}
+          color={KhedmatPalette.textMuted}
         />
 
-        <RequestSummary
-          icon="location-outline"
-          label={locationLabel}
-          value={booking.address.label}
-          isRtl={isRtl}
-        />
+        <Text
+          numberOfLines={1}
+          style={[
+            styles.compactMetaText,
+            directionStyle(isRtl),
+          ]}
+        >
+          {booking.address.label}
+        </Text>
+      </View>
 
-        <RequestSummary
-          icon="cash-outline"
-          label={estimatedCostLabel}
-          value={formatCurrency(
+      <View
+        style={[
+          styles.requestFooter,
+          {
+            flexDirection: isRtl ? "row-reverse" : "row",
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.priceText,
+            directionStyle(isRtl),
+          ]}
+        >
+          {formatCurrency(
             booking.servicePrice,
             language,
           )}
-          isRtl={isRtl}
-        />
-      </View>
+        </Text>
 
       <View
         style={[
@@ -661,51 +556,8 @@ function ProviderRequestCard({
           color={KhedmatPalette.blue500}
         />
       </View>
+      </View>
     </Pressable>
-  );
-}
-
-type RequestSummaryProps = {
-  icon: IconName;
-  label: string;
-  value: string;
-  isRtl: boolean;
-};
-
-function RequestSummary({ icon, label, value, isRtl }: RequestSummaryProps) {
-  return (
-    <View
-      style={[
-        styles.summaryItem,
-        {
-          flexDirection: isRtl ? "row-reverse" : "row",
-        },
-      ]}
-    >
-      <View style={styles.summaryIcon}>
-        <Ionicons name={icon} size={16} color={KhedmatPalette.blue500} />
-      </View>
-
-      <View
-        style={[
-          styles.summaryCopy,
-          {
-            alignItems: isRtl ? "flex-end" : "flex-start",
-          },
-        ]}
-      >
-        <Text style={[styles.summaryLabel, directionStyle(isRtl)]}>
-          {label}
-        </Text>
-
-        <Text
-          numberOfLines={2}
-          style={[styles.summaryValue, directionStyle(isRtl)]}
-        >
-          {value}
-        </Text>
-      </View>
-    </View>
   );
 }
 
@@ -743,6 +595,28 @@ function EmptyRequests({
   );
 }
 
+
+function formatRequestCount(
+  count: number,
+  language: LanguageName,
+): string {
+  const value = formatDigits(
+    count.toString(),
+    language !== "English",
+  );
+
+  if (language === "Dari") {
+    return `${value} درخواست`;
+  }
+
+  if (language === "Pashto") {
+    return `${value} غوښتنې`;
+  }
+
+  return count === 1
+    ? "1 request"
+    : `${count} requests`;
+}
 
 function getFilterLabelKey(
   filter: RequestFilter,
@@ -1164,80 +1038,12 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
 
-  eyebrow: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: KhedmatPalette.blue500,
-    fontFamily: Fonts.medium,
-  },
-
   title: {
     ...Typography.screenTitle,
     width: "100%",
     color: KhedmatPalette.textPrimary,
     fontSize: 27,
     lineHeight: 34,
-  },
-
-  subtitle: {
-    ...Typography.bodyStyle,
-    width: "100%",
-    maxWidth: Layout.readableTextMaxWidth,
-    color: KhedmatPalette.textSecondary,
-  },
-
-  overviewGrid: {
-    width: "100%",
-    marginTop: Spacing.xxl,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: Spacing.sm,
-  },
-
-  overviewCard: {
-    flex: 1,
-    minHeight: 130,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.md,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.sm,
-    borderWidth: 1,
-    borderColor: KhedmatPalette.border,
-    borderRadius: Radius.xl,
-    backgroundColor: KhedmatPalette.surface,
-    ...Shadows.small,
-  },
-
-  overviewCardCompact: {
-    minHeight: 122,
-    paddingHorizontal: 6,
-  },
-
-  overviewIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  overviewValue: {
-    ...Typography.sectionTitle,
-    width: "100%",
-    color: KhedmatPalette.textPrimary,
-    textAlign: "center",
-    fontSize: 20,
-    lineHeight: 25,
-  },
-
-  overviewLabel: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: KhedmatPalette.textMuted,
-    textAlign: "center",
-    fontSize: 11,
-    lineHeight: 15,
   },
 
   filtersRow: {
@@ -1297,51 +1103,6 @@ const styles = StyleSheet.create({
     color: KhedmatPalette.white,
   },
 
-  resultsHeader: {
-    width: "100%",
-    marginTop: Spacing.section,
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing.md,
-  },
-
-  resultsCopy: {
-    flex: 1,
-    gap: 2,
-  },
-
-  resultsTitle: {
-    ...Typography.sectionTitle,
-    width: "100%",
-    color: KhedmatPalette.textPrimary,
-    fontSize: 21,
-    lineHeight: 28,
-  },
-
-  resultsSubtitle: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: KhedmatPalette.textMuted,
-  },
-
-  resultsCountBadge: {
-    minWidth: 44,
-    height: 44,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: KhedmatPalette.border,
-    backgroundColor: KhedmatPalette.surface,
-  },
-
-  resultsCountText: {
-    fontFamily: Fonts.bold,
-    fontSize: 16,
-    color: KhedmatPalette.blue500,
-  },
-
   requestsList: {
     width: "100%",
     marginTop: Spacing.lg,
@@ -1359,8 +1120,8 @@ const styles = StyleSheet.create({
   },
 
   pendingRequestCard: {
-    borderColor: "#E5C875",
-    backgroundColor: "#FFFDF8",
+    borderColor: KhedmatPalette.border,
+    backgroundColor: KhedmatPalette.white,
   },
 
   requestHeader: {
@@ -1370,8 +1131,8 @@ const styles = StyleSheet.create({
   },
 
   serviceIcon: {
-    width: 52,
-    height: 52,
+    width: 44,
+    height: 44,
     flexShrink: 0,
     borderRadius: Radius.lg,
     alignItems: "center",
@@ -1386,8 +1147,8 @@ const styles = StyleSheet.create({
   requestTitle: {
     ...Typography.sectionTitle,
     width: "100%",
-    color: KhedmatPalette.textPrimary,
-    fontSize: 18,
+    color: KhedmatPalette.navy900,
+    fontSize: 17,
     lineHeight: 24,
   },
 
@@ -1411,52 +1172,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     fontSize: 10,
     textAlign: "center",
-  },
-
-  summaryGrid: {
-    width: "100%",
-    marginTop: Spacing.lg,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: Spacing.md,
-  },
-
-  summaryItem: {
-    width: "48.5%",
-    minHeight: 58,
-    alignItems: "center",
-    gap: Spacing.sm,
-  },
-
-  summaryIcon: {
-    width: 36,
-    height: 36,
-    flexShrink: 0,
-    borderRadius: Radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: KhedmatPalette.surfaceSoft,
-  },
-
-  summaryCopy: {
-    flex: 1,
-    gap: 1,
-  },
-
-  summaryLabel: {
-    ...Typography.captionStyle,
-    width: "100%",
-    color: KhedmatPalette.textMuted,
-    fontSize: 10,
-  },
-
-  summaryValue: {
-    ...Typography.label,
-    width: "100%",
-    color: KhedmatPalette.textPrimary,
-    fontSize: 13,
-    lineHeight: 18,
   },
 
   emptyState: {
@@ -1492,34 +1207,45 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  noticeCard: {
+  resultsCountLabel: {
+    ...Typography.captionStyle,
     width: "100%",
-    minHeight: 92,
-    marginTop: Spacing.section,
-    padding: Spacing.lg,
-    alignItems: "center",
-    gap: Spacing.md,
-    borderWidth: 1,
-    borderColor: KhedmatPalette.blue200,
-    borderRadius: Radius.xl,
-    backgroundColor: "#F4FBFC",
+    marginTop: Spacing.xl,
+    color: KhedmatPalette.textMuted,
+    fontFamily: Fonts.medium,
   },
 
-  noticeIcon: {
-    width: 44,
-    height: 44,
-    flexShrink: 0,
-    borderRadius: Radius.md,
+  compactMetaRow: {
+    width: "100%",
+    marginTop: Spacing.sm,
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: KhedmatPalette.surface,
+    gap: 6,
   },
 
-  noticeText: {
+  compactMetaText: {
     ...Typography.captionStyle,
     flex: 1,
     color: KhedmatPalette.textSecondary,
-    lineHeight: 19,
+    fontSize: 12,
+  },
+
+  requestFooter: {
+    width: "100%",
+    marginTop: Spacing.md,
+    paddingTop: Spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: KhedmatPalette.border,
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: Spacing.md,
+  },
+
+  priceText: {
+    ...Typography.label,
+    flexShrink: 0,
+    color: KhedmatPalette.navy900,
+    fontFamily: Fonts.bold,
+    fontSize: 14,
   },
 
   pressed: {
@@ -1527,13 +1253,9 @@ const styles = StyleSheet.create({
   },
 
   openDetailsRow: {
-    width: "100%",
+    flexShrink: 0,
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
+    gap: 4,
   },
 
   openDetailsText: {
